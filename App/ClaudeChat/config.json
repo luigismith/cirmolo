@@ -1,0 +1,7 @@
+{
+  "label": "Ask Claude",
+  "icon": "icon.png",
+  "launch": "launch.sh",
+  "description": "Chat with Claude through the Anthropic API (Wi-Fi and API key needed)",
+  "devices": ["MIYOO_FLIP"]
+}

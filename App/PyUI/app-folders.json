@@ -12,6 +12,7 @@
     "apps": {
         "CirmoloSynth": "music",
         "Diapason": "music",
+        "OpenOrc": "music",
         "Songo#5": "music",
         "RetroArch": "games",
         "RetroArch32": "games",

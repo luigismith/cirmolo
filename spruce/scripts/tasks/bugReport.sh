@@ -629,12 +629,9 @@ upload_report() {
     esac
 }
 
-if upload_report; then
-    echo "$report_code" > "$code_file"
-    log_message "bugReport.sh: uploaded as $report_code"
-    log_and_display_message "Bug report sent. Your code is\n\n$report_code\n\nPost this code in the spruce Discord.\nIt is also saved in bug_report_code.txt on the SD card.\n\nPress A to continue."
-else
-    log_and_display_message "The bug report could not be sent.\n\nPlease post bug_report.7z from your SD card in the spruce Discord.\n\nPress A to continue."
-fi
+# Cirmolo: i report non vanno al server del team spruce (i problemi di un fork non sono loro).
+# L'archivio resta sulla SD e si allega a una issue del fork.
+log_message "bugReport.sh: report saved to $output7z (Cirmolo: no upload)"
+log_and_display_message "Bug report saved as bug_report.7z on the SD card.\n\nOpen an issue at\ngithub.com/luigismith/cirmolo/issues\nand attach that file.\n\nPress A to continue."
 acknowledge
 stop_pyui_message_writer

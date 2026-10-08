@@ -39,7 +39,9 @@ struct Synth {
     float sr, inv_sr;
     SynthPatch patch;
     FxParams fx;
-    Pattern pattern;
+    Pattern patterns[SY_PATTERNS];
+    int selected, playing_pat;
+    unsigned chain;
 
     Event q[QUEUE_SIZE];
     int q_head, q_tail;
@@ -71,6 +73,16 @@ struct Synth {
     float scope[SY_SCOPE];
     int scope_pos;
     float peak;
+
+    /* arpeggiatore: note tenute in ordine crescente */
+    int arp_held[16], arp_n, arp_idx, arp_note, arp_was_on;
+    float arp_vel;
+    double arp_count, arp_off;
+
+    /* registrazione */
+    int16_t *rec;
+    uint32_t rec_w, rec_r, rec_drop;
+    int rec_on;
 };
 
 /* ------------------------------------------------------------------ utilita' */
@@ -246,6 +258,66 @@ static void all_off_internal(Synth *s)
     for (int i = 0; i < SY_VOICES; i++) if (s->v[i].active) voice_release(&s->v[i]);
 }
 
+/* ------------------------------------------------------------------ arpeggiatore */
+
+static void arp_add(Synth *s, int note, float vel)
+{
+    for (int i = 0; i < s->arp_n; i++) if (s->arp_held[i] == note) return;
+    if (s->arp_n == 16) return;
+    int i = s->arp_n++;
+    while (i > 0 && s->arp_held[i - 1] > note) { s->arp_held[i] = s->arp_held[i - 1]; i--; }
+    s->arp_held[i] = note;
+    s->arp_vel = vel;
+    if (s->arp_n == 1) { s->arp_idx = 0; s->arp_count = 0.0; }      /* la prima nota parte subito */
+}
+
+static void arp_remove(Synth *s, int note)
+{
+    int j = 0;
+    for (int i = 0; i < s->arp_n; i++) if (s->arp_held[i] != note) s->arp_held[j++] = s->arp_held[i];
+    s->arp_n = j;
+}
+
+static void arp_tick(Synth *s, double step_len)
+{
+    if (s->arp_note >= 0) {
+        s->arp_off -= 1.0;
+        if (s->arp_off <= 0.0) { note_off_internal(s, s->arp_note); s->arp_note = -1; }
+    }
+    int on = s->patch.arp_mode > ARP_OFF && s->patch.arp_mode < ARP_COUNT;
+    if (!on && s->arp_was_on) {                     /* spento con note tenute: suonano normalmente */
+        for (int i = 0; i < s->arp_n; i++) note_on_internal(s, s->arp_held[i], s->arp_vel);
+        s->arp_n = 0;
+    }
+    s->arp_was_on = on;
+    if (!on || s->arp_n == 0) return;
+    s->arp_count -= 1.0;
+    if (s->arp_count > 0.0) return;
+    float rate = s->patch.arp_rate;
+    if (rate < 0.5f) rate = 0.5f;
+    if (rate > 4.0f) rate = 4.0f;
+    double interval = step_len * rate;
+    s->arp_count += interval;
+    int oct = s->patch.arp_octaves < 1 ? 1 : (s->patch.arp_octaves > 3 ? 3 : s->patch.arp_octaves);
+    int len = s->arp_n * oct, pos;
+    switch (s->patch.arp_mode) {
+    case ARP_DOWN: pos = len - 1 - s->arp_idx % len; break;
+    case ARP_UPDOWN: {
+        int period = len > 1 ? 2 * len - 2 : 1, k = s->arp_idx % period;
+        pos = k < len ? k : period - k;
+        break;
+    }
+    case ARP_RANDOM: pos = (int)((white(s) + 1.0f) * 0.5f * len) % len; break;
+    default: pos = s->arp_idx % len;
+    }
+    s->arp_idx++;
+    int note = s->arp_held[pos % s->arp_n] + 12 * (pos / s->arp_n);
+    if (s->arp_note >= 0) note_off_internal(s, s->arp_note);
+    note_on_internal(s, note, s->arp_vel);
+    s->arp_note = note;
+    s->arp_off = interval * 0.6;
+}
+
 /* ------------------------------------------------------------------ batteria */
 
 static void drum_trigger(Synth *s, int kind, float vel)
@@ -367,7 +439,11 @@ Synth *synth_create(float sample_rate)
     static const int major[7] = { 0, 2, 4, 5, 7, 9, 11 };
     memcpy(s->scale, major, sizeof(major));
     s->scale_len = 7;
-    for (int i = 0; i < SY_STEPS; i++) s->pattern.note[i] = -1;
+    for (int p = 0; p < SY_PATTERNS; p++)
+        for (int i = 0; i < SY_STEPS; i++) s->patterns[p].note[i] = -1;
+    s->playing_pat = -1;
+    s->arp_note = -1;
+    s->rec = calloc((size_t)SY_REC_FRAMES * 2, sizeof(int16_t));
 
     s->dlen = (int)(sample_rate * MAX_DELAY_SECONDS);
     s->dl = calloc((size_t)s->dlen, sizeof(float));
@@ -390,6 +466,7 @@ void synth_destroy(Synth *s)
     if (!s) return;
     free(s->dl);
     free(s->dr);
+    free(s->rec);
     for (int i = 0; i < 4; i++) { free(s->comb_l[i].buf); free(s->comb_r[i].buf); }
     for (int i = 0; i < 2; i++) { free(s->ap_l[i].buf); free(s->ap_r[i].buf); }
     free(s);
@@ -414,7 +491,38 @@ void synth_drum_hit(Synth *s, int drum, float vel) { push(s, EV_DRUM, drum, vel)
 
 SynthPatch *synth_patch(Synth *s) { return &s->patch; }
 FxParams *synth_fx(Synth *s) { return &s->fx; }
-Pattern *synth_pattern(Synth *s) { return &s->pattern; }
+Pattern *synth_pattern(Synth *s) { return &s->patterns[s->selected]; }
+Pattern *synth_pattern_at(Synth *s, int i) { return &s->patterns[(i % SY_PATTERNS + SY_PATTERNS) % SY_PATTERNS]; }
+void synth_select_pattern(Synth *s, int i) { s->selected = (i % SY_PATTERNS + SY_PATTERNS) % SY_PATTERNS; }
+int synth_selected_pattern(const Synth *s) { return s->selected; }
+void synth_set_chain(Synth *s, unsigned mask) { s->chain = mask & ((1u << SY_PATTERNS) - 1); }
+unsigned synth_chain(const Synth *s) { return s->chain; }
+int synth_playing_pattern(const Synth *s) { return s->playing ? s->playing_pat : -1; }
+
+void synth_rec_start(Synth *s)
+{
+    __atomic_store_n(&s->rec_r, __atomic_load_n(&s->rec_w, __ATOMIC_ACQUIRE), __ATOMIC_RELEASE);
+    s->rec_drop = 0;
+    __atomic_store_n(&s->rec_on, 1, __ATOMIC_RELEASE);
+}
+
+void synth_rec_stop(Synth *s) { __atomic_store_n(&s->rec_on, 0, __ATOMIC_RELEASE); }
+int synth_rec_active(const Synth *s) { return __atomic_load_n(&s->rec_on, __ATOMIC_ACQUIRE); }
+uint32_t synth_rec_dropped(const Synth *s) { return s->rec_drop; }
+
+int synth_rec_read(Synth *s, int16_t *dst, int max_frames)
+{
+    uint32_t w = __atomic_load_n(&s->rec_w, __ATOMIC_ACQUIRE), r = s->rec_r;
+    int n = (int)(w - r);
+    if (n > max_frames) n = max_frames;
+    for (int i = 0; i < n; i++) {
+        uint32_t k = (r + (uint32_t)i) % SY_REC_FRAMES;
+        dst[2 * i] = s->rec[2 * k];
+        dst[2 * i + 1] = s->rec[2 * k + 1];
+    }
+    __atomic_store_n(&s->rec_r, r + (uint32_t)n, __ATOMIC_RELEASE);
+    return n;
+}
 
 void synth_set_performance(Synth *s, float bend, float cutoff_oct, float res_add, float vibrato)
 {
@@ -450,6 +558,7 @@ void synth_play(Synth *s, int on)
 {
     if (on && !s->playing) {
         s->step = -1;
+        s->playing_pat = -1;
         s->countdown = 0.0;
         __atomic_store_n(&s->playing, 1, __ATOMIC_RELEASE);
     } else if (!on && s->playing) {
@@ -499,18 +608,31 @@ static void seq_tick(Synth *s)
     s->countdown -= 1.0;
     if (s->countdown > 0.0) return;
     s->step = (s->step + 1) % SY_STEPS;
+    if (s->step == 0) {                               /* nuova battuta: quale pattern suona */
+        if (s->chain) {
+            int from = s->playing_pat;
+            for (int i = 1; i <= SY_PATTERNS; i++) {
+                int c = from < 0 ? i - 1 : (from + i) % SY_PATTERNS;
+                if (s->chain & (1u << c)) { s->playing_pat = c; break; }
+            }
+        } else {
+            s->playing_pat = s->selected;
+        }
+    }
+    if (s->playing_pat < 0) s->playing_pat = s->selected;
+    const Pattern *pat = &s->patterns[s->playing_pat];
     double base = s->sr * 60.0 / s->bpm / 4.0;
     double len = (s->step % 2 == 0) ? base * (1.0 + s->swing) : base * (1.0 - s->swing);
     s->countdown += len;
     for (int d = 0; d < DRUM_COUNT; d++) {
-        int v = s->pattern.drum[d][s->step];
+        int v = pat->drum[d][s->step];
         if (v) drum_trigger(s, d, v == 2 ? 1.0f : 0.72f);
     }
-    int deg = s->pattern.note[s->step];
+    int deg = pat->note[s->step];
     if (deg >= 0) {
         if (s->seq_note >= 0) note_off_internal(s, s->seq_note);
         s->seq_note = synth_degree_to_midi(s, deg);
-        note_on_internal(s, s->seq_note, s->pattern.accent[s->step] ? 1.0f : 0.75f);
+        note_on_internal(s, s->seq_note, pat->accent[s->step] ? 1.0f : 0.75f);
         s->seq_off = base * 0.8;
     }
 }
@@ -524,9 +646,19 @@ void synth_render(Synth *s, float *out, int frames)
     while (t != __atomic_load_n(&s->q_head, __ATOMIC_ACQUIRE)) {
         Event e = s->q[t];
         switch (e.type) {
-        case EV_NOTE_ON: note_on_internal(s, e.a, e.b); break;
-        case EV_NOTE_OFF: note_off_internal(s, e.a); break;
-        case EV_ALL_OFF: all_off_internal(s); break;
+        case EV_NOTE_ON:
+            if (s->patch.arp_mode > ARP_OFF) arp_add(s, e.a, e.b);
+            else note_on_internal(s, e.a, e.b);
+            break;
+        case EV_NOTE_OFF:
+            arp_remove(s, e.a);
+            note_off_internal(s, e.a);
+            break;
+        case EV_ALL_OFF:
+            s->arp_n = 0;
+            if (s->arp_note >= 0) { note_off_internal(s, s->arp_note); s->arp_note = -1; }
+            all_off_internal(s);
+            break;
         case EV_DRUM: drum_trigger(s, e.a, e.b); break;
         }
         t = (t + 1) % QUEUE_SIZE;
@@ -557,8 +689,12 @@ void synth_render(Synth *s, float *out, int frames)
     const float rfb = 0.7f + clampf(fx.reverb_size, 0.0f, 1.0f) * 0.26f;
     float block_peak = 0.0f;
 
+    const int rec_on = __atomic_load_n(&s->rec_on, __ATOMIC_ACQUIRE);
+    uint32_t rec_w = s->rec_w;
+
     for (int i = 0; i < frames; i++) {
         seq_tick(s);
+        arp_tick(s, step_len);
 
         s->lfo_phase += p.lfo_rate * inv_sr;
         if (s->lfo_phase >= 1.0f) s->lfo_phase -= 1.0f;
@@ -633,10 +769,21 @@ void synth_render(Synth *s, float *out, int frames)
         out_r = softclip(out_r);
         out[2 * i] = out_l;
         out[2 * i + 1] = out_r;
+        if (rec_on) {
+            if (rec_w - __atomic_load_n(&s->rec_r, __ATOMIC_ACQUIRE) < SY_REC_FRAMES) {
+                uint32_t k = rec_w % SY_REC_FRAMES;
+                s->rec[2 * k] = (int16_t)lrintf(out_l * 32767.0f);
+                s->rec[2 * k + 1] = (int16_t)lrintf(out_r * 32767.0f);
+                rec_w++;
+            } else {
+                s->rec_drop++;
+            }
+        }
         float m = 0.5f * (out_l + out_r);
         s->scope[s->scope_pos] = m;
         __atomic_store_n(&s->scope_pos, (s->scope_pos + 1) % SY_SCOPE, __ATOMIC_RELEASE);
         if (fabsf(m) > block_peak) block_peak = fabsf(m);
     }
+    __atomic_store_n(&s->rec_w, rec_w, __ATOMIC_RELEASE);
     s->peak = fmaxf(s->peak * 0.85f, block_peak);
 }

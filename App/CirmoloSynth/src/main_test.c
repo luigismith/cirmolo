@@ -139,6 +139,82 @@ int main(int argc, char **argv)
     tap(a, s, PAD_START, 0.03f, wav, &pos, cap);
     run(a, s, 2.0f, wav, &pos, cap);
 
+    /* 3b. Catena: A in catena, A copiato in B, B in catena; dopo una battuta deve suonare B */
+    tap(a, s, PAD_UP, 0.03f, wav, &pos, cap);
+    tap(a, s, PAD_UP, 0.03f, wav, &pos, cap);                          /* riga dei pattern */
+    tap(a, s, PAD_A, 0.03f, wav, &pos, cap);                           /* A in catena */
+    tap(a, s, PAD_B, 0.03f, wav, &pos, cap);                           /* copia A in B */
+    tap(a, s, PAD_RIGHT, 0.03f, wav, &pos, cap);                       /* scegli B */
+    tap(a, s, PAD_A, 0.03f, wav, &pos, cap);                           /* B in catena */
+    if (synth_chain(s) != 3u) { fprintf(stderr, "ERRORE: catena %u invece di 3\n", synth_chain(s)); fail = 1; }
+    tap(a, s, PAD_START, 0.03f, wav, &pos, cap);
+    run(a, s, 0.5f, wav, &pos, cap);
+    int first = synth_playing_pattern(s);
+    float bar = 16.0f * 60.0f / synth_tempo(s) / 4.0f;
+    run(a, s, bar, wav, &pos, cap);
+    int second = synth_playing_pattern(s);
+    printf("catena: suona %c, dopo una battuta %c\n", 'A' + first, 'A' + second);
+    if (first != 0 || second != 1) { fprintf(stderr, "ERRORE: la catena non passa da A a B\n"); fail = 1; }
+    app_draw(a, &c);
+    snprintf(out, sizeof(out), "%s/5-pattern.bmp", argv[2]);
+    write_bmp(out, &c);
+    tap(a, s, PAD_START, 0.03f, wav, &pos, cap);
+    run(a, s, 1.0f, wav, &pos, cap);
+
+    /* 3c. Arpeggiatore e registrazione: una nota tenuta, arpeggio su due ottave, registrato con R3 */
+    char rec_path[700];
+    int before = 0;
+    for (int i = 1; i < 1000; i++) {
+        snprintf(rec_path, sizeof(rec_path), "%s/registrazioni/registrazione-%03d.wav", argv[2], i);
+        FILE *t = fopen(rec_path, "rb");
+        if (!t) break;
+        fclose(t);
+        before = i;
+    }
+    app_set_screen(a, SCREEN_PLAY);
+    synth_patch(s)->arp_mode = ARP_UP;
+    synth_patch(s)->arp_rate = 1.0f;
+    synth_patch(s)->arp_octaves = 2;
+    tap(a, s, PAD_R3, 0.03f, wav, &pos, cap);
+    app_button(a, PAD_LEFT, 1);
+    app_button(a, PAD_R2, 1);                                           /* accordo arpeggiato */
+    run(a, s, 1.5f, wav, &pos, cap);
+    app_draw(a, &c);
+    snprintf(out, sizeof(out), "%s/6-arpeggio.bmp", argv[2]);
+    write_bmp(out, &c);
+    app_button(a, PAD_LEFT, 0);
+    app_button(a, PAD_R2, 0);
+    run(a, s, 0.5f, wav, &pos, cap);
+    tap(a, s, PAD_R3, 0.03f, wav, &pos, cap);
+    synth_patch(s)->arp_mode = ARP_OFF;
+    snprintf(rec_path, sizeof(rec_path), "%s/registrazioni/registrazione-%03d.wav", argv[2], before + 1);
+    FILE *rf = fopen(rec_path, "rb");
+    long rsize = 0;
+    if (rf) { fseek(rf, 0, SEEK_END); rsize = ftell(rf); fclose(rf); }
+    printf("registrazione: %s, %ld byte (%.2f s)\n", rec_path, rsize, (rsize - 44) / 4.0 / SR);
+    if (rsize < 44 + SR * 4) { fprintf(stderr, "ERRORE: registrazione mancante o troppo corta\n"); fail = 1; }
+
+    /* 3d. Preset tuo: Y nella pagina Suono, poi lo stato riaperto deve ridare lo stesso suono */
+    app_set_screen(a, SCREEN_SOUND);
+    synth_patch(s)->cutoff = 0.37f;
+    synth_patch(s)->osc2_semi = 5;
+    tap(a, s, PAD_Y, 0.03f, wav, &pos, cap);
+    SynthPatch saved = *synth_patch(s);
+    snprintf(out, sizeof(out), "%s/stato-prova.txt", argv[2]);
+    app_save(a);
+    app_load_preset(a, 3);                                             /* cambia suono... */
+    App *a2 = app_create(s, out);                                      /* ...e riapre lo stato salvato */
+    printf("preset tuo: taglio %.2f, intervallo %+.0f (attesi %.2f, %+.0f)\n",
+           synth_patch(s)->cutoff, synth_patch(s)->osc2_semi, saved.cutoff, saved.osc2_semi);
+    if (fabsf(synth_patch(s)->cutoff - saved.cutoff) > 1e-4f || synth_patch(s)->osc2_semi != saved.osc2_semi) {
+        fprintf(stderr, "ERRORE: il preset tuo non torna dopo la riapertura\n");
+        fail = 1;
+    }
+    app_destroy(a2);
+    snprintf(out, sizeof(out), "%s/preset-utente.txt", argv[2]);
+    FILE *uf = fopen(out, "r");
+    if (!uf) { fprintf(stderr, "ERRORE: preset-utente.txt non scritto\n"); fail = 1; } else fclose(uf);
+
     /* 4. Richiesta di uscita */
     app_button(a, PAD_MENU, 1); app_button(a, PAD_MENU, 0);
     app_draw(a, &c);

@@ -15,9 +15,12 @@
 
 #define SY_VOICES 8
 #define SY_STEPS 16
+#define SY_PATTERNS 4
+#define SY_REC_FRAMES (48000 * 4)   /* buffer della registrazione: 4 secondi */
 #define SY_SCOPE 2048
 
 enum { WAVE_SAW, WAVE_SQUARE, WAVE_TRIANGLE, WAVE_SINE, WAVE_COUNT };
+enum { ARP_OFF, ARP_UP, ARP_DOWN, ARP_UPDOWN, ARP_RANDOM, ARP_COUNT };
 enum { DRUM_KICK, DRUM_SNARE, DRUM_HAT, DRUM_OPENHAT, DRUM_CLAP, DRUM_COUNT };
 
 typedef struct {
@@ -40,6 +43,9 @@ typedef struct {
     float glide;                  /* secondi */
     float drive;                  /* 0..1, saturazione */
     float volume;                 /* 0..1 */
+    int   arp_mode;               /* ARP_*: con l'arpeggiatore le note tenute vengono suonate a turno */
+    float arp_rate;               /* sedicesimi per nota: 0.5, 1, 2, 4 */
+    int   arp_octaves;            /* 1..3 */
 } SynthPatch;
 
 typedef struct {
@@ -74,7 +80,22 @@ void synth_drum_hit(Synth *s, int drum, float velocity);
 
 SynthPatch *synth_patch(Synth *s);
 FxParams   *synth_fx(Synth *s);
-Pattern    *synth_pattern(Synth *s);
+Pattern    *synth_pattern(Synth *s);                 /* il pattern scelto (quello che si modifica) */
+Pattern    *synth_pattern_at(Synth *s, int index);
+/* Quattro pattern: si suona quello scelto oppure, se la catena non e' vuota, i pattern della catena
+   in ordine (bit 0 = A ... bit 3 = D). I cambi avvengono a fine battuta. */
+void synth_select_pattern(Synth *s, int index);
+int  synth_selected_pattern(const Synth *s);
+void synth_set_chain(Synth *s, unsigned mask);
+unsigned synth_chain(const Synth *s);
+int  synth_playing_pattern(const Synth *s);
+
+/* Registrazione: il thread audio scrive in un buffer circolare, l'interfaccia lo svuota su file. */
+void synth_rec_start(Synth *s);
+void synth_rec_stop(Synth *s);
+int  synth_rec_active(const Synth *s);
+int  synth_rec_read(Synth *s, int16_t *dst, int max_frames);   /* campioni stereo interlacciati */
+uint32_t synth_rec_dropped(const Synth *s);
 
 /* Controlli dal vivo: bend in semitoni, filtro in ottave, risonanza aggiunta, vibrato 0..1. */
 void synth_set_performance(Synth *s, float bend, float cutoff_oct, float res_add, float vibrato);

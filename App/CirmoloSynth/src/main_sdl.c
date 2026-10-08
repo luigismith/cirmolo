@@ -37,7 +37,7 @@
 
 /* I tasti dell'app sono valori 0..PAD_COUNT-1: se un header di sistema ridefinisse uno di questi nomi
    (successo con BTN_A & co. di linux/input.h) la compilazione si deve fermare. */
-_Static_assert(PAD_A == 4 && PAD_SELECT == 12 && PAD_COUNT == 15, "nomi dei tasti ridefiniti");
+_Static_assert(PAD_A == 4 && PAD_SELECT == 12 && PAD_COUNT == 17, "nomi dei tasti ridefiniti");
 
 #define W 640
 #define H 480
@@ -145,6 +145,8 @@ static void evdev_poll(Evdev *e, App *a, Axes *ax, float *l2p, float *r2p, int *
             case 314: b = PAD_SELECT; break;
             case 315: b = PAD_START; break;
             case 316: b = PAD_MENU; break;
+            case 317: b = PAD_L3; break;         /* levetta sinistra premuta */
+            case 318: b = PAD_R3; break;         /* levetta destra premuta */
             }
             if (b >= 0 && ev.value != 2) app_button(a, b, ev.value != 0);
         } else if (ev.type == EV_ABS) {
@@ -193,6 +195,8 @@ static int key_to_button(SDL_Keycode k)
     case SDLK_BACKSPACE: case SDLK_RSHIFT: return PAD_SELECT;
     case SDLK_RETURN: return PAD_START;
     case SDLK_ESCAPE: return PAD_MENU;
+    case SDLK_e: return PAD_L3;
+    case SDLK_r: return PAD_R3;
     }
     return -1;
 }
@@ -213,6 +217,8 @@ static int pad_to_button(int b)
     case SDL_CONTROLLER_BUTTON_BACK: return PAD_SELECT;
     case SDL_CONTROLLER_BUTTON_START: return PAD_START;
     case SDL_CONTROLLER_BUTTON_GUIDE: return PAD_MENU;
+    case SDL_CONTROLLER_BUTTON_LEFTSTICK: return PAD_L3;
+    case SDL_CONTROLLER_BUTTON_RIGHTSTICK: return PAD_R3;
     }
     return -1;
 }

@@ -1,11 +1,11 @@
-/* Cirmolo Synth - programma per la console (e per provarlo sul PC).
+/* Cirmolo kit - programma principale delle app native (vedi platform.h).
  *
  * SDL2 viene caricata a runtime (dlopen/LoadLibrary): sulla Flip si usa la libreria di PyUI
  * (/mnt/SDCARD/App/PyUI/dll/libSDL2-2.0.so, SDL 2.32 con ALSA e KMSDRM), senza dipendere dalla
  * versione del firmware. I tasti della Flip si leggono da /dev/input/event5 come fa PyUI;
  * tastiera e gamepad SDL restano come riserva (e servono sul PC).
  *
- * Uso: cirmolo-synth [--fonts DIR] [--state FILE] [--window] [--frames N]
+ * Opzioni: [--fonts DIR] [--state FILE] [--window] [--frames N]
  */
 #define SDL_MAIN_HANDLED
 #include "SDL.h"
@@ -15,9 +15,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "app.h"
 #include "gfx.h"
-#include "synth.h"
+#include "platform.h"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -35,7 +34,7 @@
 #define LIB_SYM(h, n) dlsym(h, n)
 #endif
 
-/* I tasti dell'app sono valori 0..PAD_COUNT-1: se un header di sistema ridefinisse uno di questi nomi
+/* I tasti delle app sono valori 0..PAD_COUNT-1: se un header di sistema ridefinisse uno di questi nomi
    (successo con BTN_A & co. di linux/input.h) la compilazione si deve fermare. */
 _Static_assert(PAD_A == 4 && PAD_SELECT == 12 && PAD_COUNT == 17, "nomi dei tasti ridefiniti");
 
@@ -49,8 +48,8 @@ _Static_assert(PAD_A == 4 && PAD_SELECT == 12 && PAD_COUNT == 17, "nomi dei tast
     X(SDL_UpdateTexture) X(SDL_RenderClear) X(SDL_RenderCopy) X(SDL_RenderPresent) \
     X(SDL_RenderSetLogicalSize) X(SDL_PollEvent) X(SDL_OpenAudioDevice) X(SDL_PauseAudioDevice) \
     X(SDL_CloseAudioDevice) X(SDL_Delay) X(SDL_GetTicks) X(SDL_ShowCursor) X(SDL_NumJoysticks) \
-    X(SDL_IsGameController) X(SDL_GameControllerOpen) X(SDL_GameControllerGetAxis) X(SDL_GetRendererInfo) \
-    X(SDL_SetHint) X(SDL_GetCurrentDisplayMode)
+    X(SDL_IsGameController) X(SDL_GameControllerOpen) X(SDL_GetRendererInfo) \
+    X(SDL_SetHint) X(SDL_GetCurrentDisplayMode) X(SDL_GetNumAudioDevices) X(SDL_GetAudioDeviceName)
 
 #define DECL(f) static __typeof__(f) *p_##f;
 SDL_FUNCS(DECL)
@@ -83,22 +82,63 @@ static int load_sdl(void)
 }
 
 /* ------------------------------------------------------------------ audio */
-static Synth *g_synth;
+static const CirmoloApp *g_desc;
+static void *g_app;
 
 static void audio_cb(void *ud, Uint8 *stream, int len)
 {
     (void)ud;
-    if (g_synth) synth_render(g_synth, (float *)stream, len / (int)(2 * sizeof(float)));
+    void *app = __atomic_load_n(&g_app, __ATOMIC_ACQUIRE);
+    if (app) g_desc->audio(app, (float *)stream, len / (int)(2 * sizeof(float)));
     else memset(stream, 0, (size_t)len);
+}
+
+static void capture_cb(void *ud, Uint8 *stream, int len)
+{
+    (void)ud;
+    void *app = __atomic_load_n(&g_app, __ATOMIC_ACQUIRE);
+    if (app && g_desc->capture) g_desc->capture(app, (const float *)stream, len / (int)sizeof(float));
+}
+
+/* Microfono: preferisce un dispositivo USB; scarta l'ingresso del codec interno (rk817), che sulla Flip
+   non ha un microfono collegato e darebbe solo rumore. CIRMOLO_CAPTURE sceglie a mano. */
+static SDL_AudioDeviceID open_capture(float *rate, char *name, size_t name_len)
+{
+    int n = p_SDL_GetNumAudioDevices(1);
+    const char *forced = getenv("CIRMOLO_CAPTURE");
+    int pick = -1;
+    for (int i = 0; i < n; i++) {
+        const char *dn = p_SDL_GetAudioDeviceName(i, 1);
+        if (!dn) continue;
+        fprintf(stderr, "ingresso audio %d: %s\n", i, dn);
+        if (forced && strstr(dn, forced)) { pick = i; break; }
+        if (forced) continue;
+        if (strstr(dn, "rk817") || strstr(dn, "RK817")) continue;
+        if (pick < 0 || strstr(dn, "USB") || strstr(dn, "usb")) pick = i;
+    }
+    if (pick < 0) return 0;
+    const char *dn = p_SDL_GetAudioDeviceName(pick, 1);
+    SDL_AudioSpec want = { 0 }, have = { 0 };
+    want.freq = 48000;
+    want.format = AUDIO_F32SYS;
+    want.channels = 1;
+    want.samples = 1024;
+    want.callback = capture_cb;
+    SDL_AudioDeviceID id = p_SDL_OpenAudioDevice(dn, 1, &want, &have, SDL_AUDIO_ALLOW_FREQUENCY_CHANGE);
+    if (!id) { fprintf(stderr, "ingresso %s non aperto: %s\n", dn, p_SDL_GetError()); return 0; }
+    *rate = (float)have.freq;
+    snprintf(name, name_len, "%s", dn);
+    fprintf(stderr, "microfono: %s, %d Hz\n", dn, have.freq);
+    return id;
 }
 
 /* ------------------------------------------------------------------ ingressi */
 typedef struct { float lx, ly, rx, ry, l2, r2; } Axes;
 
-static void trigger(App *a, int btn, float v, float *prev)
+static void trigger(int btn, float v, float *prev)
 {
     int was = *prev > 0.5f, now = v > 0.5f;
-    if (was != now) app_button(a, btn, now);
+    if (was != now) g_desc->button(g_app, btn, now);
     *prev = v;
 }
 
@@ -125,7 +165,7 @@ static float evdev_norm(Evdev *e, int code, int value, int unipolar)
 
 static int g_logged;   /* eventi di input gia' scritti nel log (i primi 300 servono per la diagnosi) */
 
-static void evdev_poll(Evdev *e, App *a, Axes *ax, float *l2p, float *r2p, int *hx, int *hy)
+static void evdev_poll(Evdev *e, Axes *ax, float *l2p, float *r2p, int *hx, int *hy)
 {
     struct input_event ev;
     while (read(e->fd, &ev, sizeof(ev)) == (ssize_t)sizeof(ev)) {
@@ -148,29 +188,29 @@ static void evdev_poll(Evdev *e, App *a, Axes *ax, float *l2p, float *r2p, int *
             case 317: b = PAD_L3; break;         /* levetta sinistra premuta */
             case 318: b = PAD_R3; break;         /* levetta destra premuta */
             }
-            if (b >= 0 && ev.value != 2) app_button(a, b, ev.value != 0);
+            if (b >= 0 && ev.value != 2) g_desc->button(g_app, b, ev.value != 0);
         } else if (ev.type == EV_ABS) {
             switch (ev.code) {
             case ABS_HAT0X:
-                if (*hx < 0) app_button(a, PAD_LEFT, 0);
-                if (*hx > 0) app_button(a, PAD_RIGHT, 0);
+                if (*hx < 0) g_desc->button(g_app, PAD_LEFT, 0);
+                if (*hx > 0) g_desc->button(g_app, PAD_RIGHT, 0);
                 *hx = ev.value;
-                if (ev.value < 0) app_button(a, PAD_LEFT, 1);
-                if (ev.value > 0) app_button(a, PAD_RIGHT, 1);
+                if (ev.value < 0) g_desc->button(g_app, PAD_LEFT, 1);
+                if (ev.value > 0) g_desc->button(g_app, PAD_RIGHT, 1);
                 break;
             case ABS_HAT0Y:
-                if (*hy < 0) app_button(a, PAD_UP, 0);
-                if (*hy > 0) app_button(a, PAD_DOWN, 0);
+                if (*hy < 0) g_desc->button(g_app, PAD_UP, 0);
+                if (*hy > 0) g_desc->button(g_app, PAD_DOWN, 0);
                 *hy = ev.value;
-                if (ev.value < 0) app_button(a, PAD_UP, 1);
-                if (ev.value > 0) app_button(a, PAD_DOWN, 1);
+                if (ev.value < 0) g_desc->button(g_app, PAD_UP, 1);
+                if (ev.value > 0) g_desc->button(g_app, PAD_DOWN, 1);
                 break;
             case ABS_X: ax->lx = evdev_norm(e, ev.code, ev.value, 0); break;
             case ABS_Y: ax->ly = evdev_norm(e, ev.code, ev.value, 0); break;
             case ABS_RX: ax->rx = evdev_norm(e, ev.code, ev.value, 0); break;
             case ABS_RY: ax->ry = evdev_norm(e, ev.code, ev.value, 0); break;
-            case ABS_Z: ax->l2 = evdev_norm(e, ev.code, ev.value, 1); trigger(a, PAD_L2, ax->l2, l2p); break;
-            case ABS_RZ: ax->r2 = evdev_norm(e, ev.code, ev.value, 1); trigger(a, PAD_R2, ax->r2, r2p); break;
+            case ABS_Z: ax->l2 = evdev_norm(e, ev.code, ev.value, 1); trigger(PAD_L2, ax->l2, l2p); break;
+            case ABS_RZ: ax->r2 = evdev_norm(e, ev.code, ev.value, 1); trigger(PAD_R2, ax->r2, r2p); break;
             }
         }
     }
@@ -226,8 +266,9 @@ static int pad_to_button(int b)
 /* ------------------------------------------------------------------ main */
 int main(int argc, char **argv)
 {
+    g_desc = cirmolo_app();
     const char *fonts = "/mnt/SDCARD/App/PyUI/fonts";
-    const char *state = "/mnt/SDCARD/Saves/cirmolo-synth/stato.txt";
+    const char *state = g_desc->state_path;
     int windowed = 0, max_frames = 0;
 #ifdef _WIN32
     windowed = 1;
@@ -239,6 +280,7 @@ int main(int argc, char **argv)
         else if (!strcmp(argv[i], "--window")) windowed = 1;
         else if (!strcmp(argv[i], "--frames") && i + 1 < argc) max_frames = atoi(argv[++i]);
     }
+    fprintf(stderr, "%s\n", g_desc->title);
 #ifndef _WIN32
     {   /* crea la cartella dei salvataggi */
         char dir[512];
@@ -263,7 +305,7 @@ int main(int argc, char **argv)
     SDL_DisplayMode mode;
     if (!windowed && p_SDL_GetCurrentDisplayMode(0, &mode) == 0 && mode.w > 0 && mode.h > 0) { ww = mode.w; wh = mode.h; }
     p_SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
-    SDL_Window *win = p_SDL_CreateWindow("Cirmolo Synth", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, ww, wh,
+    SDL_Window *win = p_SDL_CreateWindow(g_desc->title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, ww, wh,
                                          windowed ? 0 : SDL_WINDOW_FULLSCREEN);
     fprintf(stderr, "finestra: %dx%d%s\n", ww, wh, windowed ? "" : " a schermo intero");
     if (!win) { fprintf(stderr, "finestra: %s\n", p_SDL_GetError()); p_SDL_Quit(); return 1; }
@@ -280,7 +322,7 @@ int main(int argc, char **argv)
     p_SDL_RenderSetLogicalSize(ren, W, H);
     SDL_Texture *tex = p_SDL_CreateTexture(ren, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, W, H);
 
-    /* audio: si apre in pausa, il synth nasce con la frequenza ottenuta */
+    /* audio: si apre in pausa, l'app nasce con la frequenza ottenuta */
     SDL_AudioSpec want = { 0 }, have = { 0 };
     want.freq = 48000;
     want.format = AUDIO_F32SYS;
@@ -291,10 +333,16 @@ int main(int argc, char **argv)
     float rate = dev ? (float)have.freq : 48000.0f;
     if (!dev) fprintf(stderr, "audio non disponibile: %s\n", p_SDL_GetError());
     else fprintf(stderr, "audio: %d Hz, %d campioni per blocco\n", have.freq, have.samples);
-    Synth *synth = synth_create(rate);
-    App *app = app_create(synth, state);
-    g_synth = synth;
+    void *app = g_desc->create(rate, state);
+    if (!app) { fprintf(stderr, "l'app non e' partita\n"); p_SDL_Quit(); return 1; }
+    __atomic_store_n(&g_app, app, __ATOMIC_RELEASE);
     if (dev) p_SDL_PauseAudioDevice(dev, 0);
+
+    /* microfono: si cerca all'avvio e ogni 3 secondi finche' non c'e' (collegamento a caldo) */
+    SDL_AudioDeviceID cap = 0;
+    char cap_name[128] = "";
+    uint32_t cap_retry = 0;
+    if (g_desc->capture_status) g_desc->capture_status(app, NULL, 0.0f);
 
     for (int i = 0; i < p_SDL_NumJoysticks(); i++)
         if (p_SDL_IsGameController(i)) p_SDL_GameControllerOpen(i);
@@ -314,6 +362,7 @@ int main(int argc, char **argv)
     Canvas canvas = { px, W, H };
     Axes ax = { 0 }, pad = { 0 };
     float l2p = 0, r2p = 0, pl2p = 0, pr2p = 0;
+    (void)l2p; (void)r2p;
     uint32_t last = p_SDL_GetTicks();
     int frames = 0, running = 1;
 
@@ -321,6 +370,13 @@ int main(int argc, char **argv)
         SDL_Event e;
         while (p_SDL_PollEvent(&e)) {
             if (e.type == SDL_QUIT) { running = 0; continue; }
+            if (e.type == SDL_AUDIODEVICEADDED && e.adevice.iscapture) cap_retry = 0;
+            if (e.type == SDL_AUDIODEVICEREMOVED && e.adevice.iscapture && cap && e.adevice.which == cap) {
+                p_SDL_CloseAudioDevice(cap);
+                cap = 0;
+                fprintf(stderr, "microfono scollegato\n");
+                if (g_desc->capture_status) g_desc->capture_status(app, NULL, 0.0f);
+            }
 #ifndef _WIN32
             if ((e.type == SDL_KEYDOWN || e.type == SDL_KEYUP || e.type == SDL_CONTROLLERBUTTONDOWN ||
                  e.type == SDL_CONTROLLERBUTTONUP) && g_logged < 300) {
@@ -332,10 +388,10 @@ int main(int argc, char **argv)
             if (!sdl_input) continue;
             if ((e.type == SDL_KEYDOWN || e.type == SDL_KEYUP) && !e.key.repeat) {
                 int b = key_to_button(e.key.keysym.sym);
-                if (b >= 0) app_button(app, b, e.type == SDL_KEYDOWN);
+                if (b >= 0) g_desc->button(app, b, e.type == SDL_KEYDOWN);
             } else if (e.type == SDL_CONTROLLERBUTTONDOWN || e.type == SDL_CONTROLLERBUTTONUP) {
                 int b = pad_to_button(e.cbutton.button);
-                if (b >= 0) app_button(app, b, e.type == SDL_CONTROLLERBUTTONDOWN);
+                if (b >= 0) g_desc->button(app, b, e.type == SDL_CONTROLLERBUTTONDOWN);
             } else if (e.type == SDL_CONTROLLERAXISMOTION) {
                 float v = e.caxis.value / 32767.0f;
                 switch (e.caxis.axis) {
@@ -343,25 +399,34 @@ int main(int argc, char **argv)
                 case SDL_CONTROLLER_AXIS_LEFTY: pad.ly = v; break;
                 case SDL_CONTROLLER_AXIS_RIGHTX: pad.rx = v; break;
                 case SDL_CONTROLLER_AXIS_RIGHTY: pad.ry = v; break;
-                case SDL_CONTROLLER_AXIS_TRIGGERLEFT: pad.l2 = v; trigger(app, PAD_L2, v, &pl2p); break;
-                case SDL_CONTROLLER_AXIS_TRIGGERRIGHT: pad.r2 = v; trigger(app, PAD_R2, v, &pr2p); break;
+                case SDL_CONTROLLER_AXIS_TRIGGERLEFT: pad.l2 = v; trigger(PAD_L2, v, &pl2p); break;
+                case SDL_CONTROLLER_AXIS_TRIGGERRIGHT: pad.r2 = v; trigger(PAD_R2, v, &pr2p); break;
                 }
             }
         }
 #ifndef _WIN32
-        if (have_evdev) evdev_poll(&ev, app, &ax, &l2p, &r2p, &hx, &hy);
+        if (have_evdev) evdev_poll(&ev, &ax, &l2p, &r2p, &hx, &hy);
 #endif
         /* vince la sorgente che si sta muovendo di piu' */
         Axes use = (fabsf(pad.lx) + fabsf(pad.ly) + fabsf(pad.rx) + fabsf(pad.ry) > fabsf(ax.lx) + fabsf(ax.ly) + fabsf(ax.rx) + fabsf(ax.ry)) ? pad : ax;
-        app_axes(app, use.lx, use.ly, use.rx, use.ry, fmaxf(ax.l2, pad.l2), fmaxf(ax.r2, pad.r2));
+        g_desc->axes(app, use.lx, use.ly, use.rx, use.ry, fmaxf(ax.l2, pad.l2), fmaxf(ax.r2, pad.r2));
 
         uint32_t now = p_SDL_GetTicks();
+        if (g_desc->wants_capture && !cap && now >= cap_retry) {
+            float cr = 0.0f;
+            cap = open_capture(&cr, cap_name, sizeof(cap_name));
+            if (cap) {
+                if (g_desc->capture_status) g_desc->capture_status(app, cap_name, cr);
+                p_SDL_PauseAudioDevice(cap, 0);
+            }
+            cap_retry = now + 3000;
+        }
         float dt = (now - last) / 1000.0f;
         last = now;
-        app_update(app, dt > 0.1f ? 0.1f : dt);
-        if (app_wants_quit(app)) running = 0;
+        g_desc->update(app, dt > 0.1f ? 0.1f : dt);
+        if (g_desc->wants_quit(app)) running = 0;
 
-        app_draw(app, &canvas);
+        g_desc->draw(app, &canvas);
         p_SDL_UpdateTexture(tex, NULL, px, W * 4);
         p_SDL_RenderClear(ren);
         p_SDL_RenderCopy(ren, tex, NULL, NULL);
@@ -374,10 +439,10 @@ int main(int argc, char **argv)
         if (max_frames && frames >= max_frames) running = 0;
     }
 
+    if (cap) { p_SDL_PauseAudioDevice(cap, 1); p_SDL_CloseAudioDevice(cap); }
     if (dev) { p_SDL_PauseAudioDevice(dev, 1); p_SDL_CloseAudioDevice(dev); }
-    g_synth = NULL;
-    app_destroy(app);
-    synth_destroy(synth);
+    __atomic_store_n(&g_app, NULL, __ATOMIC_RELEASE);
+    g_desc->destroy(app);
 #ifndef _WIN32
     if (have_evdev) close(ev.fd);
 #endif

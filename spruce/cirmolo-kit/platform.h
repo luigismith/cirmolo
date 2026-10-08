@@ -1,0 +1,47 @@
+/* Cirmolo kit - strato comune delle app native di Cirmolo per la Miyoo Flip.
+ *
+ * Ogni app definisce cirmolo_app() con le sue funzioni; platform.c fa il resto: carica SDL2 a runtime
+ * (quella di PyUI), apre la finestra come PyUI, l'audio in uscita e, se richiesto, un ingresso
+ * (microfono USB), legge i tasti della Flip da evdev e disegna il framebuffer 640x480 dell'app.
+ */
+#ifndef CIRMOLO_PLATFORM_H
+#define CIRMOLO_PLATFORM_H
+
+#include "gfx.h"
+
+/* Tasti. Prefisso PAD_: i nomi BTN_* sono gia' usati da linux/input.h. */
+enum {
+    PAD_UP, PAD_DOWN, PAD_LEFT, PAD_RIGHT,
+    PAD_A, PAD_B, PAD_X, PAD_Y,
+    PAD_L1, PAD_R1, PAD_L2, PAD_R2,
+    PAD_SELECT, PAD_START, PAD_MENU,
+    PAD_L3, PAD_R3,                       /* pressione delle levette */
+    PAD_COUNT
+};
+
+typedef struct {
+    const char *title;                    /* titolo della finestra e del log */
+    const char *state_path;               /* file di stato sulla console (la cartella viene creata) */
+    int wants_capture;                    /* 1 = apre anche un ingresso audio, se c'e' */
+
+    void *(*create)(float sample_rate, const char *state_path);
+    void (*destroy)(void *app);
+    /* Thread audio: riempie frames campioni stereo interlacciati. */
+    void (*audio)(void *app, float *out, int frames);
+    /* Thread dell'ingresso: frames campioni mono. Facoltativa. */
+    void (*capture)(void *app, const float *in, int frames);
+    /* Ingresso aperto (nome del dispositivo e frequenza) o chiuso (NULL). Facoltativa. */
+    void (*capture_status)(void *app, const char *device, float sample_rate);
+
+    void (*button)(void *app, int pad, int pressed);
+    /* Levette -1..1 (su = negativo), grilletti 0..1. */
+    void (*axes)(void *app, float lx, float ly, float rx, float ry, float l2, float r2);
+    void (*update)(void *app, float dt);
+    void (*draw)(void *app, Canvas *c);
+    int  (*wants_quit)(void *app);
+} CirmoloApp;
+
+/* Definita da ogni app. */
+const CirmoloApp *cirmolo_app(void);
+
+#endif

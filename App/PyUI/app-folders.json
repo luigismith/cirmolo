@@ -1,0 +1,40 @@
+{
+    "_comment": "Cirmolo: aree tematiche del menu App. 'apps' associa il nome della cartella in App/ a un'area, 'pyui' le app interne di PyUI (per etichetta); le altre app vanno nell'area 'default'. Per l'elenco unico come in spruce: \"appFolders\": false in py-ui-config.json.",
+    "folders": [
+        { "key": "music", "label": "Music", "icon": "musica.png" },
+        { "key": "games", "label": "Games", "icon": "giochi.png" },
+        { "key": "media", "label": "Photos and reading", "icon": "media.png" },
+        { "key": "customize", "label": "Customize", "icon": "personalizza.png" },
+        { "key": "system", "label": "System", "icon": "sistema.png" },
+        { "key": "other", "label": "Other", "icon": "altro.png" }
+    ],
+    "default": "other",
+    "apps": {
+        "CirmoloSynth": "music",
+        "Diapason": "music",
+        "Songo#5": "music",
+        "RetroArch": "games",
+        "RetroArch32": "games",
+        "PPSSPP": "games",
+        "PortMaster": "games",
+        "GameNursery": "games",
+        "Moonlight": "games",
+        "RandomGame": "games",
+        "MiyooGamelist": "games",
+        "Gallery": "media",
+        "PixelReader": "media",
+        "ThemeGarden": "customize",
+        "BootLogo": "customize",
+        "FileManagement": "system",
+        "USBStorageMode": "system",
+        "spruceBackup": "system",
+        "spruceRestore": "system",
+        "-OTA": "system",
+        "-FirmwareUpdate-": "system",
+        "-Updater": "system"
+    },
+    "pyui": {
+        "Boxart Scraper": "games",
+        "Activity Tracker": "system"
+    }
+}

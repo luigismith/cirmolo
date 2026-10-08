@@ -129,9 +129,16 @@ def stringhe_display():
         for v in (t.get('descriptions') or {}).values():
             if isinstance(v, str) and v.strip():
                 task_descrizioni.add(v)
+    cartelle = {'Other'}                  # area predefinita (menus/app/app_menu.py)
+    af = os.path.join(RADICE, 'App', 'PyUI', 'app-folders.json')
+    if os.path.isfile(af):
+        with open(af, encoding='utf-8') as f:
+            for c in json.load(f).get('folders', []):
+                if isinstance(c, dict) and c.get('label'):
+                    cartelle.add(c['label'])
     return {'appLabels': sorted(etichette), 'appDescriptions': sorted(descrizioni),
             'taskLabels': sorted(task_etichette), 'taskDescriptions': sorted(task_descrizioni),
-            'pageTitles': list(PAGE_TITLES)}
+            'pageTitles': list(PAGE_TITLES), 'appFolders': sorted(cartelle)}
 
 
 # --- Messaggi degli script shell -------------------------------------------------------------

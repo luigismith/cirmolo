@@ -825,6 +825,14 @@
         "Game Switcher": "Game Switcher",
         "{system} Search": "Cerca in {system}"
     },
+    "appFolders": {
+        "Customize": "Personalizza",
+        "Games": "Giochi",
+        "Music": "Musica",
+        "Other": "Altro",
+        "Photos and reading": "Foto e letture",
+        "System": "Sistema"
+    },
     "scriptMessages": {
         "A firmware update from {brand} is ready for your device. We'll check your device's status and prepare the {brand2} update file. Once set up, the {brand3} firmware updater will install it. Press A to proceed.": "È pronto un aggiornamento del firmware {brand} per la tua console. Controlliamo lo stato della console e prepariamo il file di aggiornamento {brand2}, poi lo installerà il programma di aggiornamento {brand3}. Premi A per procedere.",
         "Applying upgrades to your system...": "Applicazione degli aggiornamenti in corso...",

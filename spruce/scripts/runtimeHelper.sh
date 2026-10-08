@@ -61,9 +61,10 @@ fetch_release_info() {
 check_for_update() {
 
     SD_CARD="/mnt/SDCARD"
-    OTA_URL="https://spruceui.github.io/OTA/spruce"
-    OTA_URL_BACKUP="https://raw.githubusercontent.com/spruceUI/spruceui.github.io/refs/heads/main/OTA/spruce"
-    OTA_URL_BACKUP_BACKUP="https://raw.githubusercontent.com/spruceUI/spruceSource/refs/heads/main/OTA/spruce"
+    # Cirmolo: stesso feed di App/-OTA/downloader.sh
+    OTA_URL="https://raw.githubusercontent.com/luigismith/cirmolo/refs/heads/cirmolo/.github/ota/cirmolo"
+    OTA_URL_BACKUP="https://cdn.jsdelivr.net/gh/luigismith/cirmolo@cirmolo/.github/ota/cirmolo"
+    OTA_URL_BACKUP_BACKUP="https://fastly.jsdelivr.net/gh/luigismith/cirmolo@cirmolo/.github/ota/cirmolo"
     # Not App/-OTA/tmp: that directory holds a pending "install later"
     # queue for the EZ Updater, and this function removes its own scratch dir.
     TMP_DIR="$SD_CARD/App/-OTA/check_tmp"
@@ -122,7 +123,7 @@ check_for_update() {
     # Try up to 3 times to get a connection
     attempts=0
     while [ $attempts -lt 3 ]; do
-        if ping -c 3 spruceui.github.io >/dev/null 2>&1; then
+        if ping -c 3 raw.githubusercontent.com >/dev/null 2>&1; then
             break
         fi
         attempts=$((attempts + 1))

@@ -6,9 +6,10 @@ IMAGE_PATH="/mnt/SDCARD/spruce/imgs/update.png"
 BAD_IMG="/mnt/SDCARD/spruce/imgs/notfound.png"
 CONFIG_FILE="/mnt/SDCARD/App/-OTA/config.json"
 
-OTA_URL="https://spruceui.github.io/OTA/spruce"
-OTA_URL_BACKUP="https://raw.githubusercontent.com/spruceUI/spruceui.github.io/refs/heads/main/OTA/spruce"
-OTA_URL_BACKUP_BACKUP="https://raw.githubusercontent.com/spruceUI/spruceSource/refs/heads/main/OTA/spruce"
+# Cirmolo: feed del fork (stesso formato di spruce), cosi' un aggiornamento non riporta la versione originale
+OTA_URL="https://raw.githubusercontent.com/luigismith/cirmolo/refs/heads/cirmolo/.github/ota/cirmolo"
+OTA_URL_BACKUP="https://cdn.jsdelivr.net/gh/luigismith/cirmolo@cirmolo/.github/ota/cirmolo"
+OTA_URL_BACKUP_BACKUP="https://fastly.jsdelivr.net/gh/luigismith/cirmolo@cirmolo/.github/ota/cirmolo"
 TMP_DIR="/mnt/SDCARD/App/-OTA/tmp"
 # Written by updater.py after a nightly install: the stable release that
 # nightly was generated from. Absent on stable installs.
@@ -17,7 +18,7 @@ NIGHTLY_BASE_FILE="/mnt/SDCARD/Saves/spruce/ota_nightly_base"
 ##### FUNCTIONS #####
 
 is_wifi_connected() {
-    if ping -c 3 -W 2 spruceui.github.io > /dev/null 2>&1; then
+    if ping -c 3 -W 2 raw.githubusercontent.com > /dev/null 2>&1; then
         log_message "GitHub ping successful; device is online."
         return 0
     else
@@ -549,7 +550,7 @@ log_message "OTA: Update queue contains $QUEUE_COUNT archive(s), ${TOTAL_SIZE} M
 ##### CONFIRM BEFORE DOWNLOADING #####
 
 if [ -z "$FINAL_INFO" ]; then
-    FINAL_INFO="https://github.com/spruceUI/spruceOS/releases/latest"
+    FINAL_INFO="https://github.com/luigismith/cirmolo/releases/latest"
 fi
 
 UPDATE_PROMPT="New version available: $FINAL_VERSION"

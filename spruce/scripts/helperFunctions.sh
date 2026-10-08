@@ -909,9 +909,23 @@ json_escape() {
         -e 's/\t/\\t/g' -e 's/\r/\\r/g' | awk 'NR>1{printf "\\n"} {printf "%s", $0} END{}'
 }
 
+# Cirmolo: messages shown by scripts follow the PyUI language. The English text is the key
+# of the "scriptMessages" section in App/PyUI/lang/<Language>.json and the parts that vary
+# are {placeholders}; see spruce/scripts/translate_message.jq. Logs stay in English.
+translate_message() {
+    [ -n "$1" ] || return 0
+    _tm_lang="$(jq -r '.language // "English"' /mnt/SDCARD/App/PyUI/py-ui-config.json 2>/dev/null)"
+    _tm_file="/mnt/SDCARD/App/PyUI/lang/${_tm_lang:-English}.json"
+    if [ "${_tm_lang:-English}" = "English" ] || [ ! -f "$_tm_file" ] ||        ! _tm_out="$(jq -j --arg t "$1" -f /mnt/SDCARD/spruce/scripts/translate_message.jq "$_tm_file" 2>/dev/null)" ||        [ -z "$_tm_out" ]; then
+        printf '%s' "$1"
+    else
+        printf '%s' "$_tm_out"
+    fi
+}
+
 log_and_display_message(){
     log_message "$1"
-    display_message "$(printf '{"cmd":"MESSAGE","args":["%s"]}' "$(json_escape "$1")")"
+    display_message "$(printf '{"cmd":"MESSAGE","args":["%s"]}' "$(json_escape "$(translate_message "$1")")")"
 }
 
 display_option_list(){
@@ -925,9 +939,9 @@ display_text_with_percentage_bar(){
     # $3 = Optional bottom text
     log_message "Display text with percentage bar $1 $2"
     if [ $# -eq 2 ]; then
-        display_message "$(printf '{"cmd":"TEXT_WITH_PERCENTAGE_BAR","args":["%s","%s"]}' "$(json_escape "$1")" "$2")"
+        display_message "$(printf '{"cmd":"TEXT_WITH_PERCENTAGE_BAR","args":["%s","%s"]}' "$(json_escape "$(translate_message "$1")")" "$2")"
     else
-        display_message "$(printf '{"cmd":"TEXT_WITH_PERCENTAGE_BAR","args":["%s","%s","%s"]}' "$(json_escape "$1")" "$2" "$(json_escape "$3")")"
+        display_message "$(printf '{"cmd":"TEXT_WITH_PERCENTAGE_BAR","args":["%s","%s","%s"]}' "$(json_escape "$(translate_message "$1")")" "$2" "$(json_escape "$(translate_message "$3")")")"
     fi
 }
 
@@ -1058,7 +1072,7 @@ display_image_and_text() {
 
     display_message "$(printf \
         '{"cmd":"IMAGE_AND_TEXT","args":["%s","%s","%s","%s","%s"]}' \
-        "$(json_escape "$img")" "$(json_escape "$text")" "$size" "$img_y" "$text_y"
+        "$(json_escape "$img")" "$(json_escape "$(translate_message "$text")")" "$size" "$img_y" "$text_y"
     )"
 }
 

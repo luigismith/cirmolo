@@ -134,10 +134,170 @@ def stringhe_display():
             'pageTitles': list(PAGE_TITLES)}
 
 
+# --- Messaggi degli script shell -------------------------------------------------------------
+# Gli script mostrano testi con display -t, log_and_display_message, display_image_and_text e
+# display_text_with_percentage_bar; spruce/scripts/translate_message.jq li traduce a schermo
+# cercando il testo inglese nella sezione scriptMessages. Le parti variabili ($VAR, ${VAR},
+# $(...)) diventano segnaposto {nome}.
+CARTELLE_SCRIPT = [os.path.join(RADICE, 'spruce', 'scripts'), APP]
+ESCLUSI_SCRIPT = ('/App/PortMaster/', '/legacy_display.sh', '/platform/device.sh')
+CHIAMATE = ('log_and_display_message', 'display_image_and_text', 'display_text_with_percentage_bar', 'display',
+            'flip_abort')
+_RX_CHIAMATA = re.compile(r'(?<![\w$/.-])(%s)(?=[ \t])' % '|'.join(CHIAMATE))
+_PRIMA_OK = ('then', 'do', 'else', 'if', 'elif', '!', 'while', 'until')
+
+
+def _fine_espansione(s, i):
+    """s[i] == '$': indice dopo l'espansione e il nome del segnaposto."""
+    if s.startswith('$((', i) or s.startswith('$(', i):
+        prof, j = 0, i + 1
+        while j < len(s):
+            if s[j] == '(':
+                prof += 1
+            elif s[j] == ')':
+                prof -= 1
+                if prof == 0:
+                    return j + 1, 'value'
+            j += 1
+        return len(s), 'value'
+    if s.startswith('${', i):
+        j = s.find('}', i)
+        j = len(s) - 1 if j < 0 else j
+        nome = re.match(r'[#!]?([A-Za-z_][A-Za-z0-9_]*|[0-9]+)', s[i + 2:j])
+        return j + 1, (nome.group(1) if nome else 'value')
+    m = re.match(r'\$([A-Za-z_][A-Za-z0-9_]*|[0-9?#@*$!-])', s[i:])
+    if m:
+        return i + len(m.group(0)), m.group(1)
+    return i + 1, None
+
+
+def _parole(s, i):
+    """Parole di un comando shell a partire da s[i], fino a fine riga/; | & non quotati.
+    Ogni parola e' una lista di pezzi ('lett', testo) o ('var', nome)."""
+    parole, pezzi, j, in_parola = [], [], i, False
+
+    def chiudi():
+        nonlocal pezzi, in_parola
+        if in_parola:
+            uniti = []
+            for tipo, val in pezzi:   # unisce i pezzi di testo consecutivi
+                if tipo == 'lett' and uniti and uniti[-1][0] == 'lett':
+                    uniti[-1] = ('lett', uniti[-1][1] + val)
+                else:
+                    uniti.append((tipo, val))
+            parole.append(uniti)
+        pezzi, in_parola = [], False
+
+    while j < len(s):
+        c = s[j]
+        if c == '\\' and s.startswith('\\\n', j):
+            j += 2
+            continue
+        if c in ' \t':
+            chiudi(); j += 1; continue
+        if c in '\n;|&)' or (c == '#' and not in_parola):
+            break
+        in_parola = True
+        if c == "'":
+            k = s.find("'", j + 1)
+            k = len(s) if k < 0 else k
+            pezzi.append(('lett', s[j + 1:k])); j = k + 1
+        elif c == '"':
+            j += 1
+            while j < len(s) and s[j] != '"':
+                if s[j] == '\\' and j + 1 < len(s) and s[j + 1] in '$`"\\\n':
+                    if s[j + 1] != '\n':
+                        pezzi.append(('lett', s[j + 1]))
+                    j += 2
+                elif s[j] == '$':
+                    k, nome = _fine_espansione(s, j)
+                    pezzi.append(('var', nome) if nome else ('lett', '$')); j = k
+                elif s[j] == '`':
+                    k = s.find('`', j + 1)
+                    pezzi.append(('var', 'value')); j = (len(s) if k < 0 else k) + 1
+                else:
+                    pezzi.append(('lett', s[j])); j += 1
+            j += 1
+        elif c == '$':
+            k, nome = _fine_espansione(s, j)
+            pezzi.append(('var', nome) if nome else ('lett', '$')); j = k
+        else:
+            pezzi.append(('lett', '\\' + s[j + 1] if c == '\\' and j + 1 < len(s) else c))
+            j += 2 if c == '\\' else 1
+    chiudi()
+    return parole
+
+
+def _modello(pezzi):
+    """Testo inglese con {segnaposto}; None se e' tutto variabile o contiene graffe vere."""
+    out, usati, lettere = [], {}, ''
+    for tipo, val in pezzi:
+        if tipo == 'lett':
+            if '{' in val or '}' in val:
+                return None
+            out.append(val); lettere += val
+        else:
+            nome = re.sub(r'[^a-z0-9_]', '', val.lower()) or 'value'
+            if nome[0].isdigit() or nome in ('', '_'):
+                nome = 'arg' + nome
+            usati[nome] = usati.get(nome, 0) + 1
+            out.append('{%s}' % (nome if usati[nome] == 1 else '%s%d' % (nome, usati[nome])))
+    if not re.search('[A-Za-z]{2}', lettere):
+        return None
+    return ''.join(out)
+
+
+def stringhe_script():
+    """{testo inglese: [file]} per i messaggi che gli script mostrano a schermo."""
+    trovate = {}
+    for base in CARTELLE_SCRIPT:
+        for cartella, _, files in os.walk(base):
+            for nome in files:
+                if not nome.endswith('.sh'):
+                    continue
+                percorso = os.path.join(cartella, nome)
+                rel = os.path.relpath(percorso, RADICE).replace('\\', '/')
+                if any(x in '/' + rel for x in ESCLUSI_SCRIPT):
+                    continue
+                with open(percorso, encoding='utf-8', errors='replace') as f:
+                    s = f.read()
+                for m in _RX_CHIAMATA.finditer(s):
+                    riga = s[s.rfind('\n', 0, m.start()) + 1:m.start()]
+                    prima = riga.strip()
+                    if prima.startswith('#') or re.match(r'\s*%s\s*\(\)' % m.group(1), s[m.start():m.start() + 60]):
+                        continue
+                    if prima and not (prima[-1] in ';|&({' or prima.split()[-1] in _PRIMA_OK):
+                        continue
+                    arg = _parole(s, m.end())
+                    testi = []
+                    if m.group(1) == 'display':
+                        testi = [arg[k + 1] for k, p in enumerate(arg[:-1]) if p in ([('lett', '-t')], [('lett', '--text')])]
+                    elif m.group(1) == 'log_and_display_message':
+                        testi = arg[:1]
+                    elif m.group(1) == 'display_text_with_percentage_bar':
+                        testi = arg[:1] + arg[2:3]
+                    elif m.group(1) == 'flip_abort':          # App/BootLogo/install_logo.sh: $2 va a schermo
+                        testi = arg[1:2]
+                    elif m.group(1) == 'display_image_and_text':
+                        testi = arg[1:2] if len(arg) == 2 else arg[3:4]
+                    for p in testi:
+                        t = _modello(p)
+                        if t:
+                            trovate.setdefault(t, [])
+                            if rel not in trovate[t]:
+                                trovate[t].append(rel)
+    return trovate
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--out')
+    ap.add_argument('--script', action='store_true', help='elenca i messaggi degli script shell')
     a = ap.parse_args()
+    if a.script:
+        for t, files in sorted(stringhe_script().items()):
+            print('%-90s %s' % (json.dumps(t, ensure_ascii=False), ', '.join(files)))
+        return
     codice = chiavi_dal_codice()
     with open(os.path.join(LANG, 'English.json'), encoding='utf-8') as f:
         en = json.load(f)

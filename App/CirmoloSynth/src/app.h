@@ -10,6 +10,7 @@ enum {
     PAD_A, PAD_B, PAD_X, PAD_Y,
     PAD_L1, PAD_R1, PAD_L2, PAD_R2,
     PAD_SELECT, PAD_START, PAD_MENU,
+    PAD_L3, PAD_R3,               /* pressione delle levette */
     PAD_COUNT
 };
 

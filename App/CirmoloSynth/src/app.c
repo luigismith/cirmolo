@@ -3,9 +3,17 @@
 
 #include <math.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef _WIN32
+#include <direct.h>
+#define MKDIR(p) _mkdir(p)
+#else
+#include <sys/stat.h>
+#define MKDIR(p) mkdir(p, 0755)
+#endif
 
 /* ------------------------------------------------------------------ palette */
 #define C_BG_TOP   RGB(13, 16, 22)
@@ -98,9 +106,11 @@ static const Preset PRESETS[] = {
       { .delay_steps = 2, .delay_feedback = 0.25f, .delay_mix = 0.15f, .reverb_mix = 0.05f, .reverb_size = 0.4f, .drums_volume = 0.8f } },
 };
 #define PRESET_COUNT ((int)(sizeof(PRESETS) / sizeof(PRESETS[0])))
+#define USER_PRESETS 8
+#define ALL_PRESETS (PRESET_COUNT + USER_PRESETS)
 
 /* ------------------------------------------------------------------ parametri della pagina Suono */
-typedef enum { K_HEADER, K_LIN, K_EXP, K_WAVE, K_BOOL, K_PRESET, K_ROOT, K_SCALE, K_TEMPO, K_SWING } Kind;
+typedef enum { K_HEADER, K_LIN, K_EXP, K_WAVE, K_BOOL, K_PRESET, K_ROOT, K_SCALE, K_TEMPO, K_SWING, K_ARP, K_ARPRATE, K_INT } Kind;
 typedef enum { T_PATCH, T_FX } Target;
 typedef enum { F_PCT, F_SEC, F_HZ, F_CENT, F_SEMI, F_BIPCT, F_STEPS, F_MIX, F_CUTOFF } Fmt;
 typedef struct { const char *name; Kind kind; Target target; size_t off; float min, max, step; Fmt fmt; } Param;
@@ -143,6 +153,10 @@ static const Param PARAMS[] = {
     { "Monofonico", K_BOOL, PP(mono) },
     { "Glide", K_LIN, PP(glide), 0, 1, 0.02f, F_SEC },
     { "Saturazione", K_LIN, PP(drive), 0, 1, 0.05f, F_PCT },
+    { "Arpeggiatore", K_HEADER },
+    { "Arpeggio", K_ARP, PP(arp_mode) },
+    { "Velocità arpeggio", K_ARPRATE, PP(arp_rate) },
+    { "Ottave arpeggio", K_INT, PP(arp_octaves), 1, 3, 1 },
     { "Effetti", K_HEADER },
     { "Delay", K_LIN, PF(delay_steps), 1, 8, 1, F_STEPS },
     { "Ritorno del delay", K_LIN, PF(delay_feedback), 0, 0.9f, 0.05f, F_PCT },
@@ -156,6 +170,9 @@ static const Param PARAMS[] = {
 };
 #define PARAM_COUNT ((int)(sizeof(PARAMS) / sizeof(PARAMS[0])))
 static const char *WAVE_NAMES[WAVE_COUNT] = { "Dente di sega", "Quadra", "Triangolo", "Sinusoide" };
+static const char *ARP_NAMES[ARP_COUNT] = { "Spento", "Su", "Giù", "Su e giù", "Casuale" };
+static const float ARP_RATES[4] = { 0.5f, 1.0f, 2.0f, 4.0f };
+static const char *ARP_RATE_NAMES[4] = { "1/32", "1/16", "1/8", "1/4" };
 
 /* Campi salvati nel file di stato. */
 typedef struct { const char *key; Target target; size_t off; int is_int; } Field;
@@ -170,6 +187,7 @@ static const Field FIELDS[] = {
     { "mono", PP(mono), 1 }, { "glide", PP(glide), 0 }, { "drive", PP(drive), 0 }, { "volume", PP(volume), 0 },
     { "delay_steps", PF(delay_steps), 0 }, { "delay_feedback", PF(delay_feedback), 0 }, { "delay_mix", PF(delay_mix), 0 },
     { "reverb_mix", PF(reverb_mix), 0 }, { "reverb_size", PF(reverb_size), 0 }, { "drums_volume", PF(drums_volume), 0 },
+    { "arp_mode", PP(arp_mode), 1 }, { "arp_rate", PP(arp_rate), 0 }, { "arp_octaves", PP(arp_octaves), 1 },
 };
 #define FIELD_COUNT ((int)(sizeof(FIELDS) / sizeof(FIELDS[0])))
 
@@ -192,6 +210,18 @@ struct App {
     float time;
     char last_label[48];
     float note_glow;
+    /* preset dell'utente */
+    SynthPatch user_p[USER_PRESETS];
+    FxParams user_fx[USER_PRESETS];
+    int user_used[USER_PRESETS];
+    char dir[512];
+    /* registrazione */
+    FILE *rec_f;
+    uint32_t rec_frames;
+    char rec_name[64];
+    /* avvisi */
+    char toast[96];
+    float toast_t;
     uint32_t drum_seen[DRUM_COUNT];
     float drum_glow[DRUM_COUNT];
     float scope[1200];
@@ -208,21 +238,126 @@ static void apply_scale(App *a)
     synth_set_scale(a->s, 48 + a->root, sc->iv, sc->n);      /* la riga melodica del sequencer parte dal Do3 */
 }
 
+static void toast(App *a, const char *msg)
+{
+    snprintf(a->toast, sizeof(a->toast), "%s", msg);
+    a->toast_t = 2.5f;
+}
+
 void app_load_preset(App *a, int i)
 {
-    if (i < 0 || i >= PRESET_COUNT) return;
+    if (i < 0 || i >= ALL_PRESETS) return;
+    if (i >= PRESET_COUNT && !a->user_used[i - PRESET_COUNT]) return;
+    synth_all_notes_off(a->s);
     a->preset = i;
     a->modified = 0;
-    *synth_patch(a->s) = PRESETS[i].p;
-    *synth_fx(a->s) = PRESETS[i].fx;
+    if (i < PRESET_COUNT) {
+        *synth_patch(a->s) = PRESETS[i].p;
+        *synth_fx(a->s) = PRESETS[i].fx;
+    } else {
+        *synth_patch(a->s) = a->user_p[i - PRESET_COUNT];
+        *synth_fx(a->s) = a->user_fx[i - PRESET_COUNT];
+    }
+    SynthPatch *p = synth_patch(a->s);
+    if (p->arp_rate <= 0.0f) p->arp_rate = 1.0f;
+    if (p->arp_octaves < 1) p->arp_octaves = 1;
+}
+
+static void preset_name(App *a, int i, char *out, size_t n)
+{
+    if (i < PRESET_COUNT) snprintf(out, n, "%s", PRESETS[i].name);
+    else snprintf(out, n, "Mio %d", i - PRESET_COUNT + 1);
 }
 
 int app_preset_count(void) { return PRESET_COUNT; }
 const char *app_preset_name(int i) { return (i >= 0 && i < PRESET_COUNT) ? PRESETS[i].name : ""; }
 
+static void write_fields(FILE *f, const SynthPatch *p, const FxParams *fx)
+{
+    for (int i = 0; i < FIELD_COUNT; i++) {
+        const char *base = FIELDS[i].target == T_PATCH ? (const char *)p : (const char *)fx;
+        const void *ptr = base + FIELDS[i].off;
+        if (FIELDS[i].is_int) fprintf(f, "%s=%d\n", FIELDS[i].key, *(const int *)ptr);
+        else fprintf(f, "%s=%g\n", FIELDS[i].key, *(const float *)ptr);
+    }
+}
+
+static int read_field(SynthPatch *p, FxParams *fx, const char *k, const char *v)
+{
+    for (int i = 0; i < FIELD_COUNT; i++)
+        if (!strcmp(k, FIELDS[i].key)) {
+            char *ptr = (FIELDS[i].target == T_PATCH ? (char *)p : (char *)fx) + FIELDS[i].off;
+            if (FIELDS[i].is_int) *(int *)ptr = atoi(v);
+            else *(float *)ptr = (float)atof(v);
+            return 1;
+        }
+    return 0;
+}
+
+static void user_presets_path(App *a, char *out, size_t n) { snprintf(out, n, "%s/preset-utente.txt", a->dir); }
+
+static void save_user_presets(App *a)
+{
+    if (!a->dir[0]) return;
+    char path[600], tmp[620];
+    user_presets_path(a, path, sizeof(path));
+    snprintf(tmp, sizeof(tmp), "%s.tmp", path);
+    FILE *f = fopen(tmp, "w");
+    if (!f) return;
+    fprintf(f, "# Cirmolo Synth: preset dell'utente\n");
+    for (int i = 0; i < USER_PRESETS; i++) {
+        if (!a->user_used[i]) continue;
+        fprintf(f, "[%d]\n", i + 1);
+        write_fields(f, &a->user_p[i], &a->user_fx[i]);
+    }
+    fclose(f);
+    remove(path);
+    rename(tmp, path);
+}
+
+static void load_user_presets(App *a)
+{
+    char path[600], line[256];
+    user_presets_path(a, path, sizeof(path));
+    FILE *f = fopen(path, "r");
+    if (!f) return;
+    int cur = -1;
+    while (fgets(line, sizeof(line), f)) {
+        line[strcspn(line, "\r\n")] = 0;
+        if (line[0] == '[') {
+            int n = atoi(line + 1);
+            cur = (n >= 1 && n <= USER_PRESETS) ? n - 1 : -1;
+            if (cur >= 0) { a->user_used[cur] = 1; a->user_p[cur] = PRESETS[0].p; a->user_fx[cur] = PRESETS[0].fx; }
+            continue;
+        }
+        char *eq = strchr(line, '=');
+        if (!eq || cur < 0) continue;
+        *eq = 0;
+        read_field(&a->user_p[cur], &a->user_fx[cur], line, eq + 1);
+    }
+    fclose(f);
+}
+
+static void save_current_as_user(App *a)
+{
+    int slot = -1;
+    if (a->preset >= PRESET_COUNT) slot = a->preset - PRESET_COUNT;
+    for (int i = 0; i < USER_PRESETS && slot < 0; i++) if (!a->user_used[i]) slot = i;
+    if (slot < 0) { toast(a, "Preset tuoi pieni: carica uno dei tuoi e salva per sostituirlo"); return; }
+    a->user_p[slot] = *synth_patch(a->s);
+    a->user_fx[slot] = *synth_fx(a->s);
+    a->user_used[slot] = 1;
+    a->preset = PRESET_COUNT + slot;
+    a->modified = 0;
+    save_user_presets(a);
+    char t[64];
+    snprintf(t, sizeof(t), "Salvato come Mio %d", slot + 1);
+    toast(a, t);
+}
+
 static void default_pattern(App *a)
 {
-    Pattern *p = synth_pattern(a->s);
+    Pattern *p = synth_pattern_at(a->s, 0);
     memset(p, 0, sizeof(*p));
     for (int i = 0; i < SY_STEPS; i++) p->note[i] = -1;
     int kick[] = { 0, 4, 8, 10, 12 }, snare[] = { 4, 12 }, ohat[] = { 14 };
@@ -245,22 +380,21 @@ void app_save(App *a)
     if (!f) return;
     fprintf(f, "# Cirmolo Synth: stato salvato automaticamente\nversion=1\npreset=%d\nmodified=%d\nroot=%d\nscale=%d\noctave=%d\ntempo=%g\nswing=%g\n",
             a->preset, a->modified, a->root, a->scale, a->octave, synth_tempo(a->s), synth_swing(a->s));
-    for (int i = 0; i < FIELD_COUNT; i++) {
-        void *ptr = field_ptr(a, FIELDS[i].target, FIELDS[i].off);
-        if (FIELDS[i].is_int) fprintf(f, "%s=%d\n", FIELDS[i].key, *(int *)ptr);
-        else fprintf(f, "%s=%g\n", FIELDS[i].key, *(float *)ptr);
-    }
-    Pattern *p = synth_pattern(a->s);
-    for (int d = 0; d < DRUM_COUNT; d++) {
-        fprintf(f, "drum%d=", d);
-        for (int i = 0; i < SY_STEPS; i++) fputc(".xX"[p->drum[d][i] % 3], f);
+    write_fields(f, synth_patch(a->s), synth_fx(a->s));
+    fprintf(f, "pattern=%d\nchain=%u\n", synth_selected_pattern(a->s), synth_chain(a->s));
+    for (int pi = 0; pi < SY_PATTERNS; pi++) {
+        Pattern *p = synth_pattern_at(a->s, pi);
+        for (int d = 0; d < DRUM_COUNT; d++) {
+            fprintf(f, "p%d.drum%d=", pi, d);
+            for (int i = 0; i < SY_STEPS; i++) fputc(".xX"[p->drum[d][i] % 3], f);
+            fputc('\n', f);
+        }
+        fprintf(f, "p%d.notes=", pi);
+        for (int i = 0; i < SY_STEPS; i++) fprintf(f, "%d%s", p->note[i], i < SY_STEPS - 1 ? "," : "\n");
+        fprintf(f, "p%d.accents=", pi);
+        for (int i = 0; i < SY_STEPS; i++) fputc(p->accent[i] ? 'X' : '.', f);
         fputc('\n', f);
     }
-    fprintf(f, "notes=");
-    for (int i = 0; i < SY_STEPS; i++) fprintf(f, "%d%s", p->note[i], i < SY_STEPS - 1 ? "," : "\n");
-    fprintf(f, "accents=");
-    for (int i = 0; i < SY_STEPS; i++) fputc(p->accent[i] ? 'X' : '.', f);
-    fputc('\n', f);
     fclose(f);
     remove(a->path);
     rename(tmp, a->path);
@@ -271,14 +405,17 @@ static int load_state(App *a)
     FILE *f = fopen(a->path, "r");
     if (!f) return 0;
     char line[256];
-    Pattern *p = synth_pattern(a->s);
     while (fgets(line, sizeof(line), f)) {
         char *eq = strchr(line, '=');
         if (!eq || line[0] == '#') continue;
         *eq = 0;
         char *k = line, *v = eq + 1;
         v[strcspn(v, "\r\n")] = 0;
-        if (!strcmp(k, "preset")) { int i = atoi(v); if (i >= 0 && i < PRESET_COUNT) a->preset = i; }
+        Pattern *p = synth_pattern_at(a->s, 0);           /* le chiavi senza prefisso sono del formato vecchio: pattern A */
+        if (k[0] == 'p' && k[1] >= '0' && k[1] <= '3' && k[2] == '.') { p = synth_pattern_at(a->s, k[1] - '0'); k += 3; }
+        if (!strcmp(k, "preset")) { int i = atoi(v); if (i >= 0 && i < ALL_PRESETS) a->preset = i; }
+        else if (!strcmp(k, "pattern")) synth_select_pattern(a->s, atoi(v));
+        else if (!strcmp(k, "chain")) synth_set_chain(a->s, (unsigned)atoi(v));
         else if (!strcmp(k, "modified")) a->modified = atoi(v);
         else if (!strcmp(k, "root")) a->root = ((atoi(v) % 12) + 12) % 12;
         else if (!strcmp(k, "scale")) { int i = atoi(v); if (i >= 0 && i < SCALE_COUNT) a->scale = i; }
@@ -300,12 +437,7 @@ static int load_state(App *a)
         } else if (!strcmp(k, "accents")) {
             for (int i = 0; i < SY_STEPS && v[i]; i++) p->accent[i] = v[i] == 'X';
         } else {
-            for (int i = 0; i < FIELD_COUNT; i++)
-                if (!strcmp(k, FIELDS[i].key)) {
-                    void *ptr = field_ptr(a, FIELDS[i].target, FIELDS[i].off);
-                    if (FIELDS[i].is_int) *(int *)ptr = atoi(v);
-                    else *(float *)ptr = (float)atof(v);
-                }
+            read_field(synth_patch(a->s), synth_fx(a->s), k, v);
         }
     }
     fclose(f);
@@ -319,6 +451,13 @@ App *app_create(Synth *s, const char *state_path)
     if (!a) return NULL;
     a->s = s;
     if (state_path) snprintf(a->path, sizeof(a->path), "%s", state_path);
+    snprintf(a->dir, sizeof(a->dir), "%s", a->path);
+    {
+        char *slash = strrchr(a->dir, '/');
+        char *bs = strrchr(a->dir, '\\');
+        if (bs && (!slash || bs > slash)) slash = bs;
+        if (slash) *slash = 0; else snprintf(a->dir, sizeof(a->dir), ".");
+    }
     a->octave = 4;
     a->sel = 1;
     a->cy = 0;
@@ -326,6 +465,7 @@ App *app_create(Synth *s, const char *state_path)
     default_pattern(a);
     synth_set_tempo(s, 110.0f);
     synth_set_swing(s, 0.1f);
+    if (a->path[0]) load_user_presets(a);
     if (a->path[0]) {
         /* il preset prima, poi i valori salvati sopra */
         FILE *f = fopen(a->path, "r");
@@ -339,12 +479,71 @@ App *app_create(Synth *s, const char *state_path)
     }
     apply_scale(a);
     snprintf(a->last_label, sizeof(a->last_label), "%s", "");
+    SynthPatch *p = synth_patch(s);
+    if (p->arp_rate <= 0.0f) p->arp_rate = 1.0f;
+    if (p->arp_octaves < 1) p->arp_octaves = 1;
     return a;
+}
+
+static void wav_header(FILE *f, uint32_t frames, int rate)
+{
+    uint32_t data = frames * 4, riff = 36 + data, fmt = 16, sr = (uint32_t)rate, br = (uint32_t)rate * 4;
+    uint16_t pcm = 1, ch = 2, ba = 4, bits = 16;
+    fseek(f, 0, SEEK_SET);
+    fwrite("RIFF", 1, 4, f); fwrite(&riff, 4, 1, f); fwrite("WAVEfmt ", 1, 8, f);
+    fwrite(&fmt, 4, 1, f); fwrite(&pcm, 2, 1, f); fwrite(&ch, 2, 1, f); fwrite(&sr, 4, 1, f);
+    fwrite(&br, 4, 1, f); fwrite(&ba, 2, 1, f); fwrite(&bits, 2, 1, f);
+    fwrite("data", 1, 4, f); fwrite(&data, 4, 1, f);
+}
+
+static void rec_drain(App *a)
+{
+    static int16_t buf[2 * 4096];
+    int n;
+    while (a->rec_f && (n = synth_rec_read(a->s, buf, 4096)) > 0) {
+        fwrite(buf, sizeof(int16_t) * 2, (size_t)n, a->rec_f);
+        a->rec_frames += (uint32_t)n;
+    }
+}
+
+static void rec_stop(App *a)
+{
+    if (!a->rec_f) return;
+    synth_rec_stop(a->s);
+    rec_drain(a);
+    wav_header(a->rec_f, a->rec_frames, (int)synth_sample_rate(a->s));
+    fclose(a->rec_f);
+    a->rec_f = NULL;
+    char t[96];
+    snprintf(t, sizeof(t), "Registrato %s (%u s)", a->rec_name, a->rec_frames / (uint32_t)synth_sample_rate(a->s));
+    toast(a, t);
+}
+
+static void rec_start(App *a)
+{
+    char dir[600], path[700];
+    snprintf(dir, sizeof(dir), "%s/registrazioni", a->dir);
+    MKDIR(a->dir);
+    MKDIR(dir);
+    for (int i = 1; i < 1000; i++) {
+        snprintf(a->rec_name, sizeof(a->rec_name), "registrazione-%03d.wav", i);
+        snprintf(path, sizeof(path), "%s/%s", dir, a->rec_name);
+        FILE *t = fopen(path, "rb");
+        if (!t) break;
+        fclose(t);
+    }
+    a->rec_f = fopen(path, "wb");
+    if (!a->rec_f) { toast(a, "Impossibile creare il file della registrazione"); return; }
+    a->rec_frames = 0;
+    wav_header(a->rec_f, 0, (int)synth_sample_rate(a->s));
+    synth_rec_start(a->s);
+    toast(a, "Registrazione avviata: R3 per fermare");
 }
 
 void app_destroy(App *a)
 {
     if (!a) return;
+    rec_stop(a);
     synth_all_notes_off(a->s);
     app_save(a);
     free(a);
@@ -433,7 +632,16 @@ static void release_sustain(App *a)
 static void param_text(App *a, const Param *pr, char *out, size_t n)
 {
     switch (pr->kind) {
-    case K_PRESET: snprintf(out, n, "%s%s", PRESETS[a->preset].name, a->modified ? " *" : ""); return;
+    case K_PRESET: { char nm[32]; preset_name(a, a->preset, nm, sizeof(nm)); snprintf(out, n, "%s%s", nm, a->modified ? " *" : ""); return; }
+    case K_ARP: { int m = *(int *)field_ptr(a, pr->target, pr->off); snprintf(out, n, "%s", ARP_NAMES[(m % ARP_COUNT + ARP_COUNT) % ARP_COUNT]); return; }
+    case K_ARPRATE: {
+        float r = *(float *)field_ptr(a, pr->target, pr->off);
+        int k = 1;
+        for (int i = 0; i < 4; i++) if (fabsf(ARP_RATES[i] - r) < 0.01f) k = i;
+        snprintf(out, n, "%s", ARP_RATE_NAMES[k]);
+        return;
+    }
+    case K_INT: snprintf(out, n, "%d", *(int *)field_ptr(a, pr->target, pr->off)); return;
     case K_ROOT: snprintf(out, n, "%s", NOTE_NAMES[a->root]); return;
     case K_SCALE: snprintf(out, n, "%s", SCALES[a->scale].name); return;
     case K_TEMPO: snprintf(out, n, "%d BPM", (int)lrintf(synth_tempo(a->s))); return;
@@ -482,7 +690,32 @@ static void param_adjust(App *a, const Param *pr, int dir, int coarse)
 {
     switch (pr->kind) {
     case K_HEADER: return;
-    case K_PRESET: app_load_preset(a, (a->preset + dir + PRESET_COUNT) % PRESET_COUNT); return;
+    case K_PRESET: {
+        int i = a->preset;
+        for (int k = 0; k < ALL_PRESETS; k++) {          /* salta i preset tuoi ancora vuoti */
+            i = (i + dir + ALL_PRESETS) % ALL_PRESETS;
+            if (i < PRESET_COUNT || a->user_used[i - PRESET_COUNT]) break;
+        }
+        app_load_preset(a, i);
+        return;
+    }
+    case K_ARP: { int *m = field_ptr(a, pr->target, pr->off); *m = (*m + dir + ARP_COUNT) % ARP_COUNT; a->modified = 1; synth_all_notes_off(a->s); return; }
+    case K_ARPRATE: {
+        float *r = field_ptr(a, pr->target, pr->off);
+        int k = 1;
+        for (int i = 0; i < 4; i++) if (fabsf(ARP_RATES[i] - *r) < 0.01f) k = i;
+        k = k + dir < 0 ? 0 : (k + dir > 3 ? 3 : k + dir);
+        *r = ARP_RATES[k];
+        a->modified = 1;
+        return;
+    }
+    case K_INT: {
+        int *v = field_ptr(a, pr->target, pr->off);
+        int nv = *v + dir;
+        *v = nv < (int)pr->min ? (int)pr->min : (nv > (int)pr->max ? (int)pr->max : nv);
+        a->modified = 1;
+        return;
+    }
     case K_ROOT: a->root = (a->root + dir + 12) % 12; apply_scale(a); return;
     case K_SCALE: a->scale = (a->scale + dir + SCALE_COUNT) % SCALE_COUNT; apply_scale(a); return;
     case K_TEMPO: synth_set_tempo(a->s, synth_tempo(a->s) + dir * (coarse ? 10.0f : 1.0f)); return;
@@ -522,15 +755,38 @@ void app_set_screen(App *a, int screen)
     a->screen = (screen % SCREEN_COUNT + SCREEN_COUNT) % SCREEN_COUNT;
 }
 
+static void pattern_row_button(App *a, int b)
+{
+    int sel = synth_selected_pattern(a->s);
+    char t[64];
+    switch (b) {
+    case PAD_LEFT: synth_select_pattern(a->s, sel - 1); break;
+    case PAD_RIGHT: synth_select_pattern(a->s, sel + 1); break;
+    case PAD_A:
+        synth_set_chain(a->s, synth_chain(a->s) ^ (1u << sel));
+        snprintf(t, sizeof(t), "Pattern %c %s la catena", 'A' + sel, (synth_chain(a->s) >> sel) & 1 ? "entra nella" : "esce dalla");
+        toast(a, t);
+        break;
+    case PAD_B: {
+        int dst = (sel + 1) % SY_PATTERNS;
+        *synth_pattern_at(a->s, dst) = *synth_pattern_at(a->s, sel);
+        snprintf(t, sizeof(t), "Pattern %c copiato in %c", 'A' + sel, 'A' + dst);
+        toast(a, t);
+        break;
+    }
+    }
+}
+
 static void seq_button(App *a, int b)
 {
     Pattern *p = synth_pattern(a->s);
     int x = a->cx, row = a->cy;
+    if (b == PAD_UP) { a->cy = a->cy <= -1 ? DRUM_COUNT : a->cy - 1; return; }
+    if (b == PAD_DOWN) { a->cy = a->cy >= DRUM_COUNT ? -1 : a->cy + 1; return; }
+    if (row < 0 && (b == PAD_LEFT || b == PAD_RIGHT || b == PAD_A || b == PAD_B)) { pattern_row_button(a, b); return; }
     switch (b) {
     case PAD_LEFT: a->cx = (a->cx + SY_STEPS - 1) % SY_STEPS; break;
     case PAD_RIGHT: a->cx = (a->cx + 1) % SY_STEPS; break;
-    case PAD_UP: a->cy = (a->cy + DRUM_COUNT) % (DRUM_COUNT + 1); break;
-    case PAD_DOWN: a->cy = (a->cy + 1) % (DRUM_COUNT + 1); break;
     case PAD_A:
         if (row < DRUM_COUNT) {
             p->drum[row][x] = p->drum[row][x] ? 0 : 1;
@@ -575,6 +831,7 @@ static void sound_button(App *a, int b)
     case PAD_RIGHT: param_adjust(a, &PARAMS[a->sel], 1, a->down[PAD_L1] || a->down[PAD_R1]); break;
     case PAD_A: if (!a->audition) { a->audition = play_midi(a, 0); synth_note_on(a->s, a->audition, 0.85f); } break;
     case PAD_B: app_set_screen(a, SCREEN_PLAY); break;
+    case PAD_Y: save_current_as_user(a); break;
     }
 }
 
@@ -595,6 +852,8 @@ static void handle_press(App *a, int b)
     if (b == PAD_MENU) { a->quit_dialog = 1; release_all(a); return; }
     if (b == PAD_SELECT) { app_set_screen(a, a->screen + 1); return; }
     if (b == PAD_START) { synth_play(a->s, !synth_playing(a->s)); return; }
+    if (b == PAD_R3) { if (a->rec_f) rec_stop(a); else rec_start(a); return; }
+    if (b == PAD_L3) { release_all(a); toast(a, "Tutte le note spente"); return; }
     if (a->screen == SCREEN_PLAY) {
         for (int i = 0; i < 8; i++) if (NOTE_BTNS[i] == b) { press_note(a, i); return; }
         if (b == PAD_L1 && a->octave > 1) a->octave--;
@@ -646,6 +905,8 @@ void app_update(App *a, float dt)
 {
     a->time += dt;
     a->note_glow = fmaxf(0.0f, a->note_glow - dt * 1.5f);
+    a->toast_t = fmaxf(0.0f, a->toast_t - dt);
+    rec_drain(a);
     for (int d = 0; d < DRUM_COUNT; d++) {
         uint32_t f = synth_drum_flash(a->s, d);
         if (f != a->drum_seen[d]) { a->drum_seen[d] = f; a->drum_glow[d] = 1.0f; }
@@ -776,7 +1037,9 @@ static void draw_play(App *a, Canvas *c)
     uint32_t col = gfx_mix(C_TEXT, C_VIOLET, a->note_glow * 0.8f);
     gfx_text(c, a->down[PAD_R2] || gfx_text_width(FONT_BIG, lbl) > 200 ? FONT_TITLE : FONT_BIG, 32, 140, lbl, col);
     char t[96];
-    snprintf(t, sizeof(t), "%s%s", PRESETS[a->preset].name, a->modified ? " *" : "");
+    char pn[32];
+    preset_name(a, a->preset, pn, sizeof(pn));
+    snprintf(t, sizeof(t), "%s%s", pn, a->modified ? " *" : "");
     gfx_text(c, FONT_SMALL, 32, 176, "Preset", C_MUTED);
     gfx_text(c, FONT_BOLD, 100, 176, t, C_TEXT);
     snprintf(t, sizeof(t), "%s %s", NOTE_NAMES[a->root], SCALES[a->scale].name);
@@ -785,9 +1048,13 @@ static void draw_play(App *a, Canvas *c)
     snprintf(t, sizeof(t), "%d", a->octave);
     gfx_text(c, FONT_SMALL, 32, 228, "Ottava", C_MUTED);
     gfx_text(c, FONT_BOLD, 100, 228, t, C_TEXT);
-    const char *mode = a->down[PAD_R2] ? "Accordi" : (a->down[PAD_L2] ? "Tenuto" : "Note");
+    int arp = synth_patch(a->s)->arp_mode;
+    char mode_buf[48];
+    if (arp > ARP_OFF && arp < ARP_COUNT) snprintf(mode_buf, sizeof(mode_buf), "Arpeggio %s%s", ARP_NAMES[arp], a->down[PAD_R2] ? " + accordi" : "");
+    else snprintf(mode_buf, sizeof(mode_buf), "%s", a->down[PAD_R2] ? "Accordi" : (a->down[PAD_L2] ? "Tenuto" : "Note"));
+    const char *mode = mode_buf;
     gfx_text(c, FONT_SMALL, 32, 254, "Modo", C_MUTED);
-    gfx_text(c, FONT_BOLD, 100, 254, mode, a->down[PAD_R2] || a->down[PAD_L2] ? C_AMBER : C_TEXT);
+    gfx_text(c, FONT_BOLD, 100, 254, mode, a->down[PAD_R2] || a->down[PAD_L2] || arp ? C_AMBER : C_TEXT);
     snprintf(t, sizeof(t), "%d/8 voci", synth_active_voices(a->s));
     gfx_text(c, FONT_SMALL, 32, 276, t, C_DIM);
 
@@ -800,7 +1067,7 @@ static void draw_play(App *a, Canvas *c)
     draw_meter(c, 24, 420, 190, "Intonazione", a->lx, 1);
     draw_meter(c, 228, 420, 190, "Filtro", -a->ly, 1);
     draw_meter(c, 432, 420, 190, "Vibrato", a->ry < 0 ? -a->ry : 0, 0);
-    draw_hints(c, "L1/R1 ottava · L2 tenuto · R2 accordi · levette: espressione · START sequenza · SELECT pagina");
+    draw_hints(c, "L1/R1 ottava · L2 tenuto · R2 accordi · R3 registra · START sequenza · SELECT pagina");
 }
 
 static void draw_envelope(Canvas *c, int x, int y, int w, int h, float at, float de, float su, float re, uint32_t col, const char *title, int active)
@@ -847,18 +1114,38 @@ static void draw_sound(App *a, Canvas *c)
     int in_filter = sel >= 14 && sel <= 21, in_amp = sel >= 23 && sel <= 26;
     draw_envelope(c, 412, 188, 212, 118, p->a_attack, p->a_decay, p->a_sustain, p->a_release, C_VIOLET, "Inviluppo ampiezza", in_amp);
     draw_envelope(c, 412, 316, 212, 124, p->f_attack, p->f_decay, p->f_sustain, p->f_release, C_GREEN, "Inviluppo filtro", in_filter);
-    draw_hints(c, "su/giù scegli · sinistra/destra cambia (con L1 o R1: di più) · A prova · B torna a Suona");
+    draw_hints(c, "su/giù scegli · sinistra/destra cambia (L1/R1: di più) · A prova · Y salva come preset tuo");
 }
 
 static void draw_seq(App *a, Canvas *c)
 {
     Pattern *p = synth_pattern(a->s);
-    int gx = 136, gy = 64, cw = 30, ch = 42;
-    int step = synth_current_step(a->s);
+    int gx = 136, gy = 104, cw = 30, ch = 40;
+    int sel = synth_selected_pattern(a->s), playing_pat = synth_playing_pattern(a->s);
+    int step = playing_pat == sel ? synth_current_step(a->s) : -1;
+    /* riga dei pattern */
+    unsigned chain = synth_chain(a->s);
+    gfx_text_right(c, FONT_BODY, gx - 12, 80, "Pattern", a->cy < 0 ? C_TEXT : C_MUTED);
+    for (int i = 0; i < SY_PATTERNS; i++) {
+        float x = gx + i * 62.0f;
+        char lbl[2] = { (char)('A' + i), 0 };
+        gfx_round_rect(c, x, 58, 54, 30, 9, i == sel ? C_VIOLET_D : C_PANEL_HI, 1.0f);
+        gfx_text_center(c, FONT_BOLD, (int)x + 27, 79, lbl, C_TEXT);
+        if (i == playing_pat) gfx_circle(c, x + 46, 66, 4, C_GREEN, 1.0f);
+        if ((chain >> i) & 1) gfx_round_rect(c, x + 10, 84, 34, 3, 1.5f, C_AMBER, 1.0f);
+        if (a->cy < 0 && i == sel) gfx_round_frame(c, x - 2, 56, 58, 34, 10, 2.5f, C_AMBER, 1.0f);
+    }
+    {
+        char ct[64] = "Catena: ";
+        int any = 0;
+        for (int i = 0; i < SY_PATTERNS; i++)
+            if ((chain >> i) & 1) { char l[4] = { (char)('A' + i), ' ', 0 }; strcat(ct, l); any = 1; }
+        if (!any) strcat(ct, "spenta");
+        gfx_text(c, FONT_SMALL, gx + 4 * 62 + 8, 79, ct, chain ? C_AMBER : C_DIM);
+    }
     for (int i = 0; i < SY_STEPS; i++) {
         int x = gx + i * cw;
         if (i % 4 == 0) gfx_rect_alpha(c, x, gy - 4, cw * 4 - 2, ch * (DRUM_COUNT + 1) + 6, C_PANEL, 0.55f);
-        if (i == step) gfx_round_rect(c, x + 4, gy - 11, cw - 8, 5, 2.5f, C_AMBER, 1.0f);
     }
     for (int r = 0; r <= DRUM_COUNT; r++) {
         int y = gy + r * ch;
@@ -889,9 +1176,10 @@ static void draw_seq(App *a, Canvas *c)
     char t[128];
     snprintf(t, sizeof(t), "Tempo %d BPM   ·   Swing %d %%   ·   %s", (int)lrintf(synth_tempo(a->s)), (int)lrintf(synth_swing(a->s) * 100),
              synth_playing(a->s) ? "in riproduzione" : "fermo");
-    gfx_text_center(c, FONT_BOLD, c->w / 2, 340, t, C_TEXT);
-    draw_scope(a, c, 16, 352, 608, 84, C_GREEN);
-    draw_hints(c, "A attiva · B accento · X/Y nota su/giù · L1/R1 tempo · L2/R2 swing · START play/stop");
+    gfx_text_center(c, FONT_BOLD, c->w / 2, 366, t, C_TEXT);
+    draw_scope(a, c, 16, 376, 608, 62, C_GREEN);
+    if (a->cy < 0) draw_hints(c, "sinistra/destra scegli il pattern · A mettilo in catena · B copialo nel successivo");
+    else draw_hints(c, "A attiva · B accento · X/Y nota su/giù · L1/R1 tempo · L2/R2 swing · START play/stop");
 }
 
 static void draw_quit(Canvas *c)
@@ -911,5 +1199,21 @@ void app_draw(App *a, Canvas *c)
     if (a->screen == SCREEN_PLAY) draw_play(a, c);
     else if (a->screen == SCREEN_SOUND) draw_sound(a, c);
     else draw_seq(a, c);
+    if (a->toast_t > 0.0f && a->toast[0]) {
+        float al = fminf(1.0f, a->toast_t * 3.0f);
+        int w = gfx_text_width(FONT_BOLD, a->toast) + 36;
+        gfx_round_rect(c, (c->w - w) / 2.0f, 400, w, 34, 17, C_PANEL_HI, 0.95f * al);
+        gfx_round_frame(c, (c->w - w) / 2.0f, 400, w, 34, 17, 1.5f, C_VIOLET, al);
+        gfx_text_center(c, FONT_BOLD, c->w / 2, 423, a->toast, gfx_mix(C_BG_BOT, C_TEXT, al));
+    }
+    if (a->rec_f) {                                   /* registrazione in corso: al posto dei suggerimenti */
+        unsigned secs = a->rec_frames / (unsigned)synth_sample_rate(a->s);
+        char t[64];
+        snprintf(t, sizeof(t), "REC %u:%02u   ·   R3 per fermare", secs / 60, secs % 60);
+        gfx_rect(c, 0, 447, c->w, 33, RGB(40, 16, 22));
+        int w = gfx_text_width(FONT_BOLD, t);
+        gfx_circle(c, (c->w - w) / 2.0f - 14, 463, 6, C_RED, 0.55f + 0.45f * sinf(a->time * 6.0f));
+        gfx_text_center(c, FONT_BOLD, c->w / 2 + 4, 469, t, C_TEXT);
+    }
     if (a->quit_dialog) draw_quit(c);
 }

@@ -99,6 +99,18 @@ if flag_check "run_upgrades"; then
     flag_remove "run_upgrades"
 fi
 
+# Cirmolo 0.2: il tema Cirmolo diventa quello di serie. Chi aggiorna dalla 0.1 ha ancora SPRUCE, che era
+# il predefinito: lo si passa a Cirmolo una volta sola, poi la scelta resta all'utente. Il segnalino sta
+# in Saves, perche' l'aggiornamento cancella spruce/flags.
+CIRMOLO_TEMA_FATTO="/mnt/SDCARD/Saves/spruce/cirmolo-tema-0.2"
+if [ ! -f "$CIRMOLO_TEMA_FATTO" ] && [ -d /mnt/SDCARD/Themes/Cirmolo ]; then
+    if [ -f "$SYSTEM_JSON" ] && grep -q '"theme"[[:space:]]*:[[:space:]]*"SPRUCE"' "$SYSTEM_JSON"; then
+        sed -i 's/"theme"[[:space:]]*:[[:space:]]*"SPRUCE"/"theme": "Cirmolo"/' "$SYSTEM_JSON"
+        log_message "Cirmolo: theme SPRUCE -> Cirmolo (one-time, 0.2)"
+    fi
+    mkdir -p /mnt/SDCARD/Saves/spruce && touch "$CIRMOLO_TEMA_FATTO"
+fi
+
 /mnt/SDCARD/spruce/scripts/set_up_swap.sh &
 
 launch_startup_watchdogs

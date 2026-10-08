@@ -1,8 +1,8 @@
 # Feed OTA di Cirmolo (stesso formato del feed di spruceOS, letto da App/-OTA/downloader.sh
 # e da spruce/scripts/runtimeHelper.sh). RELEASE_VERSION = versione di spruce/spruce
-# dell'ultima release di Cirmolo: finche' coincide con quella installata, la console
+# (base spruce) dell'ultima release PUBBLICATA di Cirmolo: finche' coincide con quella installata, la console
 # risponde che e' aggiornata. Va aggiornato a ogni release pubblicata.
-RELEASE_VERSION=4.5.3
+RELEASE_VERSION=4.5.2
 RELEASE_CHECKSUM=
 RELEASE_SIZE_IN_MB=0
 RELEASE_LINK=

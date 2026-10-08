@@ -12,10 +12,21 @@ Il nome viene dal cirmolo, il pino cembro delle Dolomiti: un legno profumato e r
 - **Segnalazioni di bug:** il report resta sulla SD e si allega alle [issue di Cirmolo](https://github.com/luigismith/cirmolo/issues), invece di andare al server del team spruce.
 - **Versione di Cirmolo** in Impostazioni → Informazioni.
 - **Logo di avvio di Cirmolo** (la pigna viola del cirmolo) e **cambio del logo più sicuro sulla Flip:** prima di riscrivere la memoria interna, l'app «Logo di avvio» controlla la batteria, copia sulla SD tutta la memoria interna con i checksum, verifica la partizione di avvio e, se la scrittura fallisce, rimette da sola la copia.
+- **App raggruppate in cartelle** (Musica, Giochi, Sistema, Altro...).
 
-- **Cirmolo Synth** (nuova app, sorgenti in [`App/CirmoloSynth/src`](App/CirmoloSynth/src)): sintetizzatore a 8 voci con filtro risonante, batteria sintetizzata e sequencer a 16 passi. Si suona con i tasti (le note della scala scelta), le levette danno espressione (intonazione, filtro, vibrato), L2 tiene le note e R2 suona accordi; 8 preset, delay e riverbero.
+### App native nuove
+Scritte in C per la Flip, con un kit comune ([`spruce/cirmolo-kit`](spruce/cirmolo-kit)): grafica, tasti, audio e tastiere MIDI USB.
+- **Cirmolo Synth** ([`App/CirmoloSynth`](App/CirmoloSynth)): sintetizzatore a 8 voci con filtro risonante, batteria e sequencer a 16 passi, pattern A-D, arpeggiatore, preset e registrazione in WAV. Si suona con i tasti o con una tastiera MIDI USB.
+- **Diapason** ([`App/Diapason`](App/Diapason)): accordatore, note di riferimento e metronomo.
+- **OpenOrc** ([`App/OpenOrc`](App/OpenOrc)): sintetizzatore di accordi per la tastiera Akai MPK mini IV, ispirato all'Orchid. Ha 4 motori di suono, 6 modi di suonare l'accordo (strum, arpeggio, arpa...), batteria, looper e una pagina MIDI che impara i controlli. Senza tastiera si suona con i tasti della Flip.
+- **Chiedi a Claude** ([`App/ClaudeChat`](App/ClaudeChat)): chat con Claude tramite l'API di Anthropic, con tastiera a schermo, scelta del modello e stima dei costi. Servono il Wi-Fi e una chiave API propria, salvata solo sulla SD.
 
 **In arrivo:** altre app, miglioramenti dell'interfaccia e delle prestazioni sulla Flip.
+
+## Rami e versioni
+- **`cirmolo`** (predefinito): lo sviluppo di Cirmolo.
+- **`release/0.1`**: la versione pubblicata, vedi le [release](https://github.com/luigismith/cirmolo/releases).
+- **`Development`**: copia identica di spruceOS, da cui si prendono gli aggiornamenti dell'originale. Gli altri rami vengono da spruceOS.
 
 ## Crediti e licenza
 - Cirmolo esiste grazie al lavoro del team **spruceUI** e dei contributori di spruceOS: il merito della base è tutto loro.
@@ -23,7 +34,7 @@ Il nome viene dal cirmolo, il pino cembro delle Dolomiti: un legno profumato e r
 - Non contiene e non conterrà mai giochi o BIOS.
 - Problemi e proposte vanno nelle [issue di Cirmolo](https://github.com/luigismith/cirmolo/issues), non al team spruce.
 
-*English:* **Cirmolo** is a spruceOS fork focused on the Miyoo Flip. It adds a complete Italian localization and i18n tooling that is useful for every language. It has its own OTA feed, its own bug-report flow and a safer boot logo flow on the Flip (battery check, full internal flash backup, automatic restore). All credit for the base goes to the spruceUI team. Like spruceOS it is licensed CC BY-NC 4.0. Please report Cirmolo issues here, not to the spruce team.
+*English:* **Cirmolo** is a spruceOS fork focused on the Miyoo Flip. It adds a complete Italian localization and i18n tooling that is useful for every language. It has its own OTA feed, its own bug-report flow and a safer boot logo flow on the Flip (battery check, full internal flash backup, automatic restore). It also has new native apps: a synthesizer, a tuner, OpenOrc (a chord synth for the Akai MPK mini IV) and a Claude chat client. Development happens on the `cirmolo` branch; `Development` mirrors spruceOS. All credit for the base goes to the spruceUI team. Like spruceOS it is licensed CC BY-NC 4.0. Please report Cirmolo issues here, not to the spruce team.
 
 ---
 

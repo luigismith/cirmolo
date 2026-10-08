@@ -19,6 +19,16 @@ MAIN_UI = os.path.join(RADICE, 'App', 'PyUI', 'main-ui')
 LANG = os.path.join(RADICE, 'App', 'PyUI', 'lang')
 SPRUCE_CONFIG = os.path.join(RADICE, 'Saves', 'spruce', 'spruce-config.json')
 EMU = os.path.join(RADICE, 'Emu')
+APP = os.path.join(RADICE, 'App')
+TASKS = os.path.join(RADICE, 'App', 'PyUI', 'spruce-tasks.json')
+
+# Testi che gli script scrivono a runtime nei config.json delle app (runtimeHelper.sh, -OTA/downloader.sh)
+# e app interne di PyUI: non stanno in nessun config.json, quindi li elenco qui.
+APP_LABELS_EXTRA = ['Update Available', 'Check for Updates', 'Boxart Scraper', 'Activity Tracker']
+APP_DESCRIPTIONS_EXTRA = ['Download and install updates over Wi-Fi', 'Version {version} is available',
+                          'A new build of version {version} ({build}) is available']
+# Titoli delle pagine di giochi (nomi passati a _run_rom_selection); i nomi dei sistemi non si traducono.
+PAGE_TITLES = ['Favorites', 'Recents', 'Collections', 'Game List', 'Game Search', 'Game Switcher', '{system} Search']
 
 
 def stringa(nodo):
@@ -80,6 +90,43 @@ def stringhe_menu():
                     if isinstance(v, str) and re.search('[A-Za-z]{2}', v) and v not in ('True', 'False'):
                         menu['menuOptionValues'].add(v)
     return {k: sorted(v) for k, v in menu.items()}
+
+
+def stringhe_display():
+    """Testi mostrati cosi' come sono (etichette e descrizioni di app e strumenti, titoli di pagina):
+    PyUI li traduce solo a schermo con Language.translate(sezione, testo_inglese)."""
+    etichette, descrizioni = set(APP_LABELS_EXTRA), set(APP_DESCRIPTIONS_EXTRA)
+    if os.path.isdir(APP):
+        for nome in os.listdir(APP):
+            cfg = os.path.join(APP, nome, 'config.json')
+            if not os.path.isfile(cfg):
+                continue
+            try:
+                with open(cfg, encoding='utf-8') as f:
+                    d = json.load(f)
+            except (ValueError, OSError):
+                continue
+            for chiave in ('label', '#label'):
+                if isinstance(d.get(chiave), str) and d[chiave].strip():
+                    etichette.add(d[chiave])
+            if isinstance(d.get('description'), str) and d['description'].strip():
+                descrizioni.add(d['description'])
+    task_etichette, task_descrizioni = set(), set()
+    if os.path.isfile(TASKS):
+        with open(TASKS, encoding='utf-8') as f:
+            t = json.load(f)
+        for k, v in t.items():
+            if k == 'descriptions':
+                continue
+            for parte in k.split('/'):
+                if parte.strip():
+                    task_etichette.add(parte)
+        for v in (t.get('descriptions') or {}).values():
+            if isinstance(v, str) and v.strip():
+                task_descrizioni.add(v)
+    return {'appLabels': sorted(etichette), 'appDescriptions': sorted(descrizioni),
+            'taskLabels': sorted(task_etichette), 'taskDescriptions': sorted(task_descrizioni),
+            'pageTitles': list(PAGE_TITLES)}
 
 
 def main():

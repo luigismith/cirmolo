@@ -36,6 +36,7 @@ UGUALI_OK = {
     'PPSSPP', 'Casual', 'Hardcore', 'Nightly', 'Standard', 'Audio', 'Proxy', 'LED', 'Overclock',
     '128MB', '256MB', '512MB', 'Apotris (GBA)', 'L2+R2+DOWN', 'Menu + Vol', 'Songo#5', 'Splore',
     'Start + L/R', 'http', 'mono', 'socks5', 'spruce', 'spruceUI', 'Mostra AM/PM',
+    'EZ Updater', 'Moonlight', 'PortMaster', 'RetroArch32',
     'http://{ip_addr}:8080', 'http://{ip_addr}:8384', 'ssh spruce@{ip_addr} (password=happygaming)',
 }
 STILE = [

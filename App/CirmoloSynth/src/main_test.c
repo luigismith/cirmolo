@@ -215,6 +215,45 @@ int main(int argc, char **argv)
     FILE *uf = fopen(out, "r");
     if (!uf) { fprintf(stderr, "ERRORE: preset-utente.txt non scritto\n"); fail = 1; } else fclose(uf);
 
+    /* 3e. Tastiera MIDI (MPK Mini): note, pad, manopola del taglio, sustain, pitch bend */
+    {
+        app_set_screen(a, SCREEN_PLAY);
+        app_load_preset(a, 3);                                         /* Pizzico */
+        app_midi_status(a, "MPKminiIV");
+        uint32_t kick0 = synth_drum_flash(s, DRUM_KICK), clap0 = synth_drum_flash(s, DRUM_CLAP);
+        const unsigned char on[3] = { 0x90, 60, 110 }, off[3] = { 0x80, 60, 0 };
+        const unsigned char pad1[3] = { 0x99, 36, 120 }, pad5[3] = { 0x99, 40, 90 };
+        const unsigned char knob[3] = { 0xB0, 70, 127 }, sus_on[3] = { 0xB0, 64, 127 }, sus_off[3] = { 0xB0, 64, 0 };
+        const unsigned char bend_up[3] = { 0xE0, 0x7F, 0x7F };
+        app_midi(a, knob, 3);
+        float cut = synth_patch(s)->cutoff;
+        app_midi(a, on, 3);
+        app_midi(a, pad1, 3);
+        app_midi(a, pad5, 3);
+        run(a, s, 0.3f, wav, &pos, cap);
+        int voices_on = synth_active_voices(s);
+        app_midi(a, sus_on, 3);
+        app_midi(a, off, 3);                                           /* tenuta dal sustain */
+        run(a, s, 0.3f, wav, &pos, cap);
+        int voices_sus = synth_active_voices(s);
+        app_midi(a, bend_up, 3);
+        run(a, s, 0.1f, wav, &pos, cap);
+        app_midi(a, sus_off, 3);                                       /* ora si rilascia */
+        run(a, s, 1.5f, wav, &pos, cap);
+        int voices_after = synth_active_voices(s);
+        printf("MIDI: taglio %.2f, voci con la nota %d, tenuta dal sustain %d, dopo il rilascio %d, cassa %u, battimani %u\n",
+               cut, voices_on, voices_sus, voices_after, synth_drum_flash(s, DRUM_KICK) - kick0, synth_drum_flash(s, DRUM_CLAP) - clap0);
+        if (cut < 0.99f || voices_on < 1 || voices_sus < 1 || voices_after != 0 ||
+            synth_drum_flash(s, DRUM_KICK) == kick0 || synth_drum_flash(s, DRUM_CLAP) == clap0) {
+            fprintf(stderr, "ERRORE: MIDI non gestito come previsto\n");
+            fail = 1;
+        }
+        app_draw(a, &c);
+        snprintf(out, sizeof(out), "%s/7-midi.bmp", argv[2]);
+        write_bmp(out, &c);
+        app_midi_status(a, NULL);
+    }
+
     /* 4. Richiesta di uscita */
     app_button(a, PAD_MENU, 1); app_button(a, PAD_MENU, 0);
     app_draw(a, &c);

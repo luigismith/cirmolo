@@ -202,6 +202,10 @@ struct App {
     int btn_notes[8][3], btn_count[8];
     int sustained[128];
     float lx, ly, rx, ry, l2, r2;
+    /* tastiera MIDI */
+    char midi_name[64];
+    float midi_bend, midi_mod;
+    int midi_sustain, midi_held[128], midi_sustained[128];
     int sel;
     float scroll;
     int audition;
@@ -890,6 +894,14 @@ static float deadzone(float v)
     return (v - (v > 0 ? 0.15f : -0.15f)) / 0.85f;
 }
 
+static void apply_performance(App *a)
+{
+    /* levette della Flip e tastiera MIDI insieme: si sommano bend, vince il vibrato piu' forte */
+    float vib = a->ry < 0 ? -a->ry : 0.0f;
+    if (a->midi_mod > vib) vib = a->midi_mod;
+    synth_set_performance(a->s, a->lx * 2.0f + a->midi_bend, -a->ly * 3.0f, a->rx * 0.3f, vib);
+}
+
 void app_axes(App *a, float lx, float ly, float rx, float ry, float l2, float r2)
 {
     a->lx = deadzone(lx);
@@ -898,7 +910,86 @@ void app_axes(App *a, float lx, float ly, float rx, float ry, float l2, float r2
     a->ry = deadzone(ry);
     a->l2 = l2;
     a->r2 = r2;
-    synth_set_performance(a->s, a->lx * 2.0f, -a->ly * 3.0f, a->rx * 0.3f, a->ry < 0 ? -a->ry : 0.0f);
+    apply_performance(a);
+}
+
+void app_midi_status(App *a, const char *device)
+{
+    snprintf(a->midi_name, sizeof(a->midi_name), "%s", device ? device : "");
+    if (!device) {                                     /* scollegata: niente note appese */
+        for (int n = 0; n < 128; n++)
+            if (a->midi_held[n] || a->midi_sustained[n]) synth_note_off(a->s, n);
+        memset(a->midi_held, 0, sizeof(a->midi_held));
+        memset(a->midi_sustained, 0, sizeof(a->midi_sustained));
+        a->midi_bend = a->midi_mod = 0.0f;
+        a->midi_sustain = 0;
+        apply_performance(a);
+    } else {
+        char t[96];
+        snprintf(t, sizeof(t), "Tastiera MIDI collegata: %s", device);
+        toast(a, t);
+    }
+}
+
+/* Manopole della MPK Mini (CC 70-77 nel programma predefinito): parametri principali del suono. */
+static void midi_knob(App *a, int cc, int v)
+{
+    SynthPatch *p = synth_patch(a->s);
+    FxParams *fx = synth_fx(a->s);
+    float t = v / 127.0f;
+    switch (cc) {
+    case 70: p->cutoff = t; break;
+    case 71: p->resonance = t * 0.97f; break;
+    case 72: p->env_amount = t * 2.0f - 1.0f; break;
+    case 73: p->a_attack = 0.001f * powf(5000.0f, t); break;           /* 1 ms .. 5 s */
+    case 74: p->a_release = 0.005f * powf(1600.0f, t); break;          /* 5 ms .. 8 s */
+    case 75: p->lfo_rate = 0.05f * powf(400.0f, t); break;             /* 0,05 .. 20 Hz */
+    case 76: fx->delay_mix = t; break;
+    case 77: fx->reverb_mix = t; break;
+    default: return;
+    }
+    a->modified = 1;
+}
+
+void app_midi(App *a, const unsigned char *m, int len)
+{
+    if (len < 1) return;
+    int type = m[0] & 0xF0, ch = m[0] & 0x0F;
+    int d1 = len > 1 ? m[1] : 0, d2 = len > 2 ? m[2] : 0;
+    if (type == 0x90 && d2 > 0) {
+        if (ch == 9) {                                 /* pad (canale 10): batteria */
+            static const int drum[8] = { DRUM_KICK, DRUM_SNARE, DRUM_HAT, DRUM_OPENHAT, DRUM_CLAP, DRUM_KICK, DRUM_SNARE, DRUM_HAT };
+            int pad = (d1 - 36) & 7;
+            synth_drum_hit(a->s, drum[pad], 0.35f + 0.65f * d2 / 127.0f + (pad >= 5 ? 0.15f : 0.0f));
+            return;
+        }
+        a->midi_held[d1] = 1;
+        a->midi_sustained[d1] = 0;
+        synth_note_on(a->s, d1, 0.25f + 0.75f * d2 / 127.0f);
+        snprintf(a->last_label, sizeof(a->last_label), "%s%d", NOTE_NAMES[d1 % 12], d1 / 12 - 1);
+        a->note_glow = 1.0f;
+    } else if (type == 0x80 || type == 0x90) {
+        if (ch == 9) return;
+        a->midi_held[d1] = 0;
+        if (a->midi_sustain) a->midi_sustained[d1] = 1;
+        else synth_note_off(a->s, d1);
+    } else if (type == 0xB0) {
+        if (d1 == 1) { a->midi_mod = d2 / 127.0f; apply_performance(a); }
+        else if (d1 == 64) {
+            a->midi_sustain = d2 >= 64;
+            if (!a->midi_sustain)
+                for (int n = 0; n < 128; n++)
+                    if (a->midi_sustained[n]) { a->midi_sustained[n] = 0; if (!a->midi_held[n]) synth_note_off(a->s, n); }
+        } else if (d1 == 123 || d1 == 120) { synth_all_notes_off(a->s); memset(a->midi_held, 0, sizeof(a->midi_held)); }
+        else midi_knob(a, d1, d2);
+    } else if (type == 0xE0) {
+        int v = ((d2 << 7) | d1) - 8192;
+        a->midi_bend = v / 8192.0f * 2.0f;
+        apply_performance(a);
+    } else if (type == 0xC0) {
+        int i = d1 % ALL_PRESETS;
+        if (i < PRESET_COUNT || a->user_used[i - PRESET_COUNT]) app_load_preset(a, i);
+    }
 }
 
 void app_update(App *a, float dt)
@@ -1055,8 +1146,9 @@ static void draw_play(App *a, Canvas *c)
     const char *mode = mode_buf;
     gfx_text(c, FONT_SMALL, 32, 254, "Modo", C_MUTED);
     gfx_text(c, FONT_BOLD, 100, 254, mode, a->down[PAD_R2] || a->down[PAD_L2] || arp ? C_AMBER : C_TEXT);
-    snprintf(t, sizeof(t), "%d/8 voci", synth_active_voices(a->s));
-    gfx_text(c, FONT_SMALL, 32, 276, t, C_DIM);
+    if (a->midi_name[0]) snprintf(t, sizeof(t), "%d/8 voci  ·  %s", synth_active_voices(a->s), a->midi_name);
+    else snprintf(t, sizeof(t), "%d/8 voci", synth_active_voices(a->s));
+    gfx_text(c, FONT_SMALL, 32, 276, t, a->midi_name[0] ? C_GREEN : C_DIM);
 
     static const char *dpad[4] = { "sinistra", "giù", "destra", "su" };
     static const char *face[4] = { "Y", "B", "A", "X" };

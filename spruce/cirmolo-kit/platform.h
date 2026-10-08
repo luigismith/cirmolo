@@ -33,6 +33,12 @@ typedef struct {
     /* Ingresso aperto (nome del dispositivo e frequenza) o chiuso (NULL). Facoltativa. */
     void (*capture_status)(void *app, const char *device, float sample_rate);
 
+    /* MIDI da una tastiera USB: un messaggio completo (1-3 byte, vedi midi.h) sul thread dell'interfaccia.
+       Facoltativa. Il kit cerca da solo i dispositivi /dev/snd/midiC*D*, anche collegati dopo l'avvio. */
+    void (*midi)(void *app, const unsigned char *msg, int len);
+    /* Tastiera MIDI collegata (nome) o scollegata (NULL). Facoltativa. */
+    void (*midi_status)(void *app, const char *device);
+
     void (*button)(void *app, int pad, int pressed);
     /* Levette -1..1 (su = negativo), grilletti 0..1. */
     void (*axes)(void *app, float lx, float ly, float rx, float ry, float l2, float r2);

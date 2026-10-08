@@ -739,7 +739,8 @@
         "Theme Garden": "Giardino dei temi",
         "USB Storage Mode": "Modalità archivio USB",
         "Update Available": "Aggiornamento disponibile",
-        "Cirmolo Synth": "Cirmolo Synth"
+        "Cirmolo Synth": "Cirmolo Synth",
+        "Diapason": "Diapason"
     },
     "appDescriptions": {
         "32-bit RetroArch frontend": "RetroArch a 32 bit",
@@ -764,7 +765,8 @@
         "Update file found, install to update to spruce": "Trovato un file di aggiornamento: installalo per aggiornare",
         "Version {version} is available": "È disponibile la versione {version}",
         "View and edit files on your SD card": "Sfoglia e modifica i file della scheda SD",
-        "Synthesizer, drum machine and 16-step sequencer": "Sintetizzatore, batteria e sequencer a 16 passi"
+        "Synthesizer, drum machine and 16-step sequencer": "Sintetizzatore, batteria e sequencer a 16 passi",
+        "Tuner, reference tones and metronome": "Accordatore, note di riferimento e metronomo"
     },
     "taskLabels": {
         "Bug report": "Segnala un problema",

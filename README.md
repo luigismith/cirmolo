@@ -11,6 +11,7 @@ Il nome viene dal cirmolo, il pino cembro delle Dolomiti: un legno profumato e r
 - **Aggiornamenti OTA dal feed di Cirmolo:** un aggiornamento non riporta la versione originale.
 - **Segnalazioni di bug:** il report resta sulla SD e si allega alle [issue di Cirmolo](https://github.com/luigismith/cirmolo/issues), invece di andare al server del team spruce.
 - **Versione di Cirmolo** in Impostazioni → Informazioni.
+- **Logo di avvio di Cirmolo** (la pigna viola del cirmolo) e **cambio del logo più sicuro sulla Flip:** prima di riscrivere la memoria interna, l'app «Logo di avvio» controlla la batteria, copia sulla SD tutta la memoria interna con i checksum, verifica la partizione di avvio e, se la scrittura fallisce, rimette da sola la copia.
 
 **In arrivo:** nuove app (tra cui un sintetizzatore), miglioramenti dell'interfaccia e delle prestazioni sulla Flip.
 
@@ -20,7 +21,7 @@ Il nome viene dal cirmolo, il pino cembro delle Dolomiti: un legno profumato e r
 - Non contiene e non conterrà mai giochi o BIOS.
 - Problemi e proposte vanno nelle [issue di Cirmolo](https://github.com/luigismith/cirmolo/issues), non al team spruce.
 
-*English:* **Cirmolo** is a spruceOS fork focused on the Miyoo Flip. It adds a complete Italian localization and i18n tooling that is useful for every language. It has its own OTA feed and its own bug-report flow. All credit for the base goes to the spruceUI team. Like spruceOS it is licensed CC BY-NC 4.0. Please report Cirmolo issues here, not to the spruce team.
+*English:* **Cirmolo** is a spruceOS fork focused on the Miyoo Flip. It adds a complete Italian localization and i18n tooling that is useful for every language. It has its own OTA feed, its own bug-report flow and a safer boot logo flow on the Flip (battery check, full internal flash backup, automatic restore). All credit for the base goes to the spruceUI team. Like spruceOS it is licensed CC BY-NC 4.0. Please report Cirmolo issues here, not to the spruce team.
 
 ---
 

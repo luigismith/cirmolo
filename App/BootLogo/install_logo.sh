@@ -155,6 +155,28 @@ case "$PLATFORM" in
         rm -f "$PROCESSED_PATH" "$PROCESSED_NAME" "$TEMP_BMP" boot0 boot0-suffix
         ;;
     "Flip")
+        # mtd2 holds the kernel and the resource image (U-Boot dtb + logos), so a
+        # bad write leaves the console unbootable. Cirmolo adds guards around the
+        # original steps: battery check, full-size read, verified copy on the SD
+        # card, layout checks before repacking, and a restore if flashcp fails.
+        flip_abort() {
+            log_message "Error: $1"
+            display --icon "$ERROR_IMAGE_PATH" -t "$2 Cancelling boot logo swap." -d 3
+            rm -rf /tmp/bootimg /tmp/bootres /tmp/boot.img 2>/dev/null
+            rm -f "$TEMP_BMP"
+            exit 1
+        }
+
+        BATTERY_PERCENT="$(device_get_battery_percent 2>/dev/null)"
+        CHARGING_STATUS="$(device_get_charging_status 2>/dev/null)"
+        case "$BATTERY_PERCENT" in ''|*[!0-9]*) BATTERY_PERCENT=0 ;; esac
+        if [ "$BATTERY_PERCENT" -lt 50 ] && [ "$CHARGING_STATUS" != "Charging" ] && [ "$CHARGING_STATUS" != "Full" ]; then
+            flip_abort "battery at ${BATTERY_PERCENT}% ($CHARGING_STATUS)." "Battery at ${BATTERY_PERCENT}%: charge above 50% or plug in the charger."
+        fi
+
+        MTD2_SIZE_HEX="$(awk '$1 == "mtd2:" { print $2 }' /proc/mtd 2>/dev/null)"
+        case "$MTD2_SIZE_HEX" in ''|*[!0-9a-fA-F]*) flip_abort "mtd2 not found in /proc/mtd." "Boot partition not found." ;; esac
+        MTD2_SIZE=$((0x$MTD2_SIZE_HEX))
 
         display --icon "$IMAGE_PATH" -t "Updating boot logo, please wait..."
 
@@ -171,14 +193,76 @@ case "$PLATFORM" in
         fi        
         cd /tmp
 
+        # One-time copy of the whole internal flash on the SD card (every mtd
+        # partition, read through the read-only devices, with checksums): the
+        # state of the console before the first boot logo swap.
+        BACKUP_DIR="/mnt/SDCARD/Saves/spruce/bootlogo-backup"
+        FULL_DIR="$BACKUP_DIR/internal-flash"
+        if [ ! -f "$FULL_DIR/complete" ]; then
+            log_message "Backing up every mtd partition to $FULL_DIR..."
+            display --icon "$IMAGE_PATH" -t "First time: backing up the internal memory to the SD card..."
+            rm -rf "$FULL_DIR"
+            mkdir -p "$FULL_DIR" || flip_abort "could not create $FULL_DIR." "Couldn't back up the internal memory."
+            : > "$FULL_DIR/md5sums.txt"
+            while read -r MTD_DEV MTD_SIZE_HEX MTD_ERASE MTD_NAME; do
+                case "$MTD_DEV" in mtd[0-9]*:) ;; *) continue ;; esac
+                MTD_DEV="${MTD_DEV%:}"
+                MTD_NAME="$(echo "$MTD_NAME" | tr -cd 'A-Za-z0-9_-')"
+                case "$MTD_SIZE_HEX" in ''|*[!0-9a-fA-F]*) flip_abort "bad size for $MTD_DEV in /proc/mtd." "Couldn't back up the internal memory." ;; esac
+                PART_FILE="$MTD_DEV-$MTD_NAME.img"
+                PART_SIZE=0
+                if dd if="/dev/${MTD_DEV}ro" of="$FULL_DIR/$PART_FILE" bs=131072 2>/dev/null; then
+                    PART_SIZE="$(wc -c < "$FULL_DIR/$PART_FILE" 2>/dev/null)"
+                    PART_SIZE=$((${PART_SIZE:-0}))
+                fi
+                if [ "$PART_SIZE" -ne $((0x$MTD_SIZE_HEX)) ]; then
+                    flip_abort "copied $PART_SIZE bytes of $MTD_DEV, expected $((0x$MTD_SIZE_HEX))." "Couldn't back up the internal memory."
+                fi
+                (cd "$FULL_DIR" && md5sum "$PART_FILE" >> md5sums.txt) || flip_abort "md5sum of $PART_FILE failed." "Couldn't back up the internal memory."
+            done < /proc/mtd
+            [ -s "$FULL_DIR/md5sums.txt" ] || flip_abort "no mtd partition copied." "Couldn't back up the internal memory."
+            sync
+            : > "$FULL_DIR/complete"
+            sync
+            log_message "Internal memory backed up: $(tr '\n' ' ' < "$FULL_DIR/md5sums.txt")"
+            display --icon "$IMAGE_PATH" -t "Updating boot logo, please wait..."
+        fi
+
         # Extracting Boot Image
         log_message "Extracting Boot files..."
-        dd if=/dev/mtd2ro of=boot.img bs=131072
+        IMG_SIZE=0
+        if dd if=/dev/mtd2ro of=boot.img bs=131072 2>/dev/null; then
+            IMG_SIZE="$(wc -c < boot.img 2>/dev/null)"
+            IMG_SIZE=$((${IMG_SIZE:-0}))
+        fi
+        if [ "$IMG_SIZE" -ne "$MTD2_SIZE" ]; then
+            flip_abort "read $IMG_SIZE bytes from mtd2, expected $MTD2_SIZE." "Couldn't read boot partition."
+        fi
+
+        # Verified copy of the partition on the SD card before anything is written
+        # (read back from the card, not from the page cache). The first one ever
+        # taken is kept as well: it is the logo the console came with.
+        BACKUP_FILE="$BACKUP_DIR/mtd2-boot-before-last-swap.img"
+        mkdir -p "$BACKUP_DIR"
+        SUM_IMG="$(md5sum < boot.img 2>/dev/null)"
+        SUM_BACKUP=""
+        if cp -f boot.img "$BACKUP_FILE" && sync; then
+            echo 3 > /proc/sys/vm/drop_caches 2>/dev/null
+            SUM_BACKUP="$(md5sum < "$BACKUP_FILE" 2>/dev/null)"
+        fi
+        if [ -z "$SUM_IMG" ] || [ "$SUM_IMG" != "$SUM_BACKUP" ]; then
+            flip_abort "could not back up mtd2 to $BACKUP_FILE." "Couldn't back up boot partition."
+        fi
+        [ -f "$BACKUP_DIR/mtd2-boot-original.img" ] || { cp -f "$BACKUP_FILE" "$BACKUP_DIR/mtd2-boot-original.img" && sync; }
+        log_message "Boot partition backed up to $BACKUP_FILE"
 
         # Unpacking Boot Image
         log_message "Unpacking Boot files..."
         mkdir -p bootimg
         unpackbootimg -i boot.img -o bootimg
+        if [ ! -s bootimg/boot.img-kernel ] || [ ! -s bootimg/boot.img-second ]; then
+            flip_abort "boot image did not unpack to kernel + second." "Unexpected boot partition layout."
+        fi
 
         # Unpacking Resources
         log_message "Unpacking Boot resources..."
@@ -192,6 +276,11 @@ case "$PLATFORM" in
         cp bootimg/boot.img-second bootres/
         cd bootres
         rsce_tool -u boot.img-second
+        # Repacking an incomplete set would drop the dtb: require the old logo and something else.
+        log_message "--Debug-- resource files: $(ls | tr '\n' ' ')"
+        if [ ! -f logo.bmp ] || [ -z "$(ls | grep -v -e '^boot\.img-second$' -e '^logo\.bmp$' -e '^logo_kernel\.bmp$')" ]; then
+            flip_abort "resource image did not unpack to the expected files." "Unexpected boot partition layout."
+        fi
 
         # Replacing logo
         log_message "Replacing Boot logo..."
@@ -200,10 +289,12 @@ case "$PLATFORM" in
 
         # Packing Resources
         log_message "Packing updated Boot resources..."
+        set --
         for file in *; do
             [ "$(basename "$file")" != "boot.img-second" ] && set -- "$@" -p "$file"
         done
         rsce_tool "$@"
+        [ -s boot-second ] || flip_abort "rsce_tool did not produce boot-second." "Couldn't pack new boot image."
 
         # Packing Boot Image
         log_message "Packing updated Boot files..."
@@ -217,10 +308,32 @@ case "$PLATFORM" in
             rm -f "$TEMP_BMP"
             exit 1
         fi
+        NEW_SIZE="$(wc -c < boot.img 2>/dev/null)"
+        NEW_SIZE=$((${NEW_SIZE:-0}))
+        if [ "$(dd if=boot.img bs=8 count=1 2>/dev/null)" != "ANDROID!" ] || [ "$NEW_SIZE" -le 0 ] || [ "$NEW_SIZE" -gt "$MTD2_SIZE" ]; then
+            flip_abort "new boot image is not valid ($NEW_SIZE bytes, partition $MTD2_SIZE)." "New boot image does not fit."
+        fi
 
         # Flash new Boot Image
         log_message "Flashing updated Boot files..."
-        flashcp boot.img /dev/mtd2 && sync
+        if flashcp boot.img /dev/mtd2; then
+            sync
+        else
+            # The partition may be half written: put the verified copy back while the system still runs.
+            log_message "Error: flashcp failed, restoring $BACKUP_FILE..."
+            display --icon "$ERROR_IMAGE_PATH" -t "Write failed. Restoring the previous boot partition, do not turn off..."
+            if flashcp "$BACKUP_FILE" /dev/mtd2; then
+                sync
+                log_message "Previous boot partition restored."
+                display --icon "$ERROR_IMAGE_PATH" -t "Previous boot partition restored. Boot logo unchanged." -d 5
+            else
+                log_message "Error: restore failed as well. Copy of the partition: $BACKUP_FILE"
+                display --icon "$ERROR_IMAGE_PATH" -t "Restore failed. Keep the console on and charging: a copy of the boot partition is in Saves/spruce/bootlogo-backup." -d 15
+            fi
+            rm -rf /tmp/bootimg /tmp/bootres /tmp/boot.img 2>/dev/null
+            rm -f "$TEMP_BMP"
+            exit 1
+        fi
 
         # Clean up
         log_message "Cleaning temporal files..."

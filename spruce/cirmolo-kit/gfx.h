@@ -9,7 +9,7 @@ typedef struct {
     int w, h;
 } Canvas;
 
-enum { FONT_SMALL, FONT_BODY, FONT_BOLD, FONT_TITLE, FONT_BIG, FONT_COUNT };
+enum { FONT_SMALL, FONT_BODY, FONT_BOLD, FONT_TITLE, FONT_BIG, FONT_HUGE, FONT_COUNT };
 
 #define RGB(r, g, b) (0xFF000000u | ((uint32_t)(r) << 16) | ((uint32_t)(g) << 8) | (uint32_t)(b))
 

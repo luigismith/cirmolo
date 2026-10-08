@@ -45,6 +45,15 @@ typedef struct {
     void (*update)(void *app, float dt);
     void (*draw)(void *app, Canvas *c);
     int  (*wants_quit)(void *app);
+
+    /* Come midi, ma da tutte le porte del dispositivo, con il loro numero (0 = la prima). La MPK mini IV,
+       per esempio, manda tasti, pad, rotelle e manopole sulla porta 0 e i tasti di trasporto sulle altre.
+       Se c'e', il kit chiama questa al posto di midi; senza, le app ricevono solo la porta 0. Facoltativa. */
+    void (*midi_port)(void *app, int port, const unsigned char *msg, int len);
+
+    /* 0 se dall'ultimo disegno sullo schermo non e' cambiato niente: il kit salta disegno e presentazione
+       di quel fotogramma (meno CPU e batteria). Facoltativa: senza, si disegna sempre. */
+    int  (*needs_draw)(void *app);
 } CirmoloApp;
 
 /* Definita da ogni app. */

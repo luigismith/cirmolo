@@ -54,7 +54,7 @@ int gfx_load_fonts(const char *regular, const char *semibold)
     }
     static const struct { int face; float px; } spec[FONT_COUNT] = {
         [FONT_SMALL] = { 0, 15.0f }, [FONT_BODY] = { 0, 18.0f }, [FONT_BOLD] = { 1, 18.0f },
-        [FONT_TITLE] = { 1, 25.0f }, [FONT_BIG] = { 1, 46.0f },
+        [FONT_TITLE] = { 1, 25.0f }, [FONT_BIG] = { 1, 46.0f }, [FONT_HUGE] = { 1, 66.0f },
     };
     for (int i = 0; i < FONT_COUNT; i++) {
         Font *f = &fonts[i];
@@ -151,33 +151,86 @@ static inline float rr_dist(float px, float py, float cx, float cy, float hw, fl
     return sqrtf(ox * ox + oy * oy) + (inside < 0 ? inside : 0) - r;
 }
 
+/* Riga y da xa a xb (escluso) con un colore a copertura a: veloce quando e' piena. */
+static inline void span(Canvas *c, int y, int xa, int xb, uint32_t color, float a)
+{
+    if (y < 0 || y >= c->h || a <= 0.0f) return;
+    if (xa < 0) xa = 0;
+    if (xb > c->w) xb = c->w;
+    uint32_t *d = &c->px[y * c->w];
+    if (a >= 1.0f) {
+        uint32_t col = color | 0xFF000000u;
+        for (int x = xa; x < xb; x++) d[x] = col;
+    } else {
+        for (int x = xa; x < xb; x++) d[x] = gfx_mix(d[x], color, a);
+    }
+}
+
+static inline float cov01(float v) { return v < 0.0f ? 0.0f : (v > 1.0f ? 1.0f : v); }
+
+/* Nei rettangoli arrotondati la distanza dal bordo si calcola solo vicino ai lati sinistro e destro:
+   nelle colonne centrali la copertura dipende solo dalla riga (pieno al centro, sfumato in cima e in
+   fondo). Con raggi sotto un pixel si torna al calcolo pixel per pixel. */
 void gfx_round_rect(Canvas *c, float x, float y, float w, float h, float r, uint32_t color, float alpha)
 {
     if (r > w * 0.5f) r = w * 0.5f;
     if (r > h * 0.5f) r = h * 0.5f;
-    float cx = x + w * 0.5f, cy = y + h * 0.5f;
-    for (int yy = (int)floorf(y); yy < (int)ceilf(y + h); yy++)
-        for (int xx = (int)floorf(x); xx < (int)ceilf(x + w); xx++) {
-            float d = rr_dist(xx + 0.5f, yy + 0.5f, cx, cy, w * 0.5f, h * 0.5f, r);
-            float cov = 0.5f - d;
-            if (cov > 0.0f) blend(c, xx, yy, color, (cov > 1.0f ? 1.0f : cov) * alpha);
+    float cx = x + w * 0.5f, cy = y + h * 0.5f, hw = w * 0.5f, hh = h * 0.5f;
+    int x0 = (int)floorf(x), x1 = (int)ceilf(x + w);
+    int cl = x1, cr = x1;
+    if (r >= 1.0f) {
+        cl = (int)ceilf(x + r - 0.5f);
+        cr = (int)floorf(x + w - r - 0.5f) + 1;
+        if (cl < x0) cl = x0;
+        if (cr > x1) cr = x1;
+        if (cr < cl) cr = cl;
+    }
+    for (int yy = (int)floorf(y); yy < (int)ceilf(y + h); yy++) {
+        if (yy < 0 || yy >= c->h) continue;
+        if (cr > cl) {
+            float dy = fabsf(yy + 0.5f - cy) - (hh - r);
+            span(c, yy, cl, cr, color, (dy <= 0.0f ? 1.0f : cov01(0.5f - (dy - r))) * alpha);
         }
+        for (int xx = x0; xx < x1; xx++) {
+            if (xx == cl && cr > cl) xx = cr;
+            if (xx >= x1) break;
+            float cov = 0.5f - rr_dist(xx + 0.5f, yy + 0.5f, cx, cy, hw, hh, r);
+            if (cov > 0.0f) blend(c, xx, yy, color, cov01(cov) * alpha);
+        }
+    }
 }
 
 void gfx_round_frame(Canvas *c, float x, float y, float w, float h, float r, float thick, uint32_t color, float alpha)
 {
     if (r > w * 0.5f) r = w * 0.5f;
     if (r > h * 0.5f) r = h * 0.5f;
-    float cx = x + w * 0.5f, cy = y + h * 0.5f;
-    for (int yy = (int)floorf(y); yy < (int)ceilf(y + h); yy++)
-        for (int xx = (int)floorf(x); xx < (int)ceilf(x + w); xx++) {
-            float d = rr_dist(xx + 0.5f, yy + 0.5f, cx, cy, w * 0.5f, h * 0.5f, r);
-            float outer = 0.5f - d, inner = 0.5f - (d + thick);
-            outer = outer < 0 ? 0 : (outer > 1 ? 1 : outer);
-            inner = inner < 0 ? 0 : (inner > 1 ? 1 : inner);
-            float cov = outer - inner;
+    float cx = x + w * 0.5f, cy = y + h * 0.5f, hw = w * 0.5f, hh = h * 0.5f;
+    int x0 = (int)floorf(x), x1 = (int)ceilf(x + w);
+    int cl = x1, cr = x1;
+    if (r >= thick + 1.0f) {                      /* dentro la cornice, al centro, non c'e' niente da fare */
+        cl = (int)ceilf(x + r - 0.5f);
+        cr = (int)floorf(x + w - r - 0.5f) + 1;
+        if (cl < x0) cl = x0;
+        if (cr > x1) cr = x1;
+        if (cr < cl) cr = cl;
+    }
+    for (int yy = (int)floorf(y); yy < (int)ceilf(y + h); yy++) {
+        if (yy < 0 || yy >= c->h) continue;
+        if (cr > cl) {
+            float dy = fabsf(yy + 0.5f - cy) - (hh - r);
+            if (dy > 0.0f) {
+                float d = dy - r;
+                span(c, yy, cl, cr, color, (cov01(0.5f - d) - cov01(0.5f - (d + thick))) * alpha);
+            }
+        }
+        for (int xx = x0; xx < x1; xx++) {
+            if (xx == cl && cr > cl) xx = cr;
+            if (xx >= x1) break;
+            float d = rr_dist(xx + 0.5f, yy + 0.5f, cx, cy, hw, hh, r);
+            float cov = cov01(0.5f - d) - cov01(0.5f - (d + thick));
             if (cov > 0.0f) blend(c, xx, yy, color, cov * alpha);
         }
+    }
 }
 
 void gfx_circle(Canvas *c, float cx, float cy, float r, uint32_t color, float alpha)

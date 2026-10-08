@@ -12,12 +12,12 @@ KIT=../../../spruce/cirmolo-kit
 CFLAGS="-O2 -std=gnu11 -Wall -Wextra -Wno-unused-parameter -Wno-missing-field-initializers -Wno-unused-function -I. -I$KIT"
 
 "$ZIG" cc $CFLAGS -s -target aarch64-linux-gnu.2.27 -mcpu=cortex_a55 -I"$SDL_INCLUDE" \
-    -o ../diapason diapason.c $KIT/platform.c $KIT/gfx.c -lm -ldl
+    -o ../diapason diapason.c $KIT/platform.c $KIT/gfx.c $KIT/midi.c -lm -ldl
 echo "console: ../diapason"
 
 if [ "$1" = "prova" ]; then
     mkdir -p "$OUT"
     "$ZIG" cc $CFLAGS -DDIAPASON_TEST -target x86_64-windows-gnu -o "$OUT/diapason-test.exe" main_test.c diapason.c $KIT/gfx.c
-    "$ZIG" cc $CFLAGS -target x86_64-windows-gnu -I"$SDL_INCLUDE" -o "$OUT/diapason.exe" diapason.c $KIT/platform.c $KIT/gfx.c
+    "$ZIG" cc $CFLAGS -target x86_64-windows-gnu -I"$SDL_INCLUDE" -o "$OUT/diapason.exe" diapason.c $KIT/platform.c $KIT/gfx.c $KIT/midi.c
     echo "PC: $OUT/diapason-test.exe, $OUT/diapason.exe (serve SDL2.dll)"
 fi

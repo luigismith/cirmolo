@@ -119,10 +119,16 @@ static float evdev_norm(Evdev *e, int code, int value, int unipolar)
     return unipolar ? t : t * 2.0f - 1.0f;
 }
 
+static int g_logged;   /* eventi di input gia' scritti nel log (i primi 300 servono per la diagnosi) */
+
 static void evdev_poll(Evdev *e, App *a, Axes *ax, float *l2p, float *r2p, int *hx, int *hy)
 {
     struct input_event ev;
     while (read(e->fd, &ev, sizeof(ev)) == (ssize_t)sizeof(ev)) {
+        if (ev.type != EV_SYN && g_logged < 300) {
+            fprintf(stderr, "evdev tipo %d codice %d valore %d\n", ev.type, ev.code, ev.value);
+            g_logged++;
+        }
         if (ev.type == EV_KEY) {
             int b = -1;
             switch (ev.code) {
@@ -269,7 +275,7 @@ int main(int argc, char **argv)
     want.freq = 48000;
     want.format = AUDIO_F32SYS;
     want.channels = 2;
-    want.samples = 512;
+    want.samples = 1024;              /* con 512 ALSA segnalava qualche underrun sulla Flip */
     want.callback = audio_cb;
     SDL_AudioDeviceID dev = p_SDL_OpenAudioDevice(NULL, 0, &want, &have, SDL_AUDIO_ALLOW_FREQUENCY_CHANGE);
     float rate = dev ? (float)have.freq : 48000.0f;
@@ -287,7 +293,13 @@ int main(int argc, char **argv)
     Evdev ev = { -1 };
     int have_evdev = evdev_open(&ev, getenv("CIRMOLO_INPUT") ? getenv("CIRMOLO_INPUT") : "/dev/input/event5") == 0;
     int hx = 0, hy = 0;
+    /* Con evdev aperto, gamepad e tastiera di SDL vengono ignorati: leggono lo stesso dispositivo
+       e ogni tasto arriverebbe due volte (con mappature diverse). */
+    int sdl_input = !have_evdev || getenv("CIRMOLO_SDL_INPUT") != NULL;
+#else
+    int sdl_input = 1;
 #endif
+    fprintf(stderr, "ingressi: %s\n", sdl_input ? "SDL (tastiera e gamepad)" : "evdev");
     uint32_t *px = malloc(sizeof(uint32_t) * W * H);
     Canvas canvas = { px, W, H };
     Axes ax = { 0 }, pad = { 0 };
@@ -298,8 +310,17 @@ int main(int argc, char **argv)
     while (running) {
         SDL_Event e;
         while (p_SDL_PollEvent(&e)) {
-            if (e.type == SDL_QUIT) running = 0;
-            else if ((e.type == SDL_KEYDOWN || e.type == SDL_KEYUP) && !e.key.repeat) {
+            if (e.type == SDL_QUIT) { running = 0; continue; }
+#ifndef _WIN32
+            if ((e.type == SDL_KEYDOWN || e.type == SDL_KEYUP || e.type == SDL_CONTROLLERBUTTONDOWN ||
+                 e.type == SDL_CONTROLLERBUTTONUP) && g_logged < 300) {
+                fprintf(stderr, "sdl evento %#x %s %d\n", e.type, sdl_input ? "usato" : "ignorato",
+                        (e.type == SDL_KEYDOWN || e.type == SDL_KEYUP) ? (int)e.key.keysym.sym : (int)e.cbutton.button);
+                g_logged++;
+            }
+#endif
+            if (!sdl_input) continue;
+            if ((e.type == SDL_KEYDOWN || e.type == SDL_KEYUP) && !e.key.repeat) {
                 int b = key_to_button(e.key.keysym.sym);
                 if (b >= 0) app_button(app, b, e.type == SDL_KEYDOWN);
             } else if (e.type == SDL_CONTROLLERBUTTONDOWN || e.type == SDL_CONTROLLERBUTTONUP) {

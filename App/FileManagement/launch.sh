@@ -15,6 +15,12 @@ LOG_PATH="/mnt/SDCARD/Saves/spruce/vtree-${PLATFORM}.log"
 # across devices but the saved dims would be stale if you swap cards between
 # Brick/TSPS/Flip/etc.). Other settings (theme, keybinds) are preserved.
 if [ -f "$HOME/config.ini" ]; then
+    # Cirmolo: same language as PyUI when vTree has a lang/<Language>.ini for it, English otherwise.
+    VTREE_LANG="$(jq -r '.language // "English"' /mnt/SDCARD/App/PyUI/py-ui-config.json 2>/dev/null)"
+    case "$VTREE_LANG" in ''|*[!A-Za-z_-]*) VTREE_LANG="English" ;; esac
+    [ -f "$HOME/lang/$VTREE_LANG.ini" ] || VTREE_LANG="English"
+    sed -i "s/^Language=.*/Language=$VTREE_LANG/" "$HOME/config.ini"
+
     sed -i -e 's/^ScreenWidth=.*/ScreenWidth=0/' \
            -e 's/^ScreenHeight=.*/ScreenHeight=0/' \
            -e 's/^Rotation=.*/Rotation=0/' "$HOME/config.ini"

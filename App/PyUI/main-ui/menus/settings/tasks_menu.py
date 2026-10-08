@@ -77,4 +77,5 @@ class TasksMenu(settings_menu.SettingsMenu):
         return option_list
 
     def get_cfw_tasks(self):
-        return OptionSelectUI.get_top_level_options_from_json(PyUiConfig.cfw_tasks_json(),ViewType.ICON_AND_DESC, execute_immediately=True)
+        return OptionSelectUI.get_top_level_options_from_json(PyUiConfig.cfw_tasks_json(),ViewType.ICON_AND_DESC, execute_immediately=True,
+                                                            label_fn=Language.task_label, desc_fn=Language.task_description)

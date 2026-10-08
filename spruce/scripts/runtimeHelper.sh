@@ -165,6 +165,14 @@ check_for_update() {
         TARGET_VERSION="$NIGHTLY_VERSION"
     fi
 
+    # Cirmolo: con CIRMOLO_VERSION nel feed si confrontano le versioni di Cirmolo (spruce/cirmolo),
+    # perche' spruce/spruce resta quella della base spruce anche quando Cirmolo cambia.
+    CIRMOLO_FEED_VERSION=$(sed -n 's/^CIRMOLO_VERSION=//p' "$TMP_DIR/spruce" | tr -d '\n\r')
+    if [ -n "$CIRMOLO_FEED_VERSION" ] && [ -f /mnt/SDCARD/spruce/cirmolo ]; then
+        TARGET_VERSION="$CIRMOLO_FEED_VERSION"
+        CURRENT_VERSION="$(head -n 1 /mnt/SDCARD/spruce/cirmolo | tr -d '\r\n ')"
+    fi
+
     # Compare versions
     log_message "Update Check: Comparing versions: $TARGET_VERSION vs $CURRENT_VERSION"
     

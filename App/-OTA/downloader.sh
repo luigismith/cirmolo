@@ -303,6 +303,17 @@ else
     TARGET_CHANNEL="stable"
 fi
 
+# Cirmolo: spruce/spruce resta la versione della base spruce anche quando Cirmolo cambia. Se il feed
+# porta CIRMOLO_VERSION si confrontano le versioni di Cirmolo (spruce/cirmolo); il pacchetto resta
+# quello di RELEASE_LINK/RELEASE_CHECKSUM. Cirmolo pubblica solo release stabili, senza nightly.
+CIRMOLO_FEED_VERSION=$(sed -n 's/^CIRMOLO_VERSION=//p' "$TMP_DIR/spruce" | tr -d '\n\r')
+if [ -n "$CIRMOLO_FEED_VERSION" ] && [ -f /mnt/SDCARD/spruce/cirmolo ]; then
+    CURRENT_VERSION="$(head -n 1 /mnt/SDCARD/spruce/cirmolo | tr -d '\r\n ')"
+    RELEASE_VERSION="$CIRMOLO_FEED_VERSION"
+    TARGET_CHANNEL="stable"
+    INSTALLED_NIGHTLY_BASE=""
+fi
+
 log_message "OTA: Current version: $CURRENT_VERSION"
 log_message "OTA: Update type: $OTA_UPDATE_TYPE"
 log_message "OTA: Target channel: $TARGET_CHANNEL"

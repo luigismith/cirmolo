@@ -1,0 +1,78 @@
+{
+    "name": "Cirmolo",
+    "author": "Cirmolo (dal tema Spruce di tenlevels)",
+    "description": "Cirmolo theme for the Miyoo Flip: night, cembra pine cone and needles",
+    "batteryPercentage": {
+        "color": "#ECE8F8",
+        "font": "nunwen.ttf",
+        "size": 18
+    },
+    "title": {
+        "font": "nunwen.ttf",
+        "size": 25,
+        "color": "#ECE8F8"
+    },
+    "hint": {
+        "font": "nunwen.ttf",
+        "size": 25,
+        "color": "#ECE8F8"
+    },
+    "currentpage": {
+        "font": "nunwen.ttf",
+        "size": 22,
+        "color": "#ECE8F8"
+    },
+    "total": {
+        "font": "nunwen.ttf",
+        "size": 22,
+        "color": "#7FD3A2"
+    },
+    "grid": {
+        "font": "nunwen.ttf",
+        "grid1x4": 25,
+        "grid3x4": 18,
+        "color": "#78739A",
+        "selectedcolor": "#F6F2FF"
+    },
+    "list": {
+        "font": "nunwen.ttf",
+        "size": 24,
+        "color": "#ECE8F8",
+        "selectedcolor": "#F6F2FF"
+    },
+    "bindOverMiyooTheme": true,
+    "recentsEnabled": false,
+    "topBarInitialXOffset": 60,
+    "setTopBarTextToGameSelection": true,
+    "fullScreenGridGameMenuResizeType": "FIT",
+    "displayVolumeNumbers": true,
+    "screensaver": {
+        "bgColor": "#13151E",
+        "screensaverTimeoutSec": 60,
+        "widgets": [
+            {
+                "type": "clock",
+                "x": 0.5,
+                "y": 0.37,
+                "fontSize": 82,
+                "color": "#FFFFFF",
+                "enabled": true,
+                "font": "nunwen.ttf"
+            },
+            {
+                "type": "date",
+                "x": 0.5,
+                "y": 0.55,
+                "fontSize": 24,
+                "color": "#B69CFF"
+            },
+            {
+                "type": "battery",
+                "x": 0.5,
+                "y": 0.7,
+                "fontSize": 20,
+                "color": "#7FD3A2"
+            }
+        ]
+    }
+}

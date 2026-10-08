@@ -1,6 +1,6 @@
 {
   "label": "OpenOrc",
-  "icon": "icon.png",
+  "icon": "openorc.png",
   "launch": "launch.sh",
   "description": "Chord synthesizer for the Akai MPK mini keyboard",
   "devices": ["MIYOO_FLIP"]

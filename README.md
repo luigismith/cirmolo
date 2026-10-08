@@ -13,7 +13,9 @@ Il nome viene dal cirmolo, il pino cembro delle Dolomiti: un legno profumato e r
 - **Versione di Cirmolo** in Impostazioni → Informazioni.
 - **Logo di avvio di Cirmolo** (la pigna viola del cirmolo) e **cambio del logo più sicuro sulla Flip:** prima di riscrivere la memoria interna, l'app «Logo di avvio» controlla la batteria, copia sulla SD tutta la memoria interna con i checksum, verifica la partizione di avvio e, se la scrittura fallisce, rimette da sola la copia.
 
-**In arrivo:** nuove app (tra cui un sintetizzatore), miglioramenti dell'interfaccia e delle prestazioni sulla Flip.
+- **Cirmolo Synth** (nuova app, sorgenti in [`App/CirmoloSynth/src`](App/CirmoloSynth/src)): sintetizzatore a 8 voci con filtro risonante, batteria sintetizzata e sequencer a 16 passi. Si suona con i tasti (le note della scala scelta), le levette danno espressione (intonazione, filtro, vibrato), L2 tiene le note e R2 suona accordi; 8 preset, delay e riverbero.
+
+**In arrivo:** altre app, miglioramenti dell'interfaccia e delle prestazioni sulla Flip.
 
 ## Crediti e licenza
 - Cirmolo esiste grazie al lavoro del team **spruceUI** e dei contributori di spruceOS: il merito della base è tutto loro.

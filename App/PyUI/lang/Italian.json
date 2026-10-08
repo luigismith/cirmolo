@@ -738,7 +738,8 @@
         "Spruce Restore": "Ripristino di spruce",
         "Theme Garden": "Giardino dei temi",
         "USB Storage Mode": "Modalità archivio USB",
-        "Update Available": "Aggiornamento disponibile"
+        "Update Available": "Aggiornamento disponibile",
+        "Cirmolo Synth": "Cirmolo Synth"
     },
     "appDescriptions": {
         "32-bit RetroArch frontend": "RetroArch a 32 bit",
@@ -762,7 +763,8 @@
         "Transfer files over USB": "Trasferisci file via USB",
         "Update file found, install to update to spruce": "Trovato un file di aggiornamento: installalo per aggiornare",
         "Version {version} is available": "È disponibile la versione {version}",
-        "View and edit files on your SD card": "Sfoglia e modifica i file della scheda SD"
+        "View and edit files on your SD card": "Sfoglia e modifica i file della scheda SD",
+        "Synthesizer, drum machine and 16-step sequencer": "Sintetizzatore, batteria e sequencer a 16 passi"
     },
     "taskLabels": {
         "Bug report": "Segnala un problema",

@@ -825,6 +825,14 @@
         "Game Switcher": "Game Switcher",
         "{system} Search": "{system} Search"
     },
+    "appFolders": {
+        "Customize": "Customize",
+        "Games": "Games",
+        "Music": "Music",
+        "Other": "Other",
+        "Photos and reading": "Photos and reading",
+        "System": "System"
+    },
     "scriptMessages": {
         "A firmware update from {brand} is ready for your device. We'll check your device's status and prepare the {brand2} update file. Once set up, the {brand3} firmware updater will install it. Press A to proceed.": "A firmware update from {brand} is ready for your device. We'll check your device's status and prepare the {brand2} update file. Once set up, the {brand3} firmware updater will install it. Press A to proceed.",
         "Applying upgrades to your system...": "Applying upgrades to your system...",

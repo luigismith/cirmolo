@@ -67,7 +67,7 @@ def main():
     sezioni.update(ek.stringhe_display())
     sezioni['scriptMessages'] = sorted(ek.stringhe_script())
     ordine = ['menuOptionDisplays', 'settingsCategories', 'menuOptionDescriptions', 'menuOptionValues',
-              'appLabels', 'appDescriptions', 'taskLabels', 'taskDescriptions', 'pageTitles', 'scriptMessages']
+              'appLabels', 'appDescriptions', 'taskLabels', 'taskDescriptions', 'pageTitles', 'appFolders', 'scriptMessages']
     for pos, sez in enumerate(ordine):
         esistenti = en.get(sez)
         voci = [v for v in sezioni.get(sez, []) if not (isinstance(esistenti, dict) and v in esistenti)]

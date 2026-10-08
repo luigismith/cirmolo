@@ -35,6 +35,10 @@
 #define LIB_SYM(h, n) dlsym(h, n)
 #endif
 
+/* I tasti dell'app sono valori 0..PAD_COUNT-1: se un header di sistema ridefinisse uno di questi nomi
+   (successo con BTN_A & co. di linux/input.h) la compilazione si deve fermare. */
+_Static_assert(PAD_A == 4 && PAD_SELECT == 12 && PAD_COUNT == 15, "nomi dei tasti ridefiniti");
+
 #define W 640
 #define H 480
 
@@ -132,39 +136,39 @@ static void evdev_poll(Evdev *e, App *a, Axes *ax, float *l2p, float *r2p, int *
         if (ev.type == EV_KEY) {
             int b = -1;
             switch (ev.code) {
-            case 305: b = BTN_A; break;          /* tasto A (a destra) */
-            case 304: b = BTN_B; break;          /* B (in basso) */
-            case 308: b = BTN_X; break;          /* X (in alto) */
-            case 307: b = BTN_Y; break;          /* Y (a sinistra) */
-            case 310: b = BTN_L1; break;
-            case 311: b = BTN_R1; break;
-            case 314: b = BTN_SELECT; break;
-            case 315: b = BTN_START; break;
-            case 316: b = BTN_MENU; break;
+            case 305: b = PAD_A; break;          /* tasto A (a destra) */
+            case 304: b = PAD_B; break;          /* B (in basso) */
+            case 308: b = PAD_X; break;          /* X (in alto) */
+            case 307: b = PAD_Y; break;          /* Y (a sinistra) */
+            case 310: b = PAD_L1; break;
+            case 311: b = PAD_R1; break;
+            case 314: b = PAD_SELECT; break;
+            case 315: b = PAD_START; break;
+            case 316: b = PAD_MENU; break;
             }
             if (b >= 0 && ev.value != 2) app_button(a, b, ev.value != 0);
         } else if (ev.type == EV_ABS) {
             switch (ev.code) {
             case ABS_HAT0X:
-                if (*hx < 0) app_button(a, BTN_LEFT, 0);
-                if (*hx > 0) app_button(a, BTN_RIGHT, 0);
+                if (*hx < 0) app_button(a, PAD_LEFT, 0);
+                if (*hx > 0) app_button(a, PAD_RIGHT, 0);
                 *hx = ev.value;
-                if (ev.value < 0) app_button(a, BTN_LEFT, 1);
-                if (ev.value > 0) app_button(a, BTN_RIGHT, 1);
+                if (ev.value < 0) app_button(a, PAD_LEFT, 1);
+                if (ev.value > 0) app_button(a, PAD_RIGHT, 1);
                 break;
             case ABS_HAT0Y:
-                if (*hy < 0) app_button(a, BTN_UP, 0);
-                if (*hy > 0) app_button(a, BTN_DOWN, 0);
+                if (*hy < 0) app_button(a, PAD_UP, 0);
+                if (*hy > 0) app_button(a, PAD_DOWN, 0);
                 *hy = ev.value;
-                if (ev.value < 0) app_button(a, BTN_UP, 1);
-                if (ev.value > 0) app_button(a, BTN_DOWN, 1);
+                if (ev.value < 0) app_button(a, PAD_UP, 1);
+                if (ev.value > 0) app_button(a, PAD_DOWN, 1);
                 break;
             case ABS_X: ax->lx = evdev_norm(e, ev.code, ev.value, 0); break;
             case ABS_Y: ax->ly = evdev_norm(e, ev.code, ev.value, 0); break;
             case ABS_RX: ax->rx = evdev_norm(e, ev.code, ev.value, 0); break;
             case ABS_RY: ax->ry = evdev_norm(e, ev.code, ev.value, 0); break;
-            case ABS_Z: ax->l2 = evdev_norm(e, ev.code, ev.value, 1); trigger(a, BTN_L2, ax->l2, l2p); break;
-            case ABS_RZ: ax->r2 = evdev_norm(e, ev.code, ev.value, 1); trigger(a, BTN_R2, ax->r2, r2p); break;
+            case ABS_Z: ax->l2 = evdev_norm(e, ev.code, ev.value, 1); trigger(a, PAD_L2, ax->l2, l2p); break;
+            case ABS_RZ: ax->r2 = evdev_norm(e, ev.code, ev.value, 1); trigger(a, PAD_R2, ax->r2, r2p); break;
             }
         }
     }
@@ -174,21 +178,21 @@ static void evdev_poll(Evdev *e, App *a, Axes *ax, float *l2p, float *r2p, int *
 static int key_to_button(SDL_Keycode k)
 {
     switch (k) {
-    case SDLK_UP: return BTN_UP;
-    case SDLK_DOWN: return BTN_DOWN;
-    case SDLK_LEFT: return BTN_LEFT;
-    case SDLK_RIGHT: return BTN_RIGHT;
-    case SDLK_x: return BTN_A;
-    case SDLK_z: return BTN_B;
-    case SDLK_s: return BTN_X;
-    case SDLK_a: return BTN_Y;
-    case SDLK_q: return BTN_L1;
-    case SDLK_w: return BTN_R1;
-    case SDLK_1: return BTN_L2;
-    case SDLK_2: return BTN_R2;
-    case SDLK_BACKSPACE: case SDLK_RSHIFT: return BTN_SELECT;
-    case SDLK_RETURN: return BTN_START;
-    case SDLK_ESCAPE: return BTN_MENU;
+    case SDLK_UP: return PAD_UP;
+    case SDLK_DOWN: return PAD_DOWN;
+    case SDLK_LEFT: return PAD_LEFT;
+    case SDLK_RIGHT: return PAD_RIGHT;
+    case SDLK_x: return PAD_A;
+    case SDLK_z: return PAD_B;
+    case SDLK_s: return PAD_X;
+    case SDLK_a: return PAD_Y;
+    case SDLK_q: return PAD_L1;
+    case SDLK_w: return PAD_R1;
+    case SDLK_1: return PAD_L2;
+    case SDLK_2: return PAD_R2;
+    case SDLK_BACKSPACE: case SDLK_RSHIFT: return PAD_SELECT;
+    case SDLK_RETURN: return PAD_START;
+    case SDLK_ESCAPE: return PAD_MENU;
     }
     return -1;
 }
@@ -196,19 +200,19 @@ static int key_to_button(SDL_Keycode k)
 static int pad_to_button(int b)
 {
     switch (b) {
-    case SDL_CONTROLLER_BUTTON_DPAD_UP: return BTN_UP;
-    case SDL_CONTROLLER_BUTTON_DPAD_DOWN: return BTN_DOWN;
-    case SDL_CONTROLLER_BUTTON_DPAD_LEFT: return BTN_LEFT;
-    case SDL_CONTROLLER_BUTTON_DPAD_RIGHT: return BTN_RIGHT;
-    case SDL_CONTROLLER_BUTTON_B: return BTN_A;       /* posizioni fisiche: est */
-    case SDL_CONTROLLER_BUTTON_A: return BTN_B;       /* sud */
-    case SDL_CONTROLLER_BUTTON_Y: return BTN_X;       /* nord */
-    case SDL_CONTROLLER_BUTTON_X: return BTN_Y;       /* ovest */
-    case SDL_CONTROLLER_BUTTON_LEFTSHOULDER: return BTN_L1;
-    case SDL_CONTROLLER_BUTTON_RIGHTSHOULDER: return BTN_R1;
-    case SDL_CONTROLLER_BUTTON_BACK: return BTN_SELECT;
-    case SDL_CONTROLLER_BUTTON_START: return BTN_START;
-    case SDL_CONTROLLER_BUTTON_GUIDE: return BTN_MENU;
+    case SDL_CONTROLLER_BUTTON_DPAD_UP: return PAD_UP;
+    case SDL_CONTROLLER_BUTTON_DPAD_DOWN: return PAD_DOWN;
+    case SDL_CONTROLLER_BUTTON_DPAD_LEFT: return PAD_LEFT;
+    case SDL_CONTROLLER_BUTTON_DPAD_RIGHT: return PAD_RIGHT;
+    case SDL_CONTROLLER_BUTTON_B: return PAD_A;       /* posizioni fisiche: est */
+    case SDL_CONTROLLER_BUTTON_A: return PAD_B;       /* sud */
+    case SDL_CONTROLLER_BUTTON_Y: return PAD_X;       /* nord */
+    case SDL_CONTROLLER_BUTTON_X: return PAD_Y;       /* ovest */
+    case SDL_CONTROLLER_BUTTON_LEFTSHOULDER: return PAD_L1;
+    case SDL_CONTROLLER_BUTTON_RIGHTSHOULDER: return PAD_R1;
+    case SDL_CONTROLLER_BUTTON_BACK: return PAD_SELECT;
+    case SDL_CONTROLLER_BUTTON_START: return PAD_START;
+    case SDL_CONTROLLER_BUTTON_GUIDE: return PAD_MENU;
     }
     return -1;
 }
@@ -333,8 +337,8 @@ int main(int argc, char **argv)
                 case SDL_CONTROLLER_AXIS_LEFTY: pad.ly = v; break;
                 case SDL_CONTROLLER_AXIS_RIGHTX: pad.rx = v; break;
                 case SDL_CONTROLLER_AXIS_RIGHTY: pad.ry = v; break;
-                case SDL_CONTROLLER_AXIS_TRIGGERLEFT: pad.l2 = v; trigger(app, BTN_L2, v, &pl2p); break;
-                case SDL_CONTROLLER_AXIS_TRIGGERRIGHT: pad.r2 = v; trigger(app, BTN_R2, v, &pr2p); break;
+                case SDL_CONTROLLER_AXIS_TRIGGERLEFT: pad.l2 = v; trigger(app, PAD_L2, v, &pl2p); break;
+                case SDL_CONTROLLER_AXIS_TRIGGERRIGHT: pad.r2 = v; trigger(app, PAD_R2, v, &pr2p); break;
                 }
             }
         }

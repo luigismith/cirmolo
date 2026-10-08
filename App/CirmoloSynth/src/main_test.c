@@ -99,26 +99,26 @@ int main(int argc, char **argv)
     int fail = 0;
 
     /* 1. Suona: accordo con R2 e levetta del filtro, poi una scala */
-    app_button(a, BTN_R2, 1);
+    app_button(a, PAD_R2, 1);
     app_axes(a, 0.0f, -0.5f, 0.0f, 0.0f, 0.0f, 1.0f);
-    app_button(a, BTN_LEFT, 1);
+    app_button(a, PAD_LEFT, 1);
     run(a, s, 1.2f, wav, &pos, cap);
     app_draw(a, &c);
     snprintf(out, sizeof(out), "%s/1-suona.bmp", argv[2]);
     write_bmp(out, &c);
-    app_button(a, BTN_LEFT, 0);
-    app_button(a, BTN_R2, 0);
+    app_button(a, PAD_LEFT, 0);
+    app_button(a, PAD_R2, 0);
     app_axes(a, 0, 0, 0, 0, 0, 0);
     run(a, s, 1.0f, wav, &pos, cap);
-    static const int scale_btns[8] = { BTN_LEFT, BTN_DOWN, BTN_RIGHT, BTN_UP, BTN_Y, BTN_B, BTN_A, BTN_X };
+    static const int scale_btns[8] = { PAD_LEFT, PAD_DOWN, PAD_RIGHT, PAD_UP, PAD_Y, PAD_B, PAD_A, PAD_X };
     for (int i = 0; i < 8; i++) tap(a, s, scale_btns[i], 0.22f, wav, &pos, cap);
     run(a, s, 1.5f, wav, &pos, cap);
 
     /* 2. Suono: preset Basso Dolomiti e taglio del filtro */
-    app_button(a, BTN_SELECT, 1); app_button(a, BTN_SELECT, 0);
-    tap(a, s, BTN_RIGHT, 0.05f, wav, &pos, cap);                       /* Preset -> Basso Dolomiti */
-    for (int i = 0; i < 10; i++) tap(a, s, BTN_DOWN, 0.03f, wav, &pos, cap);
-    tap(a, s, BTN_A, 0.6f, wav, &pos, cap);
+    app_button(a, PAD_SELECT, 1); app_button(a, PAD_SELECT, 0);
+    tap(a, s, PAD_RIGHT, 0.05f, wav, &pos, cap);                       /* Preset -> Basso Dolomiti */
+    for (int i = 0; i < 10; i++) tap(a, s, PAD_DOWN, 0.03f, wav, &pos, cap);
+    tap(a, s, PAD_A, 0.6f, wav, &pos, cap);
     run(a, s, 0.4f, wav, &pos, cap);
     app_draw(a, &c);
     snprintf(out, sizeof(out), "%s/2-suono.bmp", argv[2]);
@@ -126,25 +126,25 @@ int main(int argc, char **argv)
 
     /* 3. Sequenza: torna al pad, suona 8 secondi di pattern */
     app_load_preset(a, 0);
-    app_button(a, BTN_SELECT, 1); app_button(a, BTN_SELECT, 0);
-    tap(a, s, BTN_DOWN, 0.03f, wav, &pos, cap);
-    tap(a, s, BTN_RIGHT, 0.03f, wav, &pos, cap);
-    tap(a, s, BTN_RIGHT, 0.03f, wav, &pos, cap);
-    tap(a, s, BTN_START, 0.03f, wav, &pos, cap);
+    app_button(a, PAD_SELECT, 1); app_button(a, PAD_SELECT, 0);
+    tap(a, s, PAD_DOWN, 0.03f, wav, &pos, cap);
+    tap(a, s, PAD_RIGHT, 0.03f, wav, &pos, cap);
+    tap(a, s, PAD_RIGHT, 0.03f, wav, &pos, cap);
+    tap(a, s, PAD_START, 0.03f, wav, &pos, cap);
     run(a, s, 1.3f, wav, &pos, cap);
     app_draw(a, &c);
     snprintf(out, sizeof(out), "%s/3-sequenza.bmp", argv[2]);
     write_bmp(out, &c);
     run(a, s, 7.0f, wav, &pos, cap);
-    tap(a, s, BTN_START, 0.03f, wav, &pos, cap);
+    tap(a, s, PAD_START, 0.03f, wav, &pos, cap);
     run(a, s, 2.0f, wav, &pos, cap);
 
     /* 4. Richiesta di uscita */
-    app_button(a, BTN_MENU, 1); app_button(a, BTN_MENU, 0);
+    app_button(a, PAD_MENU, 1); app_button(a, PAD_MENU, 0);
     app_draw(a, &c);
     snprintf(out, sizeof(out), "%s/4-uscita.bmp", argv[2]);
     write_bmp(out, &c);
-    app_button(a, BTN_A, 1); app_button(a, BTN_A, 0);
+    app_button(a, PAD_A, 1); app_button(a, PAD_A, 0);
     if (!app_wants_quit(a)) { fprintf(stderr, "ERRORE: A nella finestra di uscita non esce\n"); fail = 1; }
 
     snprintf(out, sizeof(out), "%s/demo.wav", argv[2]);

@@ -40,7 +40,7 @@ static const Scale SCALES[] = {
 #define SCALE_COUNT ((int)(sizeof(SCALES) / sizeof(SCALES[0])))
 
 /* I tasti che suonano, nell'ordine dei gradi: croce sinistra-giu'-destra-su, poi Y-B-A-X (ovest-sud-est-nord). */
-static const int NOTE_BTNS[8] = { BTN_LEFT, BTN_DOWN, BTN_RIGHT, BTN_UP, BTN_Y, BTN_B, BTN_A, BTN_X };
+static const int NOTE_BTNS[8] = { PAD_LEFT, PAD_DOWN, PAD_RIGHT, PAD_UP, PAD_Y, PAD_B, PAD_A, PAD_X };
 
 static const char *DRUM_NAMES[DRUM_COUNT] = { "Cassa", "Rullante", "Charleston", "Charl. aperto", "Battimani" };
 
@@ -180,7 +180,7 @@ struct App {
     int screen, quit_dialog, quit;
     int preset, modified;
     int root, scale, octave;
-    int down[BTN_COUNT];
+    int down[PAD_COUNT];
     int btn_notes[8][3], btn_count[8];
     int sustained[128];
     float lx, ly, rx, ry, l2, r2;
@@ -188,7 +188,7 @@ struct App {
     float scroll;
     int audition;
     int cx, cy;
-    float rep[BTN_COUNT];
+    float rep[PAD_COUNT];
     float time;
     char last_label[48];
     float note_glow;
@@ -377,7 +377,7 @@ static void release_all(App *a)
 
 static void press_note(App *a, int idx)
 {
-    int chord = a->down[BTN_R2];
+    int chord = a->down[PAD_R2];
     int degs[3] = { idx, idx + 2, idx + 4 };
     int n = chord ? 3 : 1;
     a->btn_count[idx] = n;
@@ -415,7 +415,7 @@ static void release_note(App *a, int idx)
     for (int i = 0; i < n; i++) {
         int m = a->btn_notes[idx][i];
         if (note_held_by_button(a, m)) continue;
-        if (a->down[BTN_L2]) a->sustained[m] = 1;
+        if (a->down[PAD_L2]) a->sustained[m] = 1;
         else synth_note_off(a->s, m);
     }
 }
@@ -527,11 +527,11 @@ static void seq_button(App *a, int b)
     Pattern *p = synth_pattern(a->s);
     int x = a->cx, row = a->cy;
     switch (b) {
-    case BTN_LEFT: a->cx = (a->cx + SY_STEPS - 1) % SY_STEPS; break;
-    case BTN_RIGHT: a->cx = (a->cx + 1) % SY_STEPS; break;
-    case BTN_UP: a->cy = (a->cy + DRUM_COUNT) % (DRUM_COUNT + 1); break;
-    case BTN_DOWN: a->cy = (a->cy + 1) % (DRUM_COUNT + 1); break;
-    case BTN_A:
+    case PAD_LEFT: a->cx = (a->cx + SY_STEPS - 1) % SY_STEPS; break;
+    case PAD_RIGHT: a->cx = (a->cx + 1) % SY_STEPS; break;
+    case PAD_UP: a->cy = (a->cy + DRUM_COUNT) % (DRUM_COUNT + 1); break;
+    case PAD_DOWN: a->cy = (a->cy + 1) % (DRUM_COUNT + 1); break;
+    case PAD_A:
         if (row < DRUM_COUNT) {
             p->drum[row][x] = p->drum[row][x] ? 0 : 1;
             if (p->drum[row][x] && !synth_playing(a->s)) synth_drum_hit(a->s, row, 0.72f);
@@ -546,59 +546,59 @@ static void seq_button(App *a, int b)
             }
         }
         break;
-    case BTN_B:
+    case PAD_B:
         if (row < DRUM_COUNT) p->drum[row][x] = p->drum[row][x] == 2 ? 1 : 2;
         else p->accent[x] = !p->accent[x];
         break;
-    case BTN_X:
-    case BTN_Y:
+    case PAD_X:
+    case PAD_Y:
         if (row == DRUM_COUNT) {
-            int d = p->note[x] < 0 ? 0 : p->note[x] + (b == BTN_X ? 1 : -1);
+            int d = p->note[x] < 0 ? 0 : p->note[x] + (b == PAD_X ? 1 : -1);
             d = d < 0 ? 0 : (d > 15 ? 15 : d);
             p->note[x] = (int8_t)d;
             if (!synth_playing(a->s)) { int m = synth_degree_to_midi(a->s, d); synth_note_on(a->s, m, 0.8f); synth_note_off(a->s, m); }
         }
         break;
-    case BTN_L1: synth_set_tempo(a->s, synth_tempo(a->s) - 1); break;
-    case BTN_R1: synth_set_tempo(a->s, synth_tempo(a->s) + 1); break;
-    case BTN_L2: synth_set_swing(a->s, synth_swing(a->s) - 0.05f); break;
-    case BTN_R2: synth_set_swing(a->s, synth_swing(a->s) + 0.05f); break;
+    case PAD_L1: synth_set_tempo(a->s, synth_tempo(a->s) - 1); break;
+    case PAD_R1: synth_set_tempo(a->s, synth_tempo(a->s) + 1); break;
+    case PAD_L2: synth_set_swing(a->s, synth_swing(a->s) - 0.05f); break;
+    case PAD_R2: synth_set_swing(a->s, synth_swing(a->s) + 0.05f); break;
     }
 }
 
 static void sound_button(App *a, int b)
 {
     switch (b) {
-    case BTN_UP: move_selection(a, -1); break;
-    case BTN_DOWN: move_selection(a, 1); break;
-    case BTN_LEFT: param_adjust(a, &PARAMS[a->sel], -1, a->down[BTN_L1] || a->down[BTN_R1]); break;
-    case BTN_RIGHT: param_adjust(a, &PARAMS[a->sel], 1, a->down[BTN_L1] || a->down[BTN_R1]); break;
-    case BTN_A: if (!a->audition) { a->audition = play_midi(a, 0); synth_note_on(a->s, a->audition, 0.85f); } break;
-    case BTN_B: app_set_screen(a, SCREEN_PLAY); break;
+    case PAD_UP: move_selection(a, -1); break;
+    case PAD_DOWN: move_selection(a, 1); break;
+    case PAD_LEFT: param_adjust(a, &PARAMS[a->sel], -1, a->down[PAD_L1] || a->down[PAD_R1]); break;
+    case PAD_RIGHT: param_adjust(a, &PARAMS[a->sel], 1, a->down[PAD_L1] || a->down[PAD_R1]); break;
+    case PAD_A: if (!a->audition) { a->audition = play_midi(a, 0); synth_note_on(a->s, a->audition, 0.85f); } break;
+    case PAD_B: app_set_screen(a, SCREEN_PLAY); break;
     }
 }
 
 static int repeats(int screen, int b)
 {
-    if (screen == SCREEN_SOUND) return b == BTN_UP || b == BTN_DOWN || b == BTN_LEFT || b == BTN_RIGHT;
-    if (screen == SCREEN_SEQ) return b == BTN_UP || b == BTN_DOWN || b == BTN_LEFT || b == BTN_RIGHT || b == BTN_L1 || b == BTN_R1;
+    if (screen == SCREEN_SOUND) return b == PAD_UP || b == PAD_DOWN || b == PAD_LEFT || b == PAD_RIGHT;
+    if (screen == SCREEN_SEQ) return b == PAD_UP || b == PAD_DOWN || b == PAD_LEFT || b == PAD_RIGHT || b == PAD_L1 || b == PAD_R1;
     return 0;
 }
 
 static void handle_press(App *a, int b)
 {
     if (a->quit_dialog) {
-        if (b == BTN_A || b == BTN_DOWN) { a->quit = 1; release_all(a); }
-        else if (b == BTN_B || b == BTN_UP || b == BTN_MENU) a->quit_dialog = 0;
+        if (b == PAD_A || b == PAD_DOWN) { a->quit = 1; release_all(a); }
+        else if (b == PAD_B || b == PAD_UP || b == PAD_MENU) a->quit_dialog = 0;
         return;
     }
-    if (b == BTN_MENU) { a->quit_dialog = 1; release_all(a); return; }
-    if (b == BTN_SELECT) { app_set_screen(a, a->screen + 1); return; }
-    if (b == BTN_START) { synth_play(a->s, !synth_playing(a->s)); return; }
+    if (b == PAD_MENU) { a->quit_dialog = 1; release_all(a); return; }
+    if (b == PAD_SELECT) { app_set_screen(a, a->screen + 1); return; }
+    if (b == PAD_START) { synth_play(a->s, !synth_playing(a->s)); return; }
     if (a->screen == SCREEN_PLAY) {
         for (int i = 0; i < 8; i++) if (NOTE_BTNS[i] == b) { press_note(a, i); return; }
-        if (b == BTN_L1 && a->octave > 1) a->octave--;
-        if (b == BTN_R1 && a->octave < 7) a->octave++;
+        if (b == PAD_L1 && a->octave > 1) a->octave--;
+        if (b == PAD_R1 && a->octave < 7) a->octave++;
     } else if (a->screen == SCREEN_SOUND) {
         sound_button(a, b);
     } else {
@@ -608,7 +608,7 @@ static void handle_press(App *a, int b)
 
 void app_button(App *a, int b, int pressed)
 {
-    if (b < 0 || b >= BTN_COUNT) return;
+    if (b < 0 || b >= PAD_COUNT) return;
     if (pressed) {
         if (a->down[b]) app_button(a, b, 0);   /* mai un tasto bloccato come premuto: prima lo rilascia */
         a->down[b] = 1;
@@ -619,9 +619,9 @@ void app_button(App *a, int b, int pressed)
         a->down[b] = 0;
         if (a->screen == SCREEN_PLAY && !a->quit_dialog) {
             for (int i = 0; i < 8; i++) if (NOTE_BTNS[i] == b && a->btn_count[i]) release_note(a, i);
-            if (b == BTN_L2) release_sustain(a);
+            if (b == PAD_L2) release_sustain(a);
         }
-        if (a->screen == SCREEN_SOUND && b == BTN_A && a->audition) { synth_note_off(a->s, a->audition); a->audition = 0; }
+        if (a->screen == SCREEN_SOUND && b == PAD_A && a->audition) { synth_note_off(a->s, a->audition); a->audition = 0; }
     }
 }
 
@@ -652,7 +652,7 @@ void app_update(App *a, float dt)
         a->drum_glow[d] = fmaxf(0.0f, a->drum_glow[d] - dt * 4.0f);
     }
     if (a->quit_dialog) return;
-    for (int b = 0; b < BTN_COUNT; b++) {
+    for (int b = 0; b < PAD_COUNT; b++) {
         if (!a->down[b] || !repeats(a->screen, b)) continue;
         a->rep[b] += dt;
         while (a->rep[b] > 0.38f) {
@@ -774,7 +774,7 @@ static void draw_play(App *a, Canvas *c)
     gfx_text(c, FONT_SMALL, 32, 86, "Nota", C_MUTED);
     const char *lbl = a->last_label[0] ? a->last_label : "-";
     uint32_t col = gfx_mix(C_TEXT, C_VIOLET, a->note_glow * 0.8f);
-    gfx_text(c, a->down[BTN_R2] || gfx_text_width(FONT_BIG, lbl) > 200 ? FONT_TITLE : FONT_BIG, 32, 140, lbl, col);
+    gfx_text(c, a->down[PAD_R2] || gfx_text_width(FONT_BIG, lbl) > 200 ? FONT_TITLE : FONT_BIG, 32, 140, lbl, col);
     char t[96];
     snprintf(t, sizeof(t), "%s%s", PRESETS[a->preset].name, a->modified ? " *" : "");
     gfx_text(c, FONT_SMALL, 32, 176, "Preset", C_MUTED);
@@ -785,9 +785,9 @@ static void draw_play(App *a, Canvas *c)
     snprintf(t, sizeof(t), "%d", a->octave);
     gfx_text(c, FONT_SMALL, 32, 228, "Ottava", C_MUTED);
     gfx_text(c, FONT_BOLD, 100, 228, t, C_TEXT);
-    const char *mode = a->down[BTN_R2] ? "Accordi" : (a->down[BTN_L2] ? "Tenuto" : "Note");
+    const char *mode = a->down[PAD_R2] ? "Accordi" : (a->down[PAD_L2] ? "Tenuto" : "Note");
     gfx_text(c, FONT_SMALL, 32, 254, "Modo", C_MUTED);
-    gfx_text(c, FONT_BOLD, 100, 254, mode, a->down[BTN_R2] || a->down[BTN_L2] ? C_AMBER : C_TEXT);
+    gfx_text(c, FONT_BOLD, 100, 254, mode, a->down[PAD_R2] || a->down[PAD_L2] ? C_AMBER : C_TEXT);
     snprintf(t, sizeof(t), "%d/8 voci", synth_active_voices(a->s));
     gfx_text(c, FONT_SMALL, 32, 276, t, C_DIM);
 

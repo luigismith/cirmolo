@@ -5,7 +5,8 @@ Aggiunge (solo se mancano), con il testo inglese identico al default usato dal c
   - "displayName" in cima;
   - le chiavi usate dal codice ma assenti, subito dopo la sezione fontPurposeSizes;
   - i nomi delle impostazioni mancanti in menuOptionDisplays;
-  - le sezioni settingsCategories, menuOptionDescriptions, menuOptionValues (inglese -> inglese).
+  - le sezioni settingsCategories, menuOptionDescriptions, menuOptionValues e le altre sezioni
+    mostrate a schermo, compresi i messaggi degli script (scriptMessages), inglese -> inglese.
 Cosi' l'interfaccia inglese resta identica e ogni lingua puo' tradurre tutto.
 
 Uso:  python -I -X utf8 .github/i18n/sync_english.py [--dry-run]
@@ -64,8 +65,9 @@ def main():
 
     sezioni = dict(menu)
     sezioni.update(ek.stringhe_display())
+    sezioni['scriptMessages'] = sorted(ek.stringhe_script())
     ordine = ['menuOptionDisplays', 'settingsCategories', 'menuOptionDescriptions', 'menuOptionValues',
-              'appLabels', 'appDescriptions', 'taskLabels', 'taskDescriptions', 'pageTitles']
+              'appLabels', 'appDescriptions', 'taskLabels', 'taskDescriptions', 'pageTitles', 'scriptMessages']
     for pos, sez in enumerate(ordine):
         esistenti = en.get(sez)
         voci = [v for v in sezioni.get(sez, []) if not (isinstance(esistenti, dict) and v in esistenti)]

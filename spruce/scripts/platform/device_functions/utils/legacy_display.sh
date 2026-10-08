@@ -90,6 +90,7 @@ display() {
         esac
         shift
     done
+    command -v translate_message > /dev/null 2>&1 && text="$(translate_message "$text")"   # Cirmolo: same language as PyUI
     r=$(echo "$color" | cut -c1-2)
     g=$(echo "$color" | cut -c3-4)
     b=$(echo "$color" | cut -c5-6)

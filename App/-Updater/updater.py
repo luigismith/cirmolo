@@ -141,6 +141,59 @@ class PyUiMessenger:
 
     SOCKET_ADDR = b"\x0050980"
 
+    # Cirmolo: messages follow the PyUI language. The English text is the key of the
+    # "scriptMessages" section in App/PyUI/lang/<Language>.json, with {placeholders}
+    # for the parts that vary: same rules as Language.translate() in PyUI and
+    # spruce/scripts/translate_message.jq. Read once, before any file is replaced.
+    # Logs stay in English.
+    PYUI_CONFIG = "/mnt/SDCARD/App/PyUI/py-ui-config.json"
+    LANG_DIR = "/mnt/SDCARD/App/PyUI/lang"
+    _messages = None
+    _templates = []
+
+    def _load_messages(self):
+        PyUiMessenger._messages, PyUiMessenger._templates = {}, []
+        try:
+            with open(self.PYUI_CONFIG, encoding="utf-8") as f:
+                language = json.load(f).get("language") or "English"
+            if language == "English":
+                return
+            with open(os.path.join(self.LANG_DIR, language + ".json"), encoding="utf-8") as f:
+                table = json.load(f).get("scriptMessages")
+        except Exception:
+            return
+        if not isinstance(table, dict):
+            return
+        compiled = []
+        for source, target in table.items():
+            if "{" not in source or not isinstance(target, str):
+                continue
+            pattern = re.sub(r"\\\{([A-Za-z_][A-Za-z0-9_]*)\\\}", r"(?P<\1>.*?)", re.escape(source))
+            try:
+                compiled.append((re.compile(pattern, re.DOTALL), target, len(source)))
+            except re.error:
+                continue
+        compiled.sort(key=lambda t: -t[2])
+        PyUiMessenger._messages = table
+        PyUiMessenger._templates = [(rx, target) for rx, target, _ in compiled]
+
+    def translate(self, text):
+        if not text or not isinstance(text, str):
+            return text
+        if PyUiMessenger._messages is None:
+            self._load_messages()
+        table = PyUiMessenger._messages
+        if isinstance(table.get(text), str):
+            return table[text]
+        for rx, target in PyUiMessenger._templates:
+            m = rx.fullmatch(text)
+            if m:
+                for name, value in m.groupdict().items():
+                    found = table.get(value)
+                    target = target.replace("{" + name + "}", found if isinstance(found, str) else value)
+                return target
+        return text
+
     def send(self, msg):
         try:
             s = socket.socket(
@@ -173,7 +226,7 @@ class PyUiMessenger:
                 "cmd": "IMAGE_AND_TEXT",
                 "args": [
                     image,
-                    text,
+                    self.translate(text),
                     str(size),
                     str(img_y),
                     str(text_y)
@@ -188,12 +241,12 @@ class PyUiMessenger:
         bottom=""
     ):
         args = [
-            text,
+            self.translate(text),
             str(percent)
         ]
 
         if bottom:
-            args.append(bottom)
+            args.append(self.translate(bottom))
 
         self.send(
             json.dumps({

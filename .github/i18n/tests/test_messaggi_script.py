@@ -138,6 +138,27 @@ class TestMessaggiScript(unittest.TestCase):
                 fp.write('{}')
             self.assertEqual(jq_singolo(vuoto, 'Themes'), 'Themes')
 
+    def test_updater_uguale_a_pyui(self):
+        """App/-Updater/updater.py traduce da se' (gira mentre PyUI viene aggiornato): stesse regole."""
+        import ast
+        with open(estrai_chiavi.UPDATER, encoding='utf-8') as f:
+            albero = ast.parse(f.read())
+        classe = next(n for n in albero.body if isinstance(n, ast.ClassDef) and n.name == 'PyUiMessenger')
+        spazio = {'json': json, 'os': os, 're': re, 'socket': None}
+        exec(compile(ast.Module(body=[classe], type_ignores=[]), 'updater.py', 'exec'), spazio)
+        messenger = spazio['PyUiMessenger']
+        f_it = os.path.join(LANG, 'Italian.json')
+        with open(f_it, encoding='utf-8') as fp:
+            voci = json.load(fp)['scriptMessages']
+        testi = list(voci) + [istanze(k, n) for k in voci if '{' in k for n in (0, 2)] + ['Sconosciuto', '']
+        with tempfile.TemporaryDirectory() as d:
+            for lingua, atteso in (('Italian', py_traduci(f_it, testi)), ('English', testi), ('Klingon', testi)):
+                cfg = os.path.join(d, 'py-ui-config.json')
+                with open(cfg, 'w', encoding='utf-8') as fp:
+                    json.dump({'language': lingua}, fp)
+                messenger.PYUI_CONFIG, messenger.LANG_DIR, messenger._messages = cfg, LANG, None
+                self.assertEqual([messenger().translate(t) for t in testi], atteso, lingua)
+
     def test_english_json_allineato_agli_script(self):
         with open(os.path.join(LANG, 'English.json'), encoding='utf-8') as fp:
             en = json.load(fp)['scriptMessages']

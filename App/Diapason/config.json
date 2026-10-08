@@ -1,0 +1,7 @@
+{
+  "label": "Diapason",
+  "icon": "icon.png",
+  "launch": "launch.sh",
+  "description": "Tuner, reference tones and metronome",
+  "devices": ["MIYOO_FLIP"]
+}

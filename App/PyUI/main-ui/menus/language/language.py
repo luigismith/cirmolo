@@ -1,6 +1,7 @@
 
 import json
 import os
+import re
 import sys
 
 from display.font_purpose import FontPurpose
@@ -11,6 +12,7 @@ from utils.py_ui_config import PyUiConfig
 class Language:
     _data = {}
     _config_path = None
+    _template_cache = {}
     @classmethod
 
     def init(cls):
@@ -32,6 +34,7 @@ class Language:
 
     @classmethod
     def _read_from_file(cls, filepath):
+        cls._template_cache = {}
         if(filepath is not None):
             try:
                 with open(filepath, 'r', encoding='utf-8') as f:
@@ -217,6 +220,67 @@ class Language:
     @classmethod
     def screen_type_label(cls, screen_type: str) -> str:
         return cls.enum_label("screenTypes", screen_type, screen_type)
+
+    @classmethod
+    def _templates(cls, section: str, table: dict):
+        """Entries of a section that contain {placeholders}, compiled once per loaded file."""
+        if section not in cls._template_cache:
+            compiled = []
+            for source, target in table.items():
+                if "{" not in source or not isinstance(target, str):
+                    continue
+                pattern = re.escape(source)
+                pattern = re.sub(r"\\\{([A-Za-z_][A-Za-z0-9_]*)\\\}", r"(?P<\1>.*?)", pattern)
+                try:
+                    compiled.append((re.compile(pattern, re.DOTALL), target, len(source)))
+                except re.error:
+                    continue
+            compiled.sort(key=lambda t: -t[2])
+            cls._template_cache[section] = [(rx, target) for rx, target, _ in compiled]
+        return cls._template_cache[section]
+
+    @classmethod
+    def translate(cls, section: str, text):
+        """Display-time translation keyed by the English source text.
+
+        Looks up `text` in the given section of the language file; entries may contain
+        {placeholders} (e.g. "Version {version} is available"). Returns `text` unchanged
+        when there is no translation, so English output never changes.
+        """
+        if not text or not isinstance(text, str):
+            return text
+        table = cls._data.get(section)
+        if not isinstance(table, dict):
+            return text
+        if text in table:
+            return table[text]
+        for rx, target in cls._templates(section, table):
+            m = rx.fullmatch(text)
+            if m:
+                for name, value in m.groupdict().items():
+                    target = target.replace("{" + name + "}", table.get(value, value))
+                return target
+        return text
+
+    @classmethod
+    def app_label(cls, label):
+        return cls.translate("appLabels", label)
+
+    @classmethod
+    def app_description(cls, description):
+        return cls.translate("appDescriptions", description)
+
+    @classmethod
+    def task_label(cls, label):
+        return cls.translate("taskLabels", label)
+
+    @classmethod
+    def task_description(cls, description):
+        return cls.translate("taskDescriptions", description)
+
+    @classmethod
+    def page_title(cls, title):
+        return cls.translate("pageTitles", title)
 
     @classmethod
     def _font_config_key_for_purpose(cls, font_purpose: FontPurpose) -> str:

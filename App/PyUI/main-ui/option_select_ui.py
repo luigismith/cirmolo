@@ -10,6 +10,7 @@ from controller.controller import Controller
 from controller.controller_inputs import ControllerInput
 
 from display.display import Display
+from menus.language.language import Language
 from utils.logger import PyUiLogger
 from views.grid_or_list_entry import GridOrListEntry
 from views.selection import Selection
@@ -51,7 +52,7 @@ class OptionSelectUI:
             PyUiLogger.get_logger().error(f"Error writing result to file: {e}")
 
     @staticmethod
-    def _make_option_list_from_menu(menu_dict, folder, is_root, exit_after_running, view_type, execute_immediately=False, descriptions=None):
+    def _make_option_list_from_menu(menu_dict, folder, is_root, exit_after_running, view_type, execute_immediately=False, descriptions=None, label_fn=None, desc_fn=None):
         if descriptions is None:
             descriptions = {}
 
@@ -61,11 +62,11 @@ class OptionSelectUI:
                 subprocess.run(val, shell=True)
                 sys.exit(0)
             elif execute_immediately:
-                Display.display_message(f"Executing: {val}")
+                Display.display_message(Language.label("executingCommand", "Executing: {cmd}").replace("{cmd}", val))
                 subprocess.run(val, shell=True)
                 Controller.clear_input_queue()
                 Display.reinitialize()
-                Display.display_message(f"Finished Running {val}", duration_ms=2000)
+                Display.display_message(Language.label("finishedRunningCommand", "Finished Running {cmd}").replace("{cmd}", val), duration_ms=2000)
             else:
                 OptionSelectUI._write_result_to_file(val)
                 return val
@@ -94,7 +95,9 @@ class OptionSelectUI:
                             view_type=view_type,
                             execute_immediately=execute_immediately,
                             is_root=False,
-                            descriptions=descriptions
+                            descriptions=descriptions,
+                            label_fn=label_fn,
+                            desc_fn=desc_fn
                         )
                 else:
                     # navigation mode just store key for lookup
@@ -102,17 +105,17 @@ class OptionSelectUI:
 
                 option_list.append(
                     GridOrListEntry(
-                        primary_text=key,
+                        primary_text=label_fn(key) if label_fn else key,
                         value=option_value,
                         image_path=img_path,
-                        description=desc_text
+                        description=desc_fn(desc_text) if (desc_fn and desc_text) else desc_text
                     )
                 )
 
         return option_list
 
     @staticmethod
-    def navigate_menu(menu_dict, title, folder, exit_after_running, view_type, execute_immediately=False, is_root=False, descriptions=None):
+    def navigate_menu(menu_dict, title, folder, exit_after_running, view_type, execute_immediately=False, is_root=False, descriptions=None, label_fn=None, desc_fn=None):
         """
         Core navigation function.
         - If is_root is True: returns a list of GridOrListEntry with .value as callable.
@@ -130,7 +133,9 @@ class OptionSelectUI:
                 exit_after_running=exit_after_running,
                 view_type=view_type,
                 execute_immediately=execute_immediately,
-                descriptions=descriptions
+                descriptions=descriptions,
+                label_fn=label_fn,
+                desc_fn=desc_fn
             )
 
         # Build option list
@@ -141,7 +146,9 @@ class OptionSelectUI:
             exit_after_running,
             view_type,
             execute_immediately=execute_immediately,
-            descriptions=descriptions
+            descriptions=descriptions,
+            label_fn=label_fn,
+            desc_fn=desc_fn
         )
 
         if is_root:
@@ -151,7 +158,7 @@ class OptionSelectUI:
         selected = Selection(None, None, 0)
         view = ViewCreator.create_view(
             view_type=view_type,
-            top_bar_text=title,
+            top_bar_text=label_fn(title) if (label_fn and title) else title,
             options=option_list,
             selected_index=selected.get_index()
         )
@@ -175,11 +182,11 @@ class OptionSelectUI:
                         subprocess.run(val, shell=True)
                         sys.exit(0)
                     elif execute_immediately:
-                        Display.display_message(f"Executing: {val}")
+                        Display.display_message(Language.label("executingCommand", "Executing: {cmd}").replace("{cmd}", val))
                         subprocess.run(val, shell=True)
                         Controller.clear_input_queue()
                         Display.reinitialize()
-                        Display.display_message(f"Finished Running {val}", duration_ms=1000)
+                        Display.display_message(Language.label("finishedRunningCommand", "Finished Running {cmd}").replace("{cmd}", val), duration_ms=1000)
                     else:
                         OptionSelectUI._write_result_to_file(val)
                         return val
@@ -192,13 +199,15 @@ class OptionSelectUI:
                         view_type=view_type,
                         execute_immediately=execute_immediately,
                         is_root=False,
-                        descriptions=descriptions
+                        descriptions=descriptions,
+                        label_fn=label_fn,
+                        desc_fn=desc_fn
                     )
                     if result is not None:
                         return result
 
     @staticmethod
-    def get_top_level_options_from_json(json_path: str | Path, view_type, exit_after_running=False, execute_immediately=False) -> List[GridOrListEntry]:
+    def get_top_level_options_from_json(json_path: str | Path, view_type, exit_after_running=False, execute_immediately=False, label_fn=None, desc_fn=None) -> List[GridOrListEntry]:
         """
         Reads JSON, returns top-level GridOrListEntry list with .value lambdas.
         """
@@ -218,7 +227,9 @@ class OptionSelectUI:
             view_type=view_type,
             execute_immediately=execute_immediately,
             is_root=True,
-            descriptions=descriptions
+            descriptions=descriptions,
+            label_fn=label_fn,
+            desc_fn=desc_fn
         )
 
     @staticmethod

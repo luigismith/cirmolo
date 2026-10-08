@@ -32,7 +32,8 @@
         "spruceRestore": "system",
         "-OTA": "system",
         "-FirmwareUpdate-": "system",
-        "-Updater": "system"
+        "-Updater": "system",
+        "ClaudeChat": "other"
     },
     "pyui": {
         "Boxart Scraper": "games",

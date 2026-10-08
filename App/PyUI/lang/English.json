@@ -741,7 +741,8 @@
         "Update Available": "Update Available",
         "Cirmolo Synth": "Cirmolo Synth",
         "Diapason": "Diapason",
-        "OpenOrc": "OpenOrc"
+        "OpenOrc": "OpenOrc",
+        "Ask Claude": "Ask Claude"
     },
     "appDescriptions": {
         "32-bit RetroArch frontend": "32-bit RetroArch frontend",
@@ -768,7 +769,8 @@
         "View and edit files on your SD card": "View and edit files on your SD card",
         "Synthesizer, drum machine and 16-step sequencer": "Synthesizer, drum machine and 16-step sequencer",
         "Tuner, reference tones and metronome": "Tuner, reference tones and metronome",
-        "Chord synthesizer for the Akai MPK mini keyboard": "Chord synthesizer for the Akai MPK mini keyboard"
+        "Chord synthesizer for the Akai MPK mini keyboard": "Chord synthesizer for the Akai MPK mini keyboard",
+        "Chat with Claude through the Anthropic API (Wi-Fi and API key needed)": "Chat with Claude through the Anthropic API (Wi-Fi and API key needed)"
     },
     "taskLabels": {
         "Bug report": "Bug report",

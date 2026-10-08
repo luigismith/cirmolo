@@ -26,6 +26,11 @@
     "timezoneDir":"/mnt/SDCARD/spruce/zoneinfo",
     "aboutEntries" : [
         {
+           "display":"Cirmolo version",
+           "displayKey":"aboutCirmoloVersion",
+           "cmd":"cat /mnt/SDCARD/spruce/cirmolo"
+        },
+        {
            "display":"Spruce version",
            "displayKey":"aboutSpruceVersion",
            "cmd":"cat /mnt/SDCARD/spruce/spruce"

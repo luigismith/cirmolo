@@ -1,3 +1,31 @@
+# Cirmolo
+
+**Cirmolo** è un fork di [spruceOS](https://github.com/spruceUI/spruceOS) pensato per la **Miyoo Flip**, con l'interfaccia completamente in italiano.
+Il nome viene dal cirmolo, il pino cembro delle Dolomiti: un legno profumato e resistente, parente dell'abete rosso (*spruce*).
+
+> **Stato:** in sviluppo, testato solo sulla Miyoo Flip. Lo usi a tuo rischio, come spruceOS.
+
+## Cosa cambia rispetto a spruceOS
+- **Italiano completo:** interfaccia (PyUI), menu delle impostazioni, descrizioni e valori. La guida di stile è in [`.github/i18n/it/GLOSSARIO.md`](.github/i18n/it/GLOSSARIO.md).
+- **Strumenti per le traduzioni** in [`.github/i18n/`](.github/i18n/), utili a tutte le lingue: estrazione delle chiavi usate dal codice, allineamento di `English.json`, validatore.
+- **Aggiornamenti OTA dal feed di Cirmolo:** un aggiornamento non riporta la versione originale.
+- **Segnalazioni di bug:** il report resta sulla SD e si allega alle [issue di Cirmolo](https://github.com/luigismith/cirmolo/issues), invece di andare al server del team spruce.
+- **Versione di Cirmolo** in Impostazioni → Informazioni.
+
+**In arrivo:** nuove app (tra cui un sintetizzatore), miglioramenti dell'interfaccia e delle prestazioni sulla Flip.
+
+## Crediti e licenza
+- Cirmolo esiste grazie al lavoro del team **spruceUI** e dei contributori di spruceOS: il merito della base è tutto loro.
+- Come spruceOS, è distribuito con licenza **CC BY-NC 4.0** (uso non commerciale, con attribuzione): vedi [LICENSE](LICENSE). I componenti di terze parti mantengono le loro licenze.
+- Non contiene e non conterrà mai giochi o BIOS.
+- Problemi e proposte vanno nelle [issue di Cirmolo](https://github.com/luigismith/cirmolo/issues), non al team spruce.
+
+*English:* **Cirmolo** is a spruceOS fork focused on the Miyoo Flip. It adds a complete Italian localization and i18n tooling that is useful for every language. It has its own OTA feed and its own bug-report flow. All credit for the base goes to the spruceUI team. Like spruceOS it is licensed CC BY-NC 4.0. Please report Cirmolo issues here, not to the spruce team.
+
+---
+
+*Qui sotto, il README originale di spruceOS.*
+
 
 <img width="310" height="310" alt="spruce labeled" src="https://github.com/user-attachments/assets/703691e2-dca0-49e6-987b-48ccfd16270b" />
 

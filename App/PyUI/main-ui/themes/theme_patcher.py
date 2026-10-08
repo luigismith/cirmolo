@@ -3,6 +3,7 @@ import os
 import shutil
 import time
 from devices.device import Device
+from menus.language.language import Language
 from utils.cached_exists import CachedExists
 from utils.logger import PyUiLogger
 
@@ -34,8 +35,7 @@ class ThemePatcher():
             PyUiLogger().get_logger().info(f"Theme was patched")
             return False
 
-        Display.clear("Patching Theme")
-        from menus.language.language import Language
+        Display.clear(Language.label("patchingTheme", "Patching Theme"))
         Display.display_message(Language.label("patchingThemeAssets", "Patching theme to faster assets"))
         for dirpath, dirnames, filenames in os.walk(path):
             for filename in filenames:
@@ -70,7 +70,7 @@ class ThemePatcher():
         from display.display import Display
         now = time.time()
         if now - cls._last_display_time >= 1.0:
-            Display.display_message(f"Converting {os.path.basename(png_path)}")
+            Display.display_message(Language.label("convertingFile", "Converting {name}").replace("{name}", os.path.basename(png_path)))
             cls._last_display_time = now
         image_utils = Device.get_device().get_image_utils()
         image_utils.convert_from_png_to_qoi(png_path)
@@ -113,11 +113,11 @@ class ThemePatcher():
 
         PyUiLogger().get_logger().info(f"Patching theme {config_path} from {theme_width}x{theme_height} to {target_width}x{target_height} w/ a scale factor of {scale}")
 
-        Display.clear("Theme Patch")
+        Display.clear(Language.label("themePatch", "Theme Patch"))
         Display.display_message_multiline([
-            f"Theme is missing correctly sized assets so patching",
-            f"Scale factor is {scale}",
-            f"Patching main assets"
+            Language.label("themeMissingSizedAssets", "Theme is missing correctly sized assets so patching"),
+            Language.label("themeScaleFactor", "Scale factor is {scale}").replace("{scale}", str(scale)),
+            Language.label("patchingMainAssets", "Patching main assets")
         ])
         Display.present()
 
@@ -126,11 +126,11 @@ class ThemePatcher():
                      scale,
                      theme_width, theme_height, target_width, target_height)
         
-        Display.clear("Theme Patch")
+        Display.clear(Language.label("themePatch", "Theme Patch"))
         Display.display_message_multiline([
-            f"Theme is missing correctly sized assets so patching",
-            f"Scale factor is {scale}",
-            f"Patching icons"
+            Language.label("themeMissingSizedAssets", "Theme is missing correctly sized assets so patching"),
+            Language.label("themeScaleFactor", "Scale factor is {scale}").replace("{scale}", str(scale)),
+            Language.label("patchingIcons", "Patching icons")
         ])
         Display.present()
 
@@ -165,8 +165,8 @@ class ThemePatcher():
                 now = time.time()
                 if now - cls._last_display_time >= 1.0:
                     Display.display_message_multiline([
-                        f"Patching {os.path.basename(input_path)}",
-                        f"Scale factor is {scale}"
+                        Language.label("patchingFile", "Patching {name}").replace("{name}", os.path.basename(input_path)),
+                        Language.label("themeScaleFactor", "Scale factor is {scale}").replace("{scale}", str(scale))
                     ])
                     cls._last_display_time = now
                 # Process image file

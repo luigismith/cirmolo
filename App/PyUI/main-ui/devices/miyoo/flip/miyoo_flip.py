@@ -22,6 +22,7 @@ from devices.utils.file_watcher import FileWatcher
 from devices.utils.process_runner import ProcessRunner
 from display.display import Display
 from menus.games.utils.rom_info import RomInfo
+from menus.language.language import Language
 import sdl2
 from utils import throttle
 from utils.config_copier import ConfigCopier
@@ -289,8 +290,8 @@ class MiyooFlip(MiyooDevice):
         it agrees with us after the next boot.
         """
         if not super().apply_timezone(timezone):
-            Display.write_message_multiline([f"Error getting timezone file",
-                                             f"Does not appear to be a file",f"{timezone}"
+            Display.write_message_multiline([Language.label("timezoneFileError", "Error getting timezone file"),
+                                             Language.label("timezoneNotAFile", "Does not appear to be a file"),f"{timezone}"
                                              ],3_000)
             return False
 
@@ -311,7 +312,7 @@ class MiyooFlip(MiyooDevice):
         shutil.copyfile(zoneinfo_path, localtime_path)
         shutil.copyfile(localtime_path, timezone_path)
 
-        Display.display_message("Timezone updated",2_000)
+        Display.display_message(Language.label("timezoneUpdated", "Timezone updated"),2_000)
         return True
 
     def set_theme(self, theme_path: str):
@@ -326,7 +327,7 @@ class MiyooFlip(MiyooDevice):
                 return f.read().strip()
         except Exception as e:
             PyUiLogger.get_logger().error(f"Could not read FW version : {e}")
-            return "Unknown"
+            return Language.label("aboutUnknown", "Unknown")
 
     def get_core_name_overrides(self, core_name):
         return [core_name, core_name+"-64"]

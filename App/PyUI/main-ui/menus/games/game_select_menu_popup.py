@@ -88,7 +88,7 @@ class GameSelectMenuPopup:
                 CheevosCacheManager.add_cached(rom_info, game_id)
         except Exception as e:
             PyUiLogger.get_logger().error(f"cache-rom failed: {e}")
-            message = "Failed"
+            message = Language.label("cachingCheevosFailed", "Failed")
         Display.display_message(message, duration_ms=2500)
 
     def download_boxart(self, input, rom_info : RomInfo):
@@ -171,7 +171,7 @@ class GameSelectMenuPopup:
            and Device.get_device().get_system_config().use_custom_gameswitcher_path()):
             if(CustomGameSwitcherListManager.contains_game(rom_info)):
                 popup_options.append(GridOrListEntry(
-                    primary_text=Language.remove_gameswitcher_game() if use_full_text else "+/- GameSwitcher",
+                    primary_text=Language.remove_gameswitcher_game() if use_full_text else Language.label("gameSwitcherToggleShort", "+/- GameSwitcher"),
                     image_path=Theme.settings(),
                     image_path_selected=Theme.settings_selected(),
                     description=None,
@@ -180,7 +180,7 @@ class GameSelectMenuPopup:
                 ))
             else:
                 popup_options.append(GridOrListEntry(
-                    primary_text=Language.add_gameswitcher_game() if use_full_text else "+/- GameSwitcher",
+                    primary_text=Language.add_gameswitcher_game() if use_full_text else Language.label("gameSwitcherToggleShort", "+/- GameSwitcher"),
                     image_path=Theme.settings(),
                     image_path_selected=Theme.settings_selected(),
                     description=None,
@@ -191,7 +191,7 @@ class GameSelectMenuPopup:
 
         if(FavoritesManager.is_favorite(rom_info)):        
             popup_options.append(GridOrListEntry(
-                primary_text=Language.remove_favorite() if use_full_text else "+/- Favorite",
+                primary_text=Language.remove_favorite() if use_full_text else Language.label("favoriteToggleShort", "+/- Favorite"),
                 image_path=Theme.settings(),
                 image_path_selected=Theme.settings_selected(),
                 description=None,
@@ -200,7 +200,7 @@ class GameSelectMenuPopup:
             ))
         else:
             popup_options.append(GridOrListEntry(
-                primary_text=Language.add_favorite() if use_full_text else "+/- Favorite",
+                primary_text=Language.add_favorite() if use_full_text else Language.label("favoriteToggleShort", "+/- Favorite"),
                 image_path=Theme.settings(),
                 image_path_selected=Theme.settings_selected(),
                 description=None,
@@ -210,7 +210,7 @@ class GameSelectMenuPopup:
             
         
         popup_options.append(GridOrListEntry(
-            primary_text=Language.add_remove_collection() if use_full_text else "+/- Collection",
+            primary_text=Language.add_remove_collection() if use_full_text else Language.label("collectionToggleShort", "+/- Collection"),
             image_path=Theme.settings(),
             image_path_selected=Theme.settings_selected(),
             description=None,
@@ -220,7 +220,7 @@ class GameSelectMenuPopup:
 
         if(RecentsManager.is_recent(rom_info)):        
             popup_options.append(GridOrListEntry(
-                primary_text=Language.remove_recents() if use_full_text else "- Recents",
+                primary_text=Language.remove_recents() if use_full_text else Language.label("removeRecentsShort", "- Recents"),
                 image_path=Theme.settings(),
                 image_path_selected=Theme.settings_selected(),
                 description=None,
@@ -250,7 +250,7 @@ class GameSelectMenuPopup:
         if(PyUiConfig.get_cache_cheevos_cmd()
            and "True" == CfwSystemConfig.get_selected_value("RetroAchievements Settings", "enableOfflineProxy")):
             popup_options.append(GridOrListEntry(
-                primary_text=Language.label("cacheCheevos", "Cache Achievements") if use_full_text else "Cache Cheevos",
+                primary_text=Language.label("cacheCheevos", "Cache Achievements") if use_full_text else Language.label("cacheCheevosShort", "Cache Cheevos"),
                 image_path=Theme.settings(),
                 image_path_selected=Theme.settings_selected(),
                 description=None,

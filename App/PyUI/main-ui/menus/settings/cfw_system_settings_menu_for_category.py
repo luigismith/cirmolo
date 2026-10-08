@@ -64,7 +64,7 @@ class CfwSystemSettingsMenuForCategory(settings_menu.SettingsMenu):
 
         summary = Language.label("updatedCheevos", "Updated {updated}").replace("{updated}", str(updated))
         if failed:
-            summary = f"{summary}, {failed} failed"
+            summary = Language.label("updatedCheevosFailed", "{summary}, {failed} failed").replace("{failed}", str(failed)).replace("{summary}", summary)
         Display.display_message(summary, duration_ms=2500)
 
     def build_options_list(self):

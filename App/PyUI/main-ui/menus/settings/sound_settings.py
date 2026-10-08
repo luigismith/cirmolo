@@ -46,7 +46,7 @@ class SoundSettings(SettingsMenu):
         option_list.append(
             GridOrListEntry(
                 primary_text=Language.play_button_press_sound(),
-                value_text="<    " + str(Device.get_device().get_system_config().play_button_press_sound()) + "    >",
+                value_text="<    " + Language.boolean_label(Device.get_device().get_system_config().play_button_press_sound()) + "    >",
                 image_path=None,
                 image_path_selected=None,
                 description=None,
@@ -58,7 +58,7 @@ class SoundSettings(SettingsMenu):
         option_list.append(
             GridOrListEntry(
                 primary_text=Language.play_bgm(),
-                value_text="<    " + str(Device.get_device().get_system_config().play_bgm()) + "    >",
+                value_text="<    " + Language.boolean_label(Device.get_device().get_system_config().play_bgm()) + "    >",
                 image_path=None,
                 image_path_selected=None,
                 description=None,

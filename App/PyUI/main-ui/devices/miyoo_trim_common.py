@@ -17,6 +17,7 @@ from menus.games.game_system_select_menu import GameSystemSelectMenu
 from menus.games.muos_game_system_config import MuosGameSystemConfig
 from menus.games.utils.rom_info import RomInfo
 from menus.games.utils.rom_select_options_builder import get_rom_select_options_builder
+from menus.language.language import Language
 from themes.theme import Theme
 from utils.logger import PyUiLogger
 
@@ -113,14 +114,14 @@ class MiyooTrimCommon():
     def run_analog_stick_calibration(device, stick_name, joystick, file_path, leftOrRight):
         from display.display import Display
         
-        Display.clear("Stick Calibration")
-        Display.display_message(f"Rotate {stick_name}")
+        Display.clear(Language.label("stickCalibration", "Stick Calibration"))
+        Display.display_message(Language.label("rotateStick", "Rotate {stick}").replace("{stick}", stick_name))
         Display.present()
        
         rotate_stats = joystick.sample_axes_stats()
         
-        Display.clear("Stick Calibration")
-        Display.display_message(f"Leave {stick_name} Still")
+        Display.clear(Language.label("stickCalibration", "Stick Calibration"))
+        Display.display_message(Language.label("leaveStickStill", "Leave {stick} Still").replace("{stick}", stick_name))
         Display.present()
 
         centered_stats = joystick.sample_axes_stats()

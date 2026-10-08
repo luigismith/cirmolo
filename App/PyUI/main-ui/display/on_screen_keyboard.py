@@ -4,6 +4,7 @@ from controller.controller_inputs import ControllerInput
 from devices.device import Device
 from display.font_purpose import FontPurpose
 from display.render_mode import RenderMode
+from menus.language.language import Language
 from themes.theme import Theme
 
 
@@ -40,7 +41,7 @@ class OnScreenKeyboard:
         key_h = key_w
 
         while running:
-            Display.clear("Keyboard")
+            Display.clear(Language.label("keyboard", "Keyboard"))
             Display.render_image(
                 image_path = Theme.keyboard_bg(),
                 x = 0,

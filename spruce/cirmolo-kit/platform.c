@@ -51,7 +51,8 @@ _Static_assert(PAD_A == 4 && PAD_SELECT == 12 && PAD_COUNT == 17, "nomi dei tast
     X(SDL_RenderSetLogicalSize) X(SDL_PollEvent) X(SDL_OpenAudioDevice) X(SDL_PauseAudioDevice) \
     X(SDL_CloseAudioDevice) X(SDL_Delay) X(SDL_GetTicks) X(SDL_ShowCursor) X(SDL_NumJoysticks) \
     X(SDL_IsGameController) X(SDL_GameControllerOpen) X(SDL_GetRendererInfo) \
-    X(SDL_SetHint) X(SDL_GetCurrentDisplayMode) X(SDL_GetNumAudioDevices) X(SDL_GetAudioDeviceName)
+    X(SDL_SetHint) X(SDL_GetCurrentDisplayMode) X(SDL_GetNumAudioDevices) X(SDL_GetAudioDeviceName) \
+    X(SDL_StartTextInput)
 
 #define DECL(f) static __typeof__(f) *p_##f;
 SDL_FUNCS(DECL)
@@ -398,6 +399,7 @@ int main(int argc, char **argv)
         fprintf(stderr, "renderer: %s%s\n", info.name, vsync ? " (vsync)" : "");
     }
     p_SDL_RenderSetLogicalSize(ren, W, H);
+    if (g_desc->text_input) p_SDL_StartTextInput();      /* tastiere USB (e quella del PC) per scrivere */
     SDL_Texture *tex = p_SDL_CreateTexture(ren, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, W, H);
 
     /* audio: si apre in pausa, l'app nasce con la frequenza ottenuta */
@@ -465,6 +467,21 @@ int main(int argc, char **argv)
                 g_logged++;
             }
 #endif
+            if (g_desc->text_input && e.type == SDL_TEXTINPUT) { g_desc->text_input(app, e.text.text, TEXT_CHARS); continue; }
+            if (g_desc->text_input && (e.type == SDL_KEYDOWN || e.type == SDL_KEYUP)) {
+                int sp = -1;
+                switch (e.key.keysym.sym) {
+                case SDLK_BACKSPACE: sp = TEXT_BACKSPACE; break;
+                case SDLK_RETURN: case SDLK_KP_ENTER: sp = TEXT_ENTER; break;
+                case SDLK_LEFT: sp = TEXT_LEFT; break;
+                case SDLK_RIGHT: sp = TEXT_RIGHT; break;
+                case SDLK_UP: sp = TEXT_UP; break;
+                case SDLK_DOWN: sp = TEXT_DOWN; break;
+                case SDLK_DELETE: sp = TEXT_DELETE; break;
+                }
+                if (sp >= 0) { if (e.type == SDL_KEYDOWN) g_desc->text_input(app, "", sp); continue; }
+                if (e.key.keysym.sym >= SDLK_SPACE && e.key.keysym.sym < 127) continue;   /* lettere: arrivano come testo */
+            }
             if (!sdl_input) continue;
             if ((e.type == SDL_KEYDOWN || e.type == SDL_KEYUP) && !e.key.repeat) {
                 int b = key_to_button(e.key.keysym.sym);

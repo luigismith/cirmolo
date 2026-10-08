@@ -11,6 +11,7 @@
 #include "third_party/stb_truetype.h"
 
 #define GLYPHS 384   /* Latino di base, Latin-1 e Latin Extended-A: basta per l'italiano */
+#define EXTRA 512    /* altri caratteri (punteggiatura tipografica, frecce, euro...), in una tabella */
 
 typedef struct {
     int ready, w, h, x0, y0;
@@ -23,6 +24,8 @@ typedef struct {
     float scale, size;
     int ascent;
     Glyph g[GLYPHS];
+    int extra_cp[EXTRA];          /* codici dei glifi in extra, 0 = posto libero */
+    Glyph *extra;
 } Font;
 
 static unsigned char *font_data[2];
@@ -71,25 +74,64 @@ int gfx_load_fonts(const char *regular, const char *semibold)
 
 void gfx_free_fonts(void)
 {
-    for (int i = 0; i < FONT_COUNT; i++)
+    for (int i = 0; i < FONT_COUNT; i++) {
         for (int g = 0; g < GLYPHS; g++) { free(fonts[i].g[g].bmp); fonts[i].g[g].bmp = NULL; fonts[i].g[g].ready = 0; }
+        if (fonts[i].extra)
+            for (int g = 0; g < EXTRA; g++) free(fonts[i].extra[g].bmp);
+        free(fonts[i].extra);
+        fonts[i].extra = NULL;
+        memset(fonts[i].extra_cp, 0, sizeof(fonts[i].extra_cp));
+    }
     for (int i = 0; i < 2; i++) { free(font_data[i]); font_data[i] = NULL; }
 }
 
 int gfx_font_ascent(int font) { return fonts[font].ascent; }
 
+static void render(Font *f, Glyph *g, int cp)
+{
+    int adv, lsb;
+    stbtt_GetCodepointHMetrics(f->info, cp, &adv, &lsb);
+    g->advance = adv * f->scale;
+    g->bmp = stbtt_GetCodepointBitmap(f->info, f->scale, f->scale, cp, &g->w, &g->h, &g->x0, &g->y0);
+    g->ready = 1;
+}
+
+/* Caratteri che il font non ha: il piu' vicino tra quelli di base. */
+static int fallback(int cp)
+{
+    switch (cp) {
+    case 0x2018: case 0x2019: case 0x201A: case 0x2032: return '\'';
+    case 0x201C: case 0x201D: case 0x201E: case 0x2033: return '"';
+    case 0x2010: case 0x2011: case 0x2012: case 0x2013: case 0x2014: case 0x2015: case 0x2212: return '-';
+    case 0x2022: case 0x2023: case 0x2043: case 0x25CF: case 0x25E6: case 0x2219: return 0xB7;
+    case 0x2026: return '.';
+    case 0x2190: return '<';
+    case 0x2192: return '>';
+    case 0x20AC: return 'E';
+    case 0x2009: case 0x200A: case 0x202F: case 0x2002: case 0x2003: return ' ';
+    }
+    return '?';
+}
+
 static Glyph *glyph(Font *f, int cp)
 {
-    if (cp < 0 || cp >= GLYPHS) cp = '?';
-    Glyph *g = &f->g[cp];
-    if (!g->ready) {
-        int adv, lsb;
-        stbtt_GetCodepointHMetrics(f->info, cp, &adv, &lsb);
-        g->advance = adv * f->scale;
-        g->bmp = stbtt_GetCodepointBitmap(f->info, f->scale, f->scale, cp, &g->w, &g->h, &g->x0, &g->y0);
-        g->ready = 1;
+    if (cp >= 0 && cp < GLYPHS) {
+        Glyph *g = &f->g[cp];
+        if (!g->ready) render(f, g, cp);
+        return g;
     }
-    return g;
+    if (cp <= 0 || !stbtt_FindGlyphIndex(f->info, cp)) return glyph(f, fallback(cp));
+    if (!f->extra && !(f->extra = calloc(EXTRA, sizeof(Glyph)))) return glyph(f, '?');
+    unsigned h = (unsigned)cp * 2654435761u % EXTRA;
+    for (int k = 0; k < EXTRA; k++, h = (h + 1) % EXTRA) {
+        if (f->extra_cp[h] == cp) return &f->extra[h];
+        if (!f->extra_cp[h]) {
+            f->extra_cp[h] = cp;
+            render(f, &f->extra[h], cp);
+            return &f->extra[h];
+        }
+    }
+    return glyph(f, '?');                     /* tabella piena */
 }
 
 static int utf8_next(const char **s)
@@ -268,7 +310,6 @@ static int text_impl(Canvas *c, int font, int x, int y, const char *s, uint32_t 
     int prev = 0;
     while (*s) {
         int cp = utf8_next(&s);
-        if (cp >= GLYPHS) cp = '?';
         if (prev) pen += stbtt_GetCodepointKernAdvance(f->info, prev, cp) * f->scale;
         Glyph *g = glyph(f, cp);
         if (c && g->bmp) {

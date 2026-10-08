@@ -588,8 +588,8 @@ static int repeats(int screen, int b)
 static void handle_press(App *a, int b)
 {
     if (a->quit_dialog) {
-        if (b == BTN_A) { a->quit = 1; release_all(a); }
-        else if (b == BTN_B || b == BTN_MENU) a->quit_dialog = 0;
+        if (b == BTN_A || b == BTN_DOWN) { a->quit = 1; release_all(a); }
+        else if (b == BTN_B || b == BTN_UP || b == BTN_MENU) a->quit_dialog = 0;
         return;
     }
     if (b == BTN_MENU) { a->quit_dialog = 1; release_all(a); return; }
@@ -610,7 +610,7 @@ void app_button(App *a, int b, int pressed)
 {
     if (b < 0 || b >= BTN_COUNT) return;
     if (pressed) {
-        if (a->down[b]) return;
+        if (a->down[b]) app_button(a, b, 0);   /* mai un tasto bloccato come premuto: prima lo rilascia */
         a->down[b] = 1;
         a->rep[b] = 0.0f;
         handle_press(a, b);
@@ -901,7 +901,7 @@ static void draw_quit(Canvas *c)
     gfx_round_frame(c, 150, 170, 340, 140, 18, 2, C_VIOLET, 1.0f);
     gfx_text_center(c, FONT_TITLE, 320, 222, "Uscire dal synth?", C_TEXT);
     gfx_text_center(c, FONT_BODY, 320, 256, "Suoni e sequenza restano salvati.", C_MUTED);
-    gfx_text_center(c, FONT_BOLD, 320, 290, "A esci   ·   B resta", C_AMBER);
+    gfx_text_center(c, FONT_BOLD, 320, 290, "A o giù: esci   ·   B o su: resta", C_AMBER);
 }
 
 void app_draw(App *a, Canvas *c)

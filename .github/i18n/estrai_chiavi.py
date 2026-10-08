@@ -247,9 +247,67 @@ def _modello(pezzi):
     return ''.join(out)
 
 
+UPDATER = os.path.join(APP, '-Updater', 'updater.py')
+
+
+def _modello_py(nodo):
+    """Stringa o f-string Python -> testo con {segnaposto}; None se non e' un testo fisso."""
+    if isinstance(nodo, ast.Constant) and isinstance(nodo.value, str):
+        pezzi = [('lett', nodo.value)]
+    elif isinstance(nodo, ast.JoinedStr):
+        pezzi = []
+        for v in nodo.values:
+            if isinstance(v, ast.Constant):
+                pezzi.append(('lett', v.value))
+            else:
+                e = v.value
+                if isinstance(e, ast.Subscript) and isinstance(e.slice, ast.Constant) and isinstance(e.slice.value, str):
+                    nome = e.slice.value
+                elif isinstance(e, ast.Attribute):
+                    nome = e.attr
+                elif isinstance(e, ast.Name):
+                    nome = e.id
+                else:
+                    nome = 'value'
+                pezzi.append(('var', nome))
+    else:
+        return None
+    return _modello(pezzi)
+
+
+def stringhe_updater():
+    """Messaggi che App/-Updater/updater.py manda a PyUI (ui.image_and_text, ui.progress_bar, fail)."""
+    trovate = {}
+    if not os.path.isfile(UPDATER):
+        return trovate
+    rel = os.path.relpath(UPDATER, RADICE).replace('\\', '/')
+    with open(UPDATER, encoding='utf-8') as f:
+        albero = ast.parse(f.read())
+    for n in ast.walk(albero):
+        if not isinstance(n, ast.Call):
+            continue
+        nome = n.func.attr if isinstance(n.func, ast.Attribute) else getattr(n.func, 'id', None)
+        kw = {k.arg: k.value for k in n.keywords}
+        if nome == 'image_and_text':
+            testi = [n.args[3] if len(n.args) > 3 else kw.get('text')]
+        elif nome == 'progress_bar':
+            testi = [n.args[0] if n.args else kw.get('text'), n.args[2] if len(n.args) > 2 else kw.get('bottom')]
+        elif nome == 'fail' and isinstance(n.func, ast.Name):
+            testi = [n.args[0] if n.args else kw.get('msg')]
+        else:
+            continue
+        for t in testi:
+            m = _modello_py(t) if t is not None else None
+            if m:
+                trovate.setdefault(m, [])
+                if rel not in trovate[m]:
+                    trovate[m].append(rel)
+    return trovate
+
+
 def stringhe_script():
     """{testo inglese: [file]} per i messaggi che gli script mostrano a schermo."""
-    trovate = {}
+    trovate = stringhe_updater()
     for base in CARTELLE_SCRIPT:
         for cartella, _, files in os.walk(base):
             for nome in files:

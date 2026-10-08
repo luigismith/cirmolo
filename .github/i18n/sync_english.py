@@ -54,36 +54,44 @@ def main():
         righe[i_fine + 1:i_fine + 1] = blocco
         aggiunte += [k for k, _ in mancanti]
 
-    # 3) menuOptionDisplays mancanti, in fondo alla sezione
-    disp = en.get('menuOptionDisplays', {})
-    nuovi_disp = [d for d in menu['menuOptionDisplays'] if d not in disp]
-    i_mod = next(i for i, r in enumerate(righe) if r.strip().startswith('"menuOptionDisplays"'))
-    i_mod_fine = next(i for i in range(i_mod, len(righe)) if righe[i].strip() in ('},', '}'))
-    if nuovi_disp:
-        if not righe[i_mod_fine - 1].rstrip().endswith(','):
-            righe[i_mod_fine - 1] = righe[i_mod_fine - 1].rstrip() + ','
-        blocco = [riga(d, d, IND * 2) + ',' for d in nuovi_disp]
-        blocco[-1] = blocco[-1].rstrip(',')
-        righe[i_mod_fine:i_mod_fine] = blocco
-        i_mod_fine += len(blocco)
-        aggiunte += ['menuOptionDisplays: ' + d for d in nuovi_disp]
+    # 3) sezioni inglese -> inglese: voci mancanti in fondo alla sezione, oppure sezione nuova
+    #    subito dopo la sezione precedente dell'elenco (la prima dopo menuOptionDisplays)
+    def fine_sezione(nome):
+        inizio = next((i for i, r in enumerate(righe) if r.startswith(IND + json.dumps(nome) + ':')), None)
+        if inizio is None:
+            return None
+        return next(i for i in range(inizio, len(righe)) if righe[i].strip() in ('},', '}'))
 
-    # 4) nuove sezioni subito dopo menuOptionDisplays
-    nuove = []
-    for sez in ('settingsCategories', 'menuOptionDescriptions', 'menuOptionValues'):
-        if sez in en:
-            continue
-        voci = menu[sez]
-        corpo = [riga(v, v, IND * 2) + ',' for v in voci]
-        if corpo:
-            corpo[-1] = corpo[-1].rstrip(',')
-        nuove += ['%s%s: {' % (IND, json.dumps(sez))] + corpo + [IND + '},']
-        aggiunte.append('%s (%d voci)' % (sez, len(voci)))
-    if nuove:
-        if righe[i_mod_fine].strip() == '}':
-            righe[i_mod_fine] = righe[i_mod_fine].rstrip() + ','
-            nuove[-1] = nuove[-1].rstrip(',')
-        righe[i_mod_fine + 1:i_mod_fine + 1] = nuove
+    sezioni = dict(menu)
+    sezioni.update(ek.stringhe_display())
+    ordine = ['menuOptionDisplays', 'settingsCategories', 'menuOptionDescriptions', 'menuOptionValues',
+              'appLabels', 'appDescriptions', 'taskLabels', 'taskDescriptions', 'pageTitles']
+    for pos, sez in enumerate(ordine):
+        esistenti = en.get(sez)
+        voci = [v for v in sezioni.get(sez, []) if not (isinstance(esistenti, dict) and v in esistenti)]
+        if isinstance(esistenti, dict):
+            if not voci:
+                continue
+            i_fine = fine_sezione(sez)
+            if not righe[i_fine - 1].rstrip().endswith(('{', ',')):
+                righe[i_fine - 1] = righe[i_fine - 1].rstrip() + ','
+            blocco = [riga(v, v, IND * 2) + ',' for v in voci]
+            blocco[-1] = blocco[-1].rstrip(',')
+            righe[i_fine:i_fine] = blocco
+            aggiunte += ['%s: %s' % (sez, v) for v in voci]
+        else:
+            precedente = next((s for s in reversed(ordine[:pos]) if fine_sezione(s) is not None), None)
+            i_dopo = fine_sezione(precedente)
+            corpo = [riga(v, v, IND * 2) + ',' for v in voci]
+            if corpo:
+                corpo[-1] = corpo[-1].rstrip(',')
+            nuova = ['%s%s: {' % (IND, json.dumps(sez))] + corpo + [IND + '},']
+            if righe[i_dopo].strip() == '}':
+                righe[i_dopo] = righe[i_dopo].rstrip() + ','
+                nuova[-1] = nuova[-1].rstrip(',')
+            righe[i_dopo + 1:i_dopo + 1] = nuova
+            en[sez] = {}
+            aggiunte.append('%s (sezione nuova, %d voci)' % (sez, len(voci)))
 
     nuovo = '\n'.join(righe)
     json.loads(nuovo)  # deve restare JSON valido

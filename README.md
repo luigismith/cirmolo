@@ -1,9 +1,22 @@
+<p align="center">
+  <img src="App/BootLogo/Imgs/Cirmolo.png" alt="Logo di Cirmolo: la pigna viola del pino cembro tra due ciuffi di aghi" width="420">
+</p>
+
 # Cirmolo
 
 **Cirmolo** è un fork di [spruceOS](https://github.com/spruceUI/spruceOS) pensato per la **Miyoo Flip**, con l'interfaccia completamente in italiano.
 Il nome viene dal cirmolo, il pino cembro delle Dolomiti: un legno profumato e resistente, parente dell'abete rosso (*spruce*).
 
 > **Stato:** in sviluppo, testato solo sulla Miyoo Flip. Lo usi a tuo rischio, come spruceOS.
+
+<p align="center">
+  <img src=".github/branding/schermate/menu.png" width="32%" alt="Menu principale">
+  <img src=".github/branding/schermate/app.png" width="32%" alt="App divise in aree">
+  <img src=".github/branding/schermate/musica.png" width="32%" alt="Area Musica">
+  <img src=".github/branding/schermate/giochi.png" width="32%" alt="Giochi">
+  <img src=".github/branding/schermate/synth.png" width="32%" alt="Cirmolo Synth">
+  <img src=".github/branding/schermate/openorc.png" width="32%" alt="OpenOrc">
+</p>
 
 ## Cosa cambia rispetto a spruceOS
 - **Italiano completo:** interfaccia (PyUI), menu delle impostazioni, descrizioni e valori. La guida di stile è in [`.github/i18n/it/GLOSSARIO.md`](.github/i18n/it/GLOSSARIO.md).
@@ -12,6 +25,7 @@ Il nome viene dal cirmolo, il pino cembro delle Dolomiti: un legno profumato e r
 - **Segnalazioni di bug:** il report resta sulla SD e si allega alle [issue di Cirmolo](https://github.com/luigismith/cirmolo/issues), invece di andare al server del team spruce.
 - **Versione di Cirmolo** in Impostazioni → Informazioni.
 - **Logo di avvio di Cirmolo** (la pigna viola del cirmolo) e **cambio del logo più sicuro sulla Flip:** prima di riscrivere la memoria interna, l'app «Logo di avvio» controlla la batteria, copia sulla SD tutta la memoria interna con i checksum, verifica la partizione di avvio e, se la scrittura fallisce, rimette da sola la copia.
+- **Tema Cirmolo**, predefinito: i colori del logo (notte, viola della pigna, verde degli aghi) nei menu, nelle icone delle app e delle aree, nelle animazioni di caricamento e di ricarica e nelle schermate di sistema, con la pigna al posto dell'albero di spruce. È ricavato dal tema Spruce di tenlevels ([`.github/branding/tema_cirmolo.py`](.github/branding/tema_cirmolo.py)), che resta tra i temi.
 - **App raggruppate in cartelle** (Musica, Giochi, Sistema, Altro...).
 
 ### App native nuove
@@ -34,15 +48,12 @@ Scritte in C per la Flip, con un kit comune ([`spruce/cirmolo-kit`](spruce/cirmo
 - Non contiene e non conterrà mai giochi o BIOS.
 - Problemi e proposte vanno nelle [issue di Cirmolo](https://github.com/luigismith/cirmolo/issues), non al team spruce.
 
-*English:* **Cirmolo** is a spruceOS fork focused on the Miyoo Flip. It adds a complete Italian localization and i18n tooling that is useful for every language. It has its own OTA feed, its own bug-report flow and a safer boot logo flow on the Flip (battery check, full internal flash backup, automatic restore). It also has new native apps: a synthesizer, a tuner, OpenOrc (a chord synth for the Akai MPK mini IV) and a Claude chat client. Development happens on the `cirmolo` branch; `Development` mirrors spruceOS. All credit for the base goes to the spruceUI team. Like spruceOS it is licensed CC BY-NC 4.0. Please report Cirmolo issues here, not to the spruce team.
+*English:* **Cirmolo** is a spruceOS fork focused on the Miyoo Flip. It adds a complete Italian localization and i18n tooling that is useful for every language. It has its own OTA feed, its own bug-report flow and a safer boot logo flow on the Flip (battery check, full internal flash backup, automatic restore), and its own default theme (night, violet pine cone, green needles). It also has new native apps: a synthesizer, a tuner, OpenOrc (a chord synth for the Akai MPK mini IV) and a Claude chat client. Development happens on the `cirmolo` branch; `Development` mirrors spruceOS. All credit for the base goes to the spruceUI team. Like spruceOS it is licensed CC BY-NC 4.0. Please report Cirmolo issues here, not to the spruce team.
 
 ---
 
-*Qui sotto, il README originale di spruceOS.*
-
-
-<img width="310" height="310" alt="spruce labeled" src="https://github.com/user-attachments/assets/703691e2-dca0-49e6-987b-48ccfd16270b" />
-
+<details>
+<summary><b>README originale di spruceOS</b> (in inglese): funzioni, dispositivi, crediti del team spruceUI</summary>
 
 # spruceOS 
 
@@ -51,9 +62,6 @@ Scritte in C per la Flip, con un kit comune ([`spruce/cirmolo-kit`](spruce/cirmo
   - Spruce is intended to be sleek, intuitive, efficient, and user friendly. We hope that you enjoy it.
 
     _We are not responsible for damage to your device. You must use spruce and its features at your own risk._
-
-    ![1auezwmegbzd1](https://github.com/user-attachments/assets/74411c1b-a4ae-4558-98f5-151b573b2b30)
-
 
 ## Features
 
@@ -205,6 +213,7 @@ Some of our contributors use AI to help code, as is the industry standard. The s
 
 ## Interested in being a tester, or just hanging out? To provide feedback and speak with the development team please join our Discord server by clicking on the image below or using [this link](https://discord.gg/KjR5uMQQt9)
 
-[![spruce logo](https://github.com/user-attachments/assets/ee3ce8fa-87f2-455a-adf6-c071f7ce4e7a)
-](https://discord.gg/KjR5uMQQt9)
+[Discord di spruce](https://discord.gg/KjR5uMQQt9)
+
+</details>
 

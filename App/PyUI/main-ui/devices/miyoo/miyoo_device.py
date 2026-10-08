@@ -9,6 +9,7 @@ from devices.utils.process_runner import ProcessRunner
 from games.utils.device_specific.miyoo_trim_game_system_utils import MiyooTrimGameSystemUtils
 from games.utils.game_entry import GameEntry
 from menus.games.utils.rom_info import RomInfo
+from menus.language.language import Language
 from menus.settings.button_remapper import ButtonRemapper
 import sdl2
 from utils.logger import PyUiLogger
@@ -178,8 +179,8 @@ class MiyooDevice(DeviceCommon):
         time.sleep(0.5)
         joystick = TrimUIJoystick()
         joystick.open()
-        MiyooTrimCommon.run_analog_stick_calibration(self,"Left stick",joystick,"/userdata/joypad.config","L")
-        MiyooTrimCommon.run_analog_stick_calibration(self,"Right stick",joystick,"/userdata/joypad_right.config","R")
+        MiyooTrimCommon.run_analog_stick_calibration(self,Language.label("leftStick", "Left stick"),joystick,"/userdata/joypad.config","L")
+        MiyooTrimCommon.run_analog_stick_calibration(self,Language.label("rightStick", "Right stick"),joystick,"/userdata/joypad_right.config","R")
         subprocess.Popen(["/usr/miyoo/bin/miyoo_inputd"],
                                 stdin=subprocess.DEVNULL,
                                 stdout=subprocess.DEVNULL,

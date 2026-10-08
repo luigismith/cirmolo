@@ -77,7 +77,7 @@ class SettingsMenu(ABC):
             update_value(category, entry_name, new_value)
 
 
-    def change_indexed_array_option_for_menu_options_list(self, category, entry_name, input, all_options, current_value, update_value):
+    def change_indexed_array_option_for_menu_options_list(self, category, entry_name, input, all_options, current_value, update_value, display_name=None):
         try:
             selected_index = all_options.index(current_value)
         except:
@@ -95,7 +95,7 @@ class SettingsMenu(ABC):
             if(selected_index == len(all_options)):
                 selected_index = 0
         elif(ControllerInput.A == input):
-            selected_index = self.get_selected_index(Language.select_option_prompt(entry_name), all_options)
+            selected_index = self.get_selected_index(Language.select_option_prompt(display_name or entry_name), all_options)
 
         PyUiLogger.get_logger().info(f"{current_value} is updated to index {selected_index}")
 
@@ -188,8 +188,8 @@ class SettingsMenu(ABC):
                                         entry_name=name, 
                                         category=category,
                                         all_options=self.resolve_options_for_device(option),
-                                        current_value=selected_value,update_value=CfwSystemConfig.set_menu_option
-                                        : self.change_indexed_array_option_for_menu_options_list(category, entry_name, input_value, all_options, current_value, update_value)
+                                        current_value=selected_value,update_value=CfwSystemConfig.set_menu_option,display_name=display_name
+                                        : self.change_indexed_array_option_for_menu_options_list(category, entry_name, input_value, all_options, current_value, update_value, display_name=display_name)
                             )
                         )
         return option_list
@@ -354,7 +354,7 @@ class SettingsMenu(ABC):
         for index, opt in enumerate(options):
             option_list.append(
                 GridOrListEntry(
-                    primary_text=opt,
+                    primary_text=Language.menu_option_value(opt),
                     value=index
                 )
             )

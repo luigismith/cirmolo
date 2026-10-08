@@ -23,7 +23,7 @@ class GameSelectSettingsMenu(settings_menu.SettingsMenu):
         option_list.append(
                 GridOrListEntry(
                         primary_text=Language.l2_r2_skip_by_letter_for_daijisho_themes(),
-                        value_text="<    " + str(Device.get_device().get_system_config().get_skip_by_letter()) + "    >",
+                        value_text="<    " + Language.boolean_label(Device.get_device().get_system_config().get_skip_by_letter()) + "    >",
                         image_path=None,
                         image_path_selected=None,
                         description=None,

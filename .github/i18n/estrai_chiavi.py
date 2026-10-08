@@ -29,6 +29,10 @@ APP_DESCRIPTIONS_EXTRA = ['Download and install updates over Wi-Fi', 'Version {v
                           'A new build of version {version} ({build}) is available']
 # Titoli delle pagine di giochi (nomi passati a _run_rom_selection); i nomi dei sistemi non si traducono.
 PAGE_TITLES = ['Favorites', 'Recents', 'Collections', 'Game List', 'Game Search', 'Game Switcher', '{system} Search']
+# Valori mostrati con Language.menu_option_value() che non vengono da spruce-config.json
+# (colori del salvaschermo in menus/settings/screensaver_settings_menu.py).
+MENU_VALUES_EXTRA = ['White', 'Black', 'Dark gray', 'Gray', 'Red', 'Green', 'Blue', 'Yellow', 'Orange', 'Pink',
+                     'Deep blue', 'Deep purple', 'Deep green', 'Deep red', 'Deep orange', 'Deep yellow', 'Deep teal']
 
 
 def stringa(nodo):
@@ -89,6 +93,7 @@ def stringhe_menu():
                 for v in opz.get('options', []) or []:
                     if isinstance(v, str) and re.search('[A-Za-z]{2}', v) and v not in ('True', 'False'):
                         menu['menuOptionValues'].add(v)
+    menu['menuOptionValues'].update(MENU_VALUES_EXTRA)
     return {k: sorted(v) for k, v in menu.items()}
 
 

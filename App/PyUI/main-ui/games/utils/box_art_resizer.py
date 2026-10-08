@@ -8,6 +8,7 @@ from controller.controller import Controller
 from controller.controller_inputs import ControllerInput
 from devices.device import Device
 from display.display import Display
+from menus.language.language import Language
 from utils.cached_exists import CachedExists
 from utils.logger import PyUiLogger
 
@@ -46,7 +47,10 @@ class BoxArtResizer():
         now = time.time()
         if now - cls._last_display_time >= 1.0:
             Display.display_message_multiline(
-                [f"Optimizing boxart {os.path.basename(full_path)}", f"Scanned {cls.scan_count}, Patched {cls.patched_count}", "", "Press B to Abort"])
+                [Language.label("optimizingBoxartFile", "Optimizing boxart {name}").replace("{name}", os.path.basename(full_path)),
+                 Language.label("boxartScannedPatched", "Scanned {scanned}, Patched {patched}").replace("{scanned}", str(cls.scan_count)).replace("{patched}", str(cls.patched_count)),
+                 "",
+                 Language.label("pressBToAbort", "Press B to Abort")])
             cls._last_display_time = now
 
         try:
@@ -152,7 +156,7 @@ class BoxArtResizer():
             cls.create_interim_folders(path)
             cls.process_image(path)
             if (cls._aborted):
-                Display.display_message(f"Aborting boxart patching", 2000)
+                Display.display_message(Language.label("abortingBoxartPatching", "Aborting boxart patching"), 2000)
                 cls._monitoring = False
                 return
 
@@ -160,12 +164,12 @@ class BoxArtResizer():
             cls.clear_interim_folders(path)
 
         cls._monitoring = False
-        Display.display_message(f"All boxart is optimized", 2000)
+        Display.display_message(Language.label("allBoxartOptimized", "All boxart is optimized"), 2000)
 
     @classmethod
     def process_rom_folders(cls):
         """Search through ROM directories and scale images inside Imgs folders."""
-        Display.display_message(f"Starting boxart patching", 500)
+        Display.display_message(Language.label("startingBoxartPatching", "Starting boxart patching"), 500)
         rom_paths = ["/mnt/SDCARD/Roms/", "/media/sdcard1/Roms/"]
         target_medium_width, target_medium_height = Device.get_device().get_boxart_medium_resize_dimensions()
         target_small_width, target_small_height = Device.get_device().get_boxart_small_resize_dimensions()
@@ -197,7 +201,7 @@ class BoxArtResizer():
                             cls.scan_count = cls.scan_count + 1
                             cls._to_delete = []
                             if (cls._aborted):
-                                Display.display_message(f"Aborting boxart patching", 2000)
+                                Display.display_message(Language.label("abortingBoxartPatching", "Aborting boxart patching"), 2000)
                                 cls._monitoring = False
                                 return
 
@@ -215,7 +219,7 @@ class BoxArtResizer():
                     shutil.rmtree(os.path.join(folder_path, "Imgs_small"), ignore_errors=True)
 
         cls._monitoring = False
-        Display.display_message(f"All boxart is optimized", 2000)
+        Display.display_message(Language.label("allBoxartOptimized", "All boxart is optimized"), 2000)
 
     # Don't want to clean this up but be aware resize_png_path will be deleted
 

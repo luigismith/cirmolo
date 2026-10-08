@@ -58,6 +58,7 @@ LOGO = f"{APP_DIR}/updater.png"
 BAD_IMG = f"{SD_ROOT}/spruce/imgs/notfound.png"
 CONFIG_FILE = f"{SD_ROOT}/Saves/spruce/spruce-config.json"
 VERSION_FILE = f"{SD_ROOT}/spruce/spruce"
+CIRMOLO_VERSION_FILE = f"{SD_ROOT}/spruce/cirmolo"   # Cirmolo: versione del fork (il feed confronta questa)
 APP_CONFIG = f"{APP_DIR}/config.json"
 QUEUE_FILE = f"{OTA_TMP_DIR}/ota_queue"
 NIGHTLY_BASE_FILE = f"{SD_ROOT}/Saves/spruce/ota_nightly_base"
@@ -2273,10 +2274,16 @@ def main():
         f"Installed version: {installed_version}"
     )
 
+    cirmolo_version = read_sysfs(
+        CIRMOLO_VERSION_FILE,
+        ""
+    )
+
     if (
         installed_version
         and version_base(installed_version)
         != version_base(final_version)
+        and cirmolo_version != final_version
     ):
 
         log.warning(

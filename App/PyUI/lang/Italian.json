@@ -740,7 +740,8 @@
         "USB Storage Mode": "Modalità archivio USB",
         "Update Available": "Aggiornamento disponibile",
         "Cirmolo Synth": "Cirmolo Synth",
-        "Diapason": "Diapason"
+        "Diapason": "Diapason",
+        "OpenOrc": "OpenOrc"
     },
     "appDescriptions": {
         "32-bit RetroArch frontend": "RetroArch a 32 bit",
@@ -766,7 +767,8 @@
         "Version {version} is available": "È disponibile la versione {version}",
         "View and edit files on your SD card": "Sfoglia e modifica i file della scheda SD",
         "Synthesizer, drum machine and 16-step sequencer": "Sintetizzatore, batteria e sequencer a 16 passi",
-        "Tuner, reference tones and metronome": "Accordatore, note di riferimento e metronomo"
+        "Tuner, reference tones and metronome": "Accordatore, note di riferimento e metronomo",
+        "Chord synthesizer for the Akai MPK mini keyboard": "Sintetizzatore di accordi per la tastiera Akai MPK mini"
     },
     "taskLabels": {
         "Bug report": "Segnala un problema",

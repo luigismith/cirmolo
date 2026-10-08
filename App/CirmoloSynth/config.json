@@ -1,6 +1,6 @@
 {
   "label": "Cirmolo Synth",
-  "icon": "icon.png",
+  "icon": "cirmolosynth.png",
   "launch": "launch.sh",
   "description": "Synthesizer, drum machine and 16-step sequencer",
   "devices": ["MIYOO_FLIP"]

@@ -16,6 +16,7 @@
 #include <string.h>
 
 #include "gfx.h"
+#include "midi.h"
 #include "platform.h"
 
 #ifdef _WIN32
@@ -23,6 +24,7 @@
 #define LIB_OPEN(p) ((void *)LoadLibraryA(p))
 #define LIB_SYM(h, n) ((void *)GetProcAddress((HMODULE)(h), n))
 #else
+#include <dirent.h>
 #include <dlfcn.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -215,6 +217,65 @@ static void evdev_poll(Evdev *e, Axes *ax, float *l2p, float *r2p, int *hx, int 
         }
     }
 }
+
+/* ------------------------------------------------------------------ MIDI (tastiere USB) */
+typedef struct { int fd; MidiParser parser; char name[96]; uint32_t retry; } MidiIn;
+
+static void midi_close(MidiIn *m, void *app)
+{
+    close(m->fd);
+    m->fd = -1;
+    fprintf(stderr, "MIDI scollegato: %s\n", m->name);
+    if (g_desc->midi_status) g_desc->midi_status(app, NULL);
+}
+
+/* Cerca /dev/snd/midiC<card>D<dev> e lo apre; il nome viene da /proc/asound/card<card>/id. */
+static void midi_scan(MidiIn *m, void *app)
+{
+    DIR *d = opendir("/dev/snd");
+    if (!d) return;
+    struct dirent *e;
+    int card = -1, dev = -1;
+    while ((e = readdir(d))) {
+        if (sscanf(e->d_name, "midiC%dD%d", &card, &dev) == 2) break;
+        card = dev = -1;
+    }
+    closedir(d);
+    if (card < 0) return;
+    char path[64];
+    snprintf(path, sizeof(path), "/dev/snd/midiC%dD%d", card, dev);
+    m->fd = open(path, O_RDONLY | O_NONBLOCK);
+    if (m->fd < 0) { fprintf(stderr, "MIDI: %s non aperto (%s)\n", path, strerror(errno)); return; }
+    midi_parser_reset(&m->parser);
+    snprintf(m->name, sizeof(m->name), "MIDI %d", card);
+    char idp[64];
+    snprintf(idp, sizeof(idp), "/proc/asound/card%d/id", card);
+    FILE *f = fopen(idp, "r");
+    if (f) {
+        if (fgets(m->name, sizeof(m->name), f)) m->name[strcspn(m->name, "\r\n")] = 0;
+        fclose(f);
+    }
+    fprintf(stderr, "MIDI collegato: %s (%s)\n", m->name, path);
+    if (g_desc->midi_status) g_desc->midi_status(app, m->name);
+}
+
+static void midi_poll(MidiIn *m, void *app)
+{
+    unsigned char buf[256], msg[3];
+    for (;;) {
+        ssize_t n = read(m->fd, buf, sizeof(buf));
+        if (n > 0) {
+            for (ssize_t i = 0; i < n; i++) {
+                int len = midi_parse_byte(&m->parser, buf[i], msg);
+                if (len > 0 && g_desc->midi) g_desc->midi(app, msg, len);
+            }
+            continue;
+        }
+        if (n < 0 && (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)) return;
+        midi_close(m, app);                         /* 0 o errore: dispositivo scollegato */
+        return;
+    }
+}
 #endif
 
 static int key_to_button(SDL_Keycode k)
@@ -354,6 +415,8 @@ int main(int argc, char **argv)
     /* Con evdev aperto, gamepad e tastiera di SDL vengono ignorati: leggono lo stesso dispositivo
        e ogni tasto arriverebbe due volte (con mappature diverse). */
     int sdl_input = !have_evdev || getenv("CIRMOLO_SDL_INPUT") != NULL;
+    MidiIn midi = { -1 };
+    if (g_desc->midi_status) g_desc->midi_status(app, NULL);
 #else
     int sdl_input = 1;
 #endif
@@ -406,6 +469,10 @@ int main(int argc, char **argv)
         }
 #ifndef _WIN32
         if (have_evdev) evdev_poll(&ev, &ax, &l2p, &r2p, &hx, &hy);
+        if (g_desc->midi) {
+            if (midi.fd >= 0) midi_poll(&midi, app);
+            else if (p_SDL_GetTicks() >= midi.retry) { midi_scan(&midi, app); midi.retry = p_SDL_GetTicks() + 1500; }
+        }
 #endif
         /* vince la sorgente che si sta muovendo di piu' */
         Axes use = (fabsf(pad.lx) + fabsf(pad.ly) + fabsf(pad.rx) + fabsf(pad.ry) > fabsf(ax.lx) + fabsf(ax.ly) + fabsf(ax.rx) + fabsf(ax.ry)) ? pad : ax;
@@ -445,6 +512,7 @@ int main(int argc, char **argv)
     g_desc->destroy(app);
 #ifndef _WIN32
     if (have_evdev) close(ev.fd);
+    if (midi.fd >= 0) close(midi.fd);
 #endif
     p_SDL_DestroyTexture(tex);
     p_SDL_DestroyRenderer(ren);

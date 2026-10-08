@@ -17,6 +17,9 @@ void app_save(App *a);
 void app_button(App *a, int button, int pressed);
 /* Levette -1..1 (su = negativo), grilletti 0..1. */
 void app_axes(App *a, float lx, float ly, float rx, float ry, float l2, float r2);
+/* Tastiera MIDI USB (spruce/cirmolo-kit/midi.h): un messaggio completo; nome del dispositivo o NULL. */
+void app_midi(App *a, const unsigned char *msg, int len);
+void app_midi_status(App *a, const char *device);
 void app_update(App *a, float dt);
 void app_draw(App *a, Canvas *c);
 int  app_wants_quit(const App *a);

@@ -39,7 +39,7 @@ Scritte in C per la Flip, con un kit comune ([`spruce/cirmolo-kit`](spruce/cirmo
 
 ## Rami e versioni
 - **`cirmolo`** (predefinito): lo sviluppo di Cirmolo.
-- **`release/0.1`**: la versione pubblicata, vedi le [release](https://github.com/luigismith/cirmolo/releases).
+- **`release/0.2`**: la versione pubblicata, vedi le [release](https://github.com/luigismith/cirmolo/releases); `release/0.1` resta com'era per la 0.1.0.
 - **`Development`**: copia identica di spruceOS, da cui si prendono gli aggiornamenti dell'originale. Gli altri rami vengono da spruceOS.
 
 ## Crediti e licenza

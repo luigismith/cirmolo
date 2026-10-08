@@ -3,16 +3,8 @@
 #define CIRMOLO_APP_H
 
 #include "gfx.h"
+#include "platform.h"   /* tasti PAD_* (spruce/cirmolo-kit) */
 #include "synth.h"
-
-enum {
-    PAD_UP, PAD_DOWN, PAD_LEFT, PAD_RIGHT,
-    PAD_A, PAD_B, PAD_X, PAD_Y,
-    PAD_L1, PAD_R1, PAD_L2, PAD_R2,
-    PAD_SELECT, PAD_START, PAD_MENU,
-    PAD_L3, PAD_R3,               /* pressione delle levette */
-    PAD_COUNT
-};
 
 enum { SCREEN_PLAY, SCREEN_SOUND, SCREEN_SEQ, SCREEN_COUNT };
 

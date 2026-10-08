@@ -6,7 +6,7 @@
 # Va aggiornato a ogni release pubblicata.
 CIRMOLO_VERSION=0.1.0
 RELEASE_VERSION=4.5.2
-RELEASE_CHECKSUM=
-RELEASE_SIZE_IN_MB=0
-RELEASE_LINK=
-RELEASE_INFO=https://github.com/luigismith/cirmolo/releases
+RELEASE_CHECKSUM=f8df2f7a048229c240f0093361dd9ed0
+RELEASE_SIZE_IN_MB=1453
+RELEASE_LINK=https://github.com/luigismith/cirmolo/releases/download/v0.1.0/cirmolo-0.1.0.7z
+RELEASE_INFO=https://github.com/luigismith/cirmolo/releases/tag/v0.1.0

@@ -83,7 +83,8 @@ struct Diapason {
 
     /* nota di riferimento (thread audio) */
     int ref_on;
-    float ref_freq, ref_phase, ref_env;
+    float ref_freq, ref_phase, ref_env, ref_built, ref_amp[49];
+    int ref_n;
 
     /* metronomo (thread audio) */
     int metro_on;
@@ -217,10 +218,49 @@ void diapason_audio(Diapason *d, float *out, int frames)
         if (d->ref_env < target) d->ref_env = fminf(target, d->ref_env + env_step);
         else if (d->ref_env > target) d->ref_env = fmaxf(target, d->ref_env - env_step);
         if (d->ref_env > 0.0f) {
-            d->ref_phase += d->ref_freq * inv;
+            /* L'altoparlante della Flip non emette quasi nulla sotto i 250-300 Hz: una sinusoide a 82 Hz
+               (Mi della chitarra) non si sentirebbe. La nota e' una somma di armoniche col peso spostato
+               dove l'altoparlante suona (250-2500 Hz): l'orecchio ricostruisce comunque l'altezza della
+               fondamentale. Ampiezze calcolate quando cambia la nota; armoniche con la ricorrenza
+               sin(kx) = 2 cos(x) sin((k-1)x) - sin((k-2)x). */
+            float f = d->ref_freq;
+            if (f != d->ref_built) {
+                d->ref_built = f;
+                int n = (int)(6000.0f / f);
+                if (n > 48) n = 48;
+                if (n < 1) n = 1;
+                float sum2 = 0.0f;
+                for (int k = 1; k <= n; k++) {
+                    float fk = f * k;
+                    float w = (fk < 250.0f ? 0.3f : 1.0f) / (1.0f + (fk / 2500.0f) * (fk / 2500.0f)) / sqrtf((float)k);
+                    d->ref_amp[k] = w;
+                    sum2 += w * w;
+                }
+                float norm = 0.24f / sqrtf(0.5f * sum2);      /* valore efficace costante per ogni nota */
+                for (int k = 1; k <= n; k++) d->ref_amp[k] *= norm;
+                d->ref_n = n;
+            }
+            d->ref_phase += f * inv;
             if (d->ref_phase >= 1.0f) d->ref_phase -= 1.0f;
-            float ph = TWO_PI_F * d->ref_phase;
-            s += (sinf(ph) + 0.25f * sinf(2 * ph) + 0.1f * sinf(3 * ph)) * 0.32f * d->ref_env;
+            float x = TWO_PI_F * d->ref_phase;
+            /* fasi a quarti di giro con andamento quadratico (come le fasi di Schroeder): stesso suono,
+               ma le armoniche non si sommano tutte nello stesso istante, quindi niente picchi che saturano */
+            float cx = cosf(x), c2 = 2.0f * cx;
+            float sp = 0.0f, sc = sinf(x), cp = 1.0f, cc = cx, acc = 0.0f;
+            for (int k = 1; k <= d->ref_n; k++) {
+                float v;
+                switch ((k * (k - 1) / 2) & 3) {
+                case 0: v = sc; break;
+                case 1: v = cc; break;
+                case 2: v = -sc; break;
+                default: v = -cc;
+                }
+                acc += d->ref_amp[k] * v;
+                float sn = c2 * sc - sp, cn = c2 * cc - cp;
+                sp = sc; sc = sn;
+                cp = cc; cc = cn;
+            }
+            s += acc * d->ref_env;
         }
         /* metronomo: colpi sintetizzati (accento piu' acuto, suddivisioni piu' piane) */
         if (d->metro_on) {

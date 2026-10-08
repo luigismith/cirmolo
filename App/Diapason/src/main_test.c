@@ -114,6 +114,35 @@ int main(int argc, char **argv)
     printf("silenzio: nota %d\n", diapason_note(d));
     if (diapason_note(d) != -1) { fprintf(stderr, "ERRORE: nota rilevata nel silenzio\n"); fail = 1; }
 
+    /* nota di riferimento: quanta energia cade sopra i 300 Hz (dove l'altoparlante della Flip suona davvero) */
+    {
+        static const int strings[6] = { 40, 45, 50, 55, 59, 64 };
+        static const char *names[6] = { "Mi2", "La2", "Re3", "Sol3", "Si3", "Mi4" };
+        static float tone[2 * SR];
+        diapason_set_page(d, 0);
+        diapason_set_instrument(d, 1);
+        diapason_button(d, PAD_A, 1); diapason_button(d, PAD_A, 0);       /* accende la nota di riferimento */
+        for (int k = 0; k < 6; k++) {
+            if (k) { diapason_button(d, PAD_RIGHT, 1); diapason_button(d, PAD_RIGHT, 0); }
+            diapason_update(d, 0.01f);
+            for (int b = 0; b < 2; b++) diapason_audio(d, tone, SR / 2);   /* assestamento */
+            diapason_audio(d, tone, SR);
+            float f0 = 440.0f * powf(2.0f, (strings[k] - 69) / 12.0f);
+            double total = 0, high = 0, peak = 0;
+            for (int h = 1; h * f0 < 12000.0f; h++) {                    /* Goertzel sulle armoniche */
+                double w = 2 * M_PI * h * f0 / SR, cw = 2 * cos(w), s1 = 0, s2 = 0;
+                for (int i = 0; i < SR; i++) { double s0 = tone[2 * i] + cw * s1 - s2; s2 = s1; s1 = s0; }
+                double pw = s1 * s1 + s2 * s2 - cw * s1 * s2;
+                total += pw;
+                if (h * f0 > 300.0f) high += pw;
+            }
+            for (int i = 0; i < SR; i++) peak = fmax(peak, fabs(tone[2 * i]));
+            printf("riferimento %-4s %6.1f Hz: energia sopra 300 Hz %3.0f %%, picco %.2f\n", names[k], f0, 100 * high / total, peak);
+            if (high / total < 0.5 || peak > 0.98) { fprintf(stderr, "ERRORE: nota di riferimento %s poco udibile o satura\n", names[k]); fail = 1; }
+        }
+        diapason_button(d, PAD_A, 1); diapason_button(d, PAD_A, 0);
+    }
+
     /* metronomo: 4 secondi a 120 BPM devono dare 8 battiti */
     diapason_set_page(d, 1);
     diapason_button(d, PAD_UP, 1); diapason_button(d, PAD_UP, 0);   /* 90 -> 91 */

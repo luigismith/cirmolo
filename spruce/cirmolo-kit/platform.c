@@ -219,17 +219,20 @@ static void evdev_poll(Evdev *e, Axes *ax, float *l2p, float *r2p, int *hx, int 
 }
 
 /* ------------------------------------------------------------------ MIDI (tastiere USB) */
-typedef struct { int fd; MidiParser parser; char name[96]; uint32_t retry; } MidiIn;
+#define MIDI_PORTS 8
+typedef struct { int fd[MIDI_PORTS], ports; MidiParser parser[MIDI_PORTS]; char name[96]; uint32_t retry; } MidiIn;
 
 static void midi_close(MidiIn *m, void *app)
 {
-    close(m->fd);
-    m->fd = -1;
+    for (int p = 0; p < m->ports; p++) close(m->fd[p]);
+    m->ports = 0;
     fprintf(stderr, "MIDI scollegato: %s\n", m->name);
     if (g_desc->midi_status) g_desc->midi_status(app, NULL);
 }
 
-/* Cerca /dev/snd/midiC<card>D<dev> e lo apre; il nome viene da /proc/asound/card<card>/id. */
+/* Cerca /dev/snd/midiC<card>D<dev> e lo apre; il nome viene da /proc/asound/card<card>/id.
+   Ogni open() senza preferenze prende la prima sottoperiferica libera (una per porta del dispositivo
+   USB) e, con O_NONBLOCK, fallisce con EBUSY quando sono finite: cosi' si aprono tutte le porte. */
 static void midi_scan(MidiIn *m, void *app)
 {
     DIR *d = opendir("/dev/snd");
@@ -244,9 +247,19 @@ static void midi_scan(MidiIn *m, void *app)
     if (card < 0) return;
     char path[64];
     snprintf(path, sizeof(path), "/dev/snd/midiC%dD%d", card, dev);
-    m->fd = open(path, O_RDONLY | O_NONBLOCK);
-    if (m->fd < 0) { fprintf(stderr, "MIDI: %s non aperto (%s)\n", path, strerror(errno)); return; }
-    midi_parser_reset(&m->parser);
+    int want = g_desc->midi_port ? MIDI_PORTS : 1;
+    m->ports = 0;
+    while (m->ports < want) {
+        int fd = open(path, O_RDONLY | O_NONBLOCK);
+        if (fd < 0) {
+            if (!m->ports) fprintf(stderr, "MIDI: %s non aperto (%s)\n", path, strerror(errno));
+            break;
+        }
+        m->fd[m->ports] = fd;
+        midi_parser_reset(&m->parser[m->ports]);
+        m->ports++;
+    }
+    if (!m->ports) return;
     snprintf(m->name, sizeof(m->name), "MIDI %d", card);
     char idp[64];
     snprintf(idp, sizeof(idp), "/proc/asound/card%d/id", card);
@@ -255,25 +268,29 @@ static void midi_scan(MidiIn *m, void *app)
         if (fgets(m->name, sizeof(m->name), f)) m->name[strcspn(m->name, "\r\n")] = 0;
         fclose(f);
     }
-    fprintf(stderr, "MIDI collegato: %s (%s)\n", m->name, path);
+    fprintf(stderr, "MIDI collegato: %s (%s, %d port%s)\n", m->name, path, m->ports, m->ports == 1 ? "a" : "e");
     if (g_desc->midi_status) g_desc->midi_status(app, m->name);
 }
 
 static void midi_poll(MidiIn *m, void *app)
 {
     unsigned char buf[256], msg[3];
-    for (;;) {
-        ssize_t n = read(m->fd, buf, sizeof(buf));
-        if (n > 0) {
-            for (ssize_t i = 0; i < n; i++) {
-                int len = midi_parse_byte(&m->parser, buf[i], msg);
-                if (len > 0 && g_desc->midi) g_desc->midi(app, msg, len);
+    for (int p = 0; p < m->ports; p++) {
+        for (;;) {
+            ssize_t n = read(m->fd[p], buf, sizeof(buf));
+            if (n > 0) {
+                for (ssize_t i = 0; i < n; i++) {
+                    int len = midi_parse_byte(&m->parser[p], buf[i], msg);
+                    if (len <= 0) continue;
+                    if (g_desc->midi_port) g_desc->midi_port(app, p, msg, len);
+                    else if (g_desc->midi) g_desc->midi(app, msg, len);
+                }
+                continue;
             }
-            continue;
+            if (n < 0 && (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)) break;
+            midi_close(m, app);                     /* 0 o errore: dispositivo scollegato */
+            return;
         }
-        if (n < 0 && (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)) return;
-        midi_close(m, app);                         /* 0 o errore: dispositivo scollegato */
-        return;
     }
 }
 #endif
@@ -415,7 +432,7 @@ int main(int argc, char **argv)
     /* Con evdev aperto, gamepad e tastiera di SDL vengono ignorati: leggono lo stesso dispositivo
        e ogni tasto arriverebbe due volte (con mappature diverse). */
     int sdl_input = !have_evdev || getenv("CIRMOLO_SDL_INPUT") != NULL;
-    MidiIn midi = { -1 };
+    MidiIn midi = { { -1 }, 0 };
     if (g_desc->midi_status) g_desc->midi_status(app, NULL);
 #else
     int sdl_input = 1;
@@ -469,8 +486,8 @@ int main(int argc, char **argv)
         }
 #ifndef _WIN32
         if (have_evdev) evdev_poll(&ev, &ax, &l2p, &r2p, &hx, &hy);
-        if (g_desc->midi) {
-            if (midi.fd >= 0) midi_poll(&midi, app);
+        if (g_desc->midi || g_desc->midi_port) {
+            if (midi.ports) midi_poll(&midi, app);
             else if (p_SDL_GetTicks() >= midi.retry) { midi_scan(&midi, app); midi.retry = p_SDL_GetTicks() + 1500; }
         }
 #endif
@@ -493,12 +510,15 @@ int main(int argc, char **argv)
         g_desc->update(app, dt > 0.1f ? 0.1f : dt);
         if (g_desc->wants_quit(app)) running = 0;
 
-        g_desc->draw(app, &canvas);
-        p_SDL_UpdateTexture(tex, NULL, px, W * 4);
-        p_SDL_RenderClear(ren);
-        p_SDL_RenderCopy(ren, tex, NULL, NULL);
-        p_SDL_RenderPresent(ren);
-        if (!vsync) {
+        int fresh = frames < 2 || !g_desc->needs_draw || g_desc->needs_draw(app);
+        if (fresh) {
+            g_desc->draw(app, &canvas);
+            p_SDL_UpdateTexture(tex, NULL, px, W * 4);
+            p_SDL_RenderClear(ren);
+            p_SDL_RenderCopy(ren, tex, NULL, NULL);
+            p_SDL_RenderPresent(ren);
+        }
+        if (!vsync || !fresh) {                   /* senza presentazione non c'e' il vsync ad aspettare */
             uint32_t spent = p_SDL_GetTicks() - now;
             if (spent < 16) p_SDL_Delay(16 - spent);
         }
@@ -512,7 +532,7 @@ int main(int argc, char **argv)
     g_desc->destroy(app);
 #ifndef _WIN32
     if (have_evdev) close(ev.fd);
-    if (midi.fd >= 0) close(midi.fd);
+    for (int p = 0; p < midi.ports; p++) close(midi.fd[p]);
 #endif
     p_SDL_DestroyTexture(tex);
     p_SDL_DestroyRenderer(ren);

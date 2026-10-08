@@ -54,7 +54,14 @@ typedef struct {
     /* 0 se dall'ultimo disegno sullo schermo non e' cambiato niente: il kit salta disegno e presentazione
        di quel fotogramma (meno CPU e batteria). Facoltativa: senza, si disegna sempre. */
     int  (*needs_draw)(void *app);
+
+    /* Testo da una tastiera (USB sulla console, quella del PC in prova): utf8 con special = TEXT_CHARS,
+       oppure un tasto di modifica (utf8 vuoto). Facoltativa: con questa il kit attiva l'inserimento di
+       testo di SDL e i tasti della tastiera non fanno piu' da tasti della Flip. */
+    void (*text_input)(void *app, const char *utf8, int special);
 } CirmoloApp;
+
+enum { TEXT_CHARS, TEXT_BACKSPACE, TEXT_ENTER, TEXT_LEFT, TEXT_RIGHT, TEXT_UP, TEXT_DOWN, TEXT_DELETE };
 
 /* Definita da ogni app. */
 const CirmoloApp *cirmolo_app(void);

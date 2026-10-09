@@ -773,7 +773,8 @@
         "What should I play?": "Cosa gioco?",
         "Cheevos": "Cheevos",
         "LittleGPTracker": "LittleGPTracker",
-        "Cirmolo Piano": "Cirmolo Piano"
+        "Cirmolo Piano": "Cirmolo Piano",
+        "Cirmolo Sampler": "Cirmolo Sampler"
     },
     "appDescriptions": {
         "32-bit RetroArch frontend": "RetroArch a 32 bit",
@@ -805,7 +806,8 @@
         "Three questions, and the AI picks games from your collection (Wi-Fi and API key needed)": "Tre domande e l'IA sceglie tra i tuoi giochi (servono Wi-Fi e chiave API)",
         "RetroAchievements hub": "I tuoi obiettivi RetroAchievements",
         "Sample tracker for gamepads, LSDj style": "Tracker a campioni per gamepad, stile LSDj",
-        "General MIDI instrument for a USB MIDI keyboard": "Strumento General MIDI per la tastiera MIDI USB"
+        "General MIDI instrument for a USB MIDI keyboard": "Strumento General MIDI per la tastiera MIDI USB",
+        "Pad sampler with step sequencer, USB mic recording and MIDI": "Campionatore a pad con sequencer, registrazione dal microfono USB e MIDI"
     },
     "taskLabels": {
         "Bug report": "Segnala un problema",

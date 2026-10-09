@@ -1,0 +1,7 @@
+{
+  "label": "Cirmolo Sampler",
+  "icon": "cirmolosampler.png",
+  "launch": "launch.sh",
+  "description": "Pad sampler with step sequencer, USB mic recording and MIDI",
+  "devices": ["MIYOO_FLIP"]
+}

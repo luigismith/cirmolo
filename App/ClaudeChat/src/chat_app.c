@@ -154,7 +154,7 @@ struct ChatApp {
     /* funzioni IA della console: modello per le immagini e traduzione dei giochi */
     int ia_prov;                                  /* -1 = come la chat */
     char ia_model[96];
-    int translate, tr_voice;
+    int translate, tr_voice, diary_ai, remind;
     char tr_lang[8];                              /* "" = come l'interfaccia */
     int set_sel;
     int down[PAD_COUNT];
@@ -270,7 +270,8 @@ static void save_settings(ChatApp *a)
     buf_printf(&b, "# Chiedi all'IA\nprovider=%s\neffort=%d\nconcise=%d\nspeak=%d\nautosend=%d\nmic=%d\nstt=%s\ntts=%s\n",
                cur_prov(a)->id, a->effort, a->concise, a->speak, a->autosend, a->mic,
                a->stt_prov >= 0 ? a->reg.p[a->stt_prov].id : "none", a->tts_prov >= 0 ? a->reg.p[a->tts_prov].id : "none");
-    buf_printf(&b, "traduzione=%d\ntraduzione.voce=%d\ntraduzione.lingua=%s\n", a->translate, a->tr_voice, a->tr_lang);
+    buf_printf(&b, "traduzione=%d\ntraduzione.voce=%d\ntraduzione.lingua=%s\ndiario.ia=%d\ndiario.promemoria=%d\n",
+               a->translate, a->tr_voice, a->tr_lang, a->diary_ai, a->remind);
     if (a->ia_prov >= 0) buf_printf(&b, "ia.provider=%s\nia.model=%s\n", a->reg.p[a->ia_prov].id, a->ia_model);
     for (int i = 0; i < a->reg.n; i++) {
         if (a->prefs[i].model[0]) buf_printf(&b, "model.%s=%s\n", a->reg.p[i].id, a->prefs[i].model);
@@ -369,6 +370,8 @@ static void load_settings(ChatApp *a)
             else if (!strcmp(k, "ia.model")) snprintf(a->ia_model, sizeof(a->ia_model), "%s", v);
             else if (!strcmp(k, "traduzione")) a->translate = iv != 0;
             else if (!strcmp(k, "traduzione.voce")) a->tr_voice = iv != 0;
+            else if (!strcmp(k, "diario.ia")) a->diary_ai = iv != 0;
+            else if (!strcmp(k, "diario.promemoria")) a->remind = iv != 0;
             else if (!strcmp(k, "traduzione.lingua")) snprintf(a->tr_lang, sizeof(a->tr_lang), "%s", v);
             else if (!strcmp(k, "tts")) { tts_set = 1; a->tts_prov = registry_find(&a->reg, v); }
         }
@@ -1071,7 +1074,7 @@ static int tr_lang_index(const ChatApp *a)
 }
 
 /* ------------------------------------------------------------------ impostazioni */
-enum { K_TRANSLATE, K_PROV, K_MODEL, K_LANG, K_VOICE, K_HOW, K_COUNT };
+enum { K_TRANSLATE, K_PROV, K_MODEL, K_LANG, K_VOICE, K_DIARY, K_REMIND, K_HOW, K_COUNT };
 enum { S_PROVIDER, S_MODEL, S_EFFORT, S_STYLE, S_KEY, S_NEW, S_USAGE, S_COUNT };
 enum { W_SPEAK, W_TTS, W_VOICE, W_STT, W_AUTOSEND, W_MIC, W_STATUS, W_COUNT };
 
@@ -1140,6 +1143,12 @@ static void console_change(ChatApp *a, int dir)
     case K_LANG:
         snprintf(a->tr_lang, sizeof(a->tr_lang), "%s", TR_LANGS[(tr_lang_index(a) + dir + TR_LANG_COUNT) % TR_LANG_COUNT][0]);
         console_apply(a);
+        break;
+    case K_DIARY:
+        a->diary_ai = !a->diary_ai;
+        break;
+    case K_REMIND:
+        a->remind = !a->remind;
         break;
     case K_VOICE:
         a->tr_voice = !a->tr_voice;
@@ -1591,7 +1600,7 @@ int chat_needs_draw(ChatApp *a)
 {
     int v[] = { a->page, a->tab, a->typing, a->quit_dialog, a->quick_open, a->quick_sel, a->confirm_new, a->entering_key, a->set_sel,
                 a->cursor, a->layer, a->shift, a->kr, a->kc, a->busy, a->reply.state, a->conv.n, a->prov, a->model, a->effort,
-                a->concise, a->speak, a->autosend, a->mic, a->stt_prov, a->tts_prov, a->picker_open, a->picker_sel, a->mfetch, a->translate, a->tr_voice, a->ia_prov, (int)a->ia_model[0], tr_lang_index(a),
+                a->concise, a->speak, a->autosend, a->mic, a->stt_prov, a->tts_prov, a->picker_open, a->picker_sel, a->mfetch, a->translate, a->tr_voice, a->diary_ai, a->remind, a->ia_prov, (int)a->ia_model[0], tr_lang_index(a),
                 (int)a->scroll, a->follow, a->toast_t > 0.0f, a->key[0] != 0, a->vstate, a->cap_rate > 0, speech_busy(a),
                 a->busy || a->vstate >= V_RECORDING ? (int)(a->time * 8.0f) : 0,
                 a->typing ? (int)(a->time * 2.0f) : 0 };
@@ -1884,7 +1893,8 @@ static void draw_settings(ChatApp *a, Canvas *c)
     Provider *p = cur_prov(a);
     if (a->tab == TAB_CONSOLE) {
         static const char *L[K_COUNT] = { N_("Traduzione dei giochi"), N_("Fornitore per le immagini"), N_("Modello per le immagini"),
-                                          N_("Lingua della traduzione"), N_("Leggi la traduzione"), N_("Come si usa") };
+                                          N_("Lingua della traduzione"), N_("Leggi la traduzione"), N_("Diario con l'IA"),
+                                          N_("Promemoria all'avvio"), N_("Come si usa") };
         for (int i = 0; i < K_COUNT; i++) labels[i] = tr(L[i]);
         snprintf(vals[K_TRANSLATE], 96, "%s", a->translate ? tr("Sì") : tr("No"));
         if (a->translate) cols[K_TRANSLATE] = C_GREEN;
@@ -1905,6 +1915,8 @@ static void draw_settings(ChatApp *a, Canvas *c)
         if (li == 0) snprintf(vals[K_LANG], 96, "%s", tr(TR_LANGS[0][1]));
         else snprintf(vals[K_LANG], 96, "%s", TR_LANGS[li][1]);
         snprintf(vals[K_VOICE], 96, "%s", a->tr_voice ? tr("Sì") : tr("No"));
+        snprintf(vals[K_DIARY], 96, "%s", a->diary_ai ? tr("Sì") : tr("No"));
+        snprintf(vals[K_REMIND], 96, "%s", a->remind ? tr("Sì") : tr("No"));
         snprintf(vals[K_HOW], 96, "%s", tr("SELECT + giù nel gioco"));
         switch (a->set_sel) {
         case K_TRANSLATE:
@@ -1918,6 +1930,14 @@ static void draw_settings(ChatApp *a, Canvas *c)
         case K_LANG:
             snprintf(help[0], 160, "%s", tr("In che lingua tradurre. La lingua di partenza la riconosce il modello"));
             snprintf(help[1], 160, "%s", tr("(spesso è il giapponese)."));
+            break;
+        case K_DIARY:
+            snprintf(help[0], 160, "%s", tr("A fine partita il modello guarda l'ultima schermata e scrive dove"));
+            snprintf(help[1], 160, "%s", tr("eri rimasto. Il diario (data, durata) si tiene comunque, senza IA."));
+            break;
+        case K_REMIND:
+            snprintf(help[0], 160, "%s", tr("Quando riapri un gioco, per qualche secondo vedi l'ultima"));
+            snprintf(help[1], 160, "%s", tr("schermata e dove eri rimasto; un tasto qualsiasi e si gioca."));
             break;
         case K_VOICE:
             snprintf(help[0], 160, "%s", tr("Legge anche ad alta voce la traduzione, con la sintesi vocale"));
@@ -2021,7 +2041,8 @@ static void draw_settings(ChatApp *a, Canvas *c)
             snprintf(help[1], 160, "%s", tr("B mentre parli annulla. Al massimo un minuto per volta."));
         }
     }
-    for (int i = 0; i < n; i++) draw_row(c, 94 + i * 37, i == a->set_sel, labels[i], vals[i], cols[i]);
+    int rh = n > 7 ? 33 : 37;
+    for (int i = 0; i < n; i++) draw_row(c, 92 + i * rh, i == a->set_sel, labels[i], vals[i], cols[i]);
     gfx_round_rect(c, 14, 358, 612, 82, 14, C_PANEL, 1.0f);
     gfx_text(c, FONT_SMALL, 30, 388, help[0], C_MUTED);
     gfx_text(c, FONT_SMALL, 30, 414, help[1], C_MUTED);

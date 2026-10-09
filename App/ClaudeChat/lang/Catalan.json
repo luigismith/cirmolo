@@ -85,6 +85,8 @@
   "Modello per le immagini": "Model per a imatges",
   "Lingua della traduzione": "Idioma de la traducció",
   "Leggi la traduzione": "Llegeix la traducció",
+  "Diario con l'IA": "Diari amb la IA",
+  "Promemoria all'avvio": "Recordatori a l'inici",
   "Come si usa": "Com s'utilitza",
   "Sì": "Sí",
   "No": "No",
@@ -97,6 +99,10 @@
   "GLM-4.6V-Flash (gratis), Qwen-VL... A apre l'elenco, X lo aggiorna.": "GLM-4.6V-Flash (gratis), Qwen-VL... A obre la llista, X l'actualitza.",
   "In che lingua tradurre. La lingua di partenza la riconosce il modello": "A quin idioma traduir. L'idioma d'origen el reconeix el model",
   "(spesso è il giapponese).": "(sovint és el japonès).",
+  "A fine partita il modello guarda l'ultima schermata e scrive dove": "En sortir, el model mira l'última pantalla i escriu on",
+  "eri rimasto. Il diario (data, durata) si tiene comunque, senza IA.": "t'havies quedat. El diari (data, durada) es manté igualment, sense IA.",
+  "Quando riapri un gioco, per qualche secondo vedi l'ultima": "Quan tornes a obrir un joc, uns segons veus l'última",
+  "schermata e dove eri rimasto; un tasto qualsiasi e si gioca.": "pantalla i on t'havies quedat; qualsevol botó per jugar.",
   "Legge anche ad alta voce la traduzione, con la sintesi vocale": "També llegeix la traducció en veu alta, amb la síntesi de veu",
   "scelta nella scheda Voce.": "triada a la pestanya Veu.",
   "Le traduzioni si salvano in Saves/claude/traduzioni, una per gioco.": "Les traduccions es desen a Saves/claude/traduzioni, una per joc.",
@@ -176,6 +182,10 @@
   "La risposta si è interrotta.": "La resposta s'ha interromput.",
   "Per la lettura scegli la sintesi vocale e la sua chiave (Chiedi all'IA, scheda Voce).": "Per llegir en veu alta, tria la síntesi de veu i la seva clau (Pregunta a la IA, pestanya Veu).",
   "Apri la scheda dal menu di un gioco (tasto del menu sul gioco).": "Obre la fitxa des del menú d'un joc (botó de menú sobre el joc).",
+  "Ultima partita: %s, %s. In tutto %s (%d partite).": "Última partida: %s, %s. En total %s (%d partides).",
+  "Dove eri rimasto": "On t'havies quedat",
+  "Ultima partita: %s, %s.": "Última partida: %s, %s.",
+  "Un tasto qualsiasi per giocare subito": "Qualsevol botó per jugar ja",
   "Scrivo la scheda": "Escric la fitxa",
   "Scheda del gioco": "Fitxa del joc",
   "legge...": "llegint...",
@@ -244,5 +254,6 @@
   "Impossibile preparare la richiesta in /tmp.": "No s'ha pogut preparar la petició a /tmp.",
   "Sul PC questa app non si collega a Internet.": "Al PC aquesta app no es connecta a Internet.",
   "Scegli il modello per le immagini in Chiedi all'IA, scheda Console.": "Tria el model per a imatges a Pregunta a la IA, pestanya Consola.",
-  "Manca la chiave API di %s: mettila in Chiedi all'IA.": "Falta la clau API de %s: posa-la a Pregunta a la IA."
+  "Manca la chiave API di %s: mettila in Chiedi all'IA.": "Falta la clau API de %s: posa-la a Pregunta a la IA.",
+  "meno di un minuto": "menys d'un minut"
 }

@@ -2,8 +2,8 @@
  *
  * SDL2 viene caricata a runtime (dlopen/LoadLibrary): sulla Flip si usa la libreria di PyUI
  * (/mnt/SDCARD/App/PyUI/dll/libSDL2-2.0.so, SDL 2.32 con ALSA e KMSDRM), senza dipendere dalla
- * versione del firmware. I tasti della Flip si leggono da /dev/input/event5 come fa PyUI;
- * tastiera e gamepad SDL restano come riserva (e servono sul PC).
+ * versione del firmware. I tasti della Flip si leggono dal pad "MIYOO Player1", cercato per nome in
+ * /proc/bus/input/devices come fa PyUI; tastiera e gamepad SDL restano come riserva (e servono sul PC).
  *
  * Opzioni: [--fonts DIR] [--state FILE] [--window] [--frames N]
  */
@@ -225,13 +225,46 @@ static void trigger(int btn, float v, float *prev)
 #ifndef _WIN32
 typedef struct { int fd; struct input_absinfo abs[ABS_CNT]; int have[ABS_CNT]; } Evdev;
 
-static int evdev_open(Evdev *e, const char *path)
+#define FLIP_PAD_NAME "MIYOO Player1"
+
+/* Il pad della Flip e' il dispositivo virtuale "MIYOO Player1" che miyoo_inputd crea all'avvio: il suo
+   numero non e' fisso, perche' un dispositivo USB o Bluetooth con interfaccia HID presente all'avvio (il
+   telecomando di cuffie, i tasti di un DAC, una tastiera) registra prima e si prende event5. Si cerca per
+   nome in /proc/bus/input/devices, come fanno PyUI e gli script di spruce; event5 resta la riserva. */
+static const char *pad_event_path(char *out, size_t n)
+{
+    static const char tag[] = "N: Name=\"" FLIP_PAD_NAME "\"";
+    FILE *f = fopen("/proc/bus/input/devices", "r");
+    char line[256];
+    int found = 0;
+    if (f) {
+        while (fgets(line, sizeof(line), f)) {
+            if (line[0] == '\n') found = 0;
+            else if (!strncmp(line, tag, sizeof(tag) - 1)) found = 1;
+            else if (found && !strncmp(line, "H: Handlers=", 12)) {
+                for (char *tok = strtok(line + 12, " \n"); tok; tok = strtok(NULL, " \n"))
+                    if (!strncmp(tok, "event", 5) && tok[5] >= '0' && tok[5] <= '9') {
+                        fclose(f);
+                        snprintf(out, n, "/dev/input/%s", tok);
+                        return out;
+                    }
+            }
+        }
+        fclose(f);
+    }
+    const char *env = getenv("EVENT_PATH_READ_INPUTS_SPRUCE");     /* Flip.cfg lo cerca allo stesso modo */
+    snprintf(out, n, "%s", env && *env ? env : "/dev/input/event5");
+    return out;
+}
+
+static int evdev_open(Evdev *e, const char *path, char *name, size_t name_n)
 {
     e->fd = open(path, O_RDONLY | O_NONBLOCK);
     if (e->fd < 0) return -1;
     for (int c = 0; c < ABS_CNT; c++)
         e->have[c] = ioctl(e->fd, EVIOCGABS(c), &e->abs[c]) == 0 && e->abs[c].maximum > e->abs[c].minimum;
-    fprintf(stderr, "input: %s\n", path);
+    if (ioctl(e->fd, EVIOCGNAME(name_n), name) < 0) snprintf(name, name_n, "?");
+    fprintf(stderr, "input: %s (%s)\n", path, name);
     return 0;
 }
 
@@ -509,7 +542,18 @@ int main(int argc, char **argv)
 
 #ifndef _WIN32
     Evdev ev = { -1 };
-    int have_evdev = evdev_open(&ev, getenv("CIRMOLO_INPUT") ? getenv("CIRMOLO_INPUT") : "/dev/input/event5") == 0;
+    char ev_path[64], ev_name[80] = "";
+    const char *forced = getenv("CIRMOLO_INPUT");
+    int have_evdev = evdev_open(&ev, forced && *forced ? forced : pad_event_path(ev_path, sizeof(ev_path)),
+                                ev_name, sizeof(ev_name)) == 0;
+    /* Se quello aperto non e' il pad (per esempio il pad non e' ancora registrato), l'app resterebbe sorda
+       e senza modo di uscire: meglio il gamepad di SDL, che il pad lo trova da se'. */
+    if (have_evdev && !(forced && *forced) && strcmp(ev_name, FLIP_PAD_NAME)) {
+        fprintf(stderr, "input: %s non e' il pad %s, uso SDL\n", ev_name, FLIP_PAD_NAME);
+        close(ev.fd);
+        ev.fd = -1;
+        have_evdev = 0;
+    }
     int hx = 0, hy = 0;
     /* Con evdev aperto, gamepad e tastiera di SDL vengono ignorati: leggono lo stesso dispositivo
        e ogni tasto arriverebbe due volte (con mappature diverse). */

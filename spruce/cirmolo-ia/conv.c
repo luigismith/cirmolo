@@ -62,7 +62,7 @@ void conv_add_user(Conversation *c, const char *text)
     conv_add(c, ROLE_USER, PROTO_PLAIN, plain_json(ROLE_USER, text), dup_str(text));
 }
 
-char *anthropic_request(const Conversation *c, const char *model, const char *effort, int fallbacks)
+char *anthropic_request(const Conversation *c, const char *model, const char *effort, int fallbacks, const char *tools)
 {
     Buf b = { 0 };
     /* thinking non c'e': sui modelli Claude recenti il pensiero adattivo e' gia' attivo; l'impegno lo regola */
@@ -71,6 +71,7 @@ char *anthropic_request(const Conversation *c, const char *model, const char *ef
     buf_adds(&b, ",\"max_tokens\":64000,\"stream\":true,\"cache_control\":{\"type\":\"ephemeral\"},");
     if (effort) buf_printf(&b, "\"output_config\":{\"effort\":\"%s\"},", effort);
     if (fallbacks) buf_adds(&b, "\"fallbacks\":\"default\",");
+    if (tools) { buf_adds(&b, "\"tools\":"); buf_adds(&b, tools); buf_adds(&b, ","); }
     buf_adds(&b, "\"system\":");
     json_escape(&b, c->system);
     buf_adds(&b, ",\"messages\":[");
@@ -78,16 +79,21 @@ char *anthropic_request(const Conversation *c, const char *model, const char *ef
     for (int i = 0; i < c->n; i++) {
         const ChatMsg *m = &c->msg[i];
         if (m->excluded) continue;
+        const char *raw = NULL;
+        char *p = NULL;
+        if (m->proto == PROTO_ANTHROPIC || (m->role == ROLE_USER && m->proto == PROTO_PLAIN && !m->tool)) raw = m->json;
+        else if (!m->tool && m->text && m->text[0]) raw = p = plain_json(m->role, m->text);   /* risposta di un altro fornitore */
+        if (!raw) continue;                       /* strumenti usati con un altro protocollo: non si rimandano */
         if (!first) buf_add(&b, ",", 1);
         first = 0;
-        if (m->proto == PROTO_ANTHROPIC || m->role == ROLE_USER) buf_adds(&b, m->json);
-        else { char *p = plain_json(m->role, m->text); buf_adds(&b, p); free(p); }   /* risposta di un altro fornitore */
+        buf_adds(&b, raw);
+        free(p);
     }
     buf_adds(&b, "]}");
     return buf_steal(&b);
 }
 
-char *openai_request(const Conversation *c, const char *model, int max_tokens, int stream_options)
+char *openai_request(const Conversation *c, const char *model, int max_tokens, int stream_options, const char *tools)
 {
     Buf b = { 0 };
     buf_adds(&b, "{\"model\":");
@@ -95,12 +101,19 @@ char *openai_request(const Conversation *c, const char *model, int max_tokens, i
     buf_adds(&b, ",\"stream\":true,");
     if (stream_options) buf_adds(&b, "\"stream_options\":{\"include_usage\":true},");
     if (max_tokens > 0) buf_printf(&b, "\"max_tokens\":%d,", max_tokens);
+    if (tools) { buf_adds(&b, "\"tools\":"); buf_adds(&b, tools); buf_adds(&b, ","); }
     buf_adds(&b, "\"messages\":[{\"role\":\"system\",\"content\":");
     json_escape(&b, c->system);
     buf_adds(&b, "}");
     for (int i = 0; i < c->n; i++) {
         const ChatMsg *m = &c->msg[i];
         if (m->excluded) continue;
+        if (m->proto == PROTO_OPENAI) {           /* chiamate e risultati degli strumenti, identici */
+            buf_adds(&b, ",");
+            buf_adds(&b, m->json);
+            continue;
+        }
+        if (m->tool || !m->text || (!m->text[0] && m->role == ROLE_ASSISTANT)) continue;
         char *p = plain_json(m->role, m->text);
         buf_adds(&b, ",");
         buf_adds(&b, p);
@@ -108,6 +121,33 @@ char *openai_request(const Conversation *c, const char *model, int max_tokens, i
     }
     buf_adds(&b, "]}");
     return buf_steal(&b);
+}
+
+void conv_add_tool_results(Conversation *c, int proto, int n, const char *const *ids, const char *const *results)
+{
+    if (proto == PROTO_ANTHROPIC) {
+        Buf b = { 0 };
+        buf_adds(&b, "{\"role\":\"user\",\"content\":[");
+        for (int i = 0; i < n; i++) {
+            buf_adds(&b, i ? ",{\"type\":\"tool_result\",\"tool_use_id\":" : "{\"type\":\"tool_result\",\"tool_use_id\":");
+            json_escape(&b, ids[i]);
+            buf_adds(&b, ",\"content\":");
+            json_escape(&b, results[i]);
+            buf_adds(&b, "}");
+        }
+        buf_adds(&b, "]}");
+        conv_add(c, ROLE_USER, PROTO_ANTHROPIC, buf_steal(&b), dup_str(""))->tool = 1;
+        return;
+    }
+    for (int i = 0; i < n; i++) {
+        Buf b = { 0 };
+        buf_adds(&b, "{\"role\":\"tool\",\"tool_call_id\":");
+        json_escape(&b, ids[i]);
+        buf_adds(&b, ",\"content\":");
+        json_escape(&b, results[i]);
+        buf_adds(&b, "}");
+        conv_add(c, ROLE_USER, PROTO_OPENAI, buf_steal(&b), dup_str(""))->tool = 1;
+    }
 }
 
 char *conv_save(const Conversation *c)
@@ -124,7 +164,7 @@ char *conv_save(const Conversation *c)
     for (int i = 0; i < c->n; i++) {
         const ChatMsg *m = &c->msg[i];
         buf_adds(&b, i ? ",\n" : "\n");
-        buf_printf(&b, "{\"excluded\":%d,\"proto\":%d,\"text\":", m->excluded, m->proto);
+        buf_printf(&b, "{\"excluded\":%d,\"proto\":%d,%s\"text\":", m->excluded, m->proto, m->tool ? "\"tool\":1," : "");
         json_escape(&b, m->text);
         if (m->note) { buf_adds(&b, ",\"note\":"); json_escape(&b, m->note); }
         if (m->model) { buf_adds(&b, ",\"model\":"); json_escape(&b, m->model); }
@@ -158,6 +198,7 @@ int conv_load(Conversation *c, const char *json, size_t len)
         if (!text && cm->role == ROLE_USER) { free(cm->text); cm->text = dup_str(json_str(m, "content")); }
         if (mt) {
             cm->excluded = (int)json_num(mt, "excluded", 0) != 0;
+            cm->tool = (int)json_num(mt, "tool", 0) != 0;
             const char *note = json_str(mt, "note"), *model = json_str(mt, "model");
             if (note) cm->note = dup_str(note);
             if (model) cm->model = dup_str(model);
@@ -210,6 +251,7 @@ Block *reply_new_block(Reply *r, int type)
     buf_clear(&b->b);
     buf_add(&b->a, "", 0);
     buf_add(&b->b, "", 0);
+    b->name[0] = 0;
     b->type = type;
     r->cur = r->nblk++;
     return b;
@@ -295,12 +337,48 @@ char *reply_message_json(const Reply *r, int *proto)
         if (proto) *proto = PROTO_ANTHROPIC;
         return anthropic_message_json(r);
     }
-    if (proto) *proto = PROTO_PLAIN;
     char *t = reply_text(r);
-    if (!t[0]) { free(t); return NULL; }
-    char *j = plain_json(ROLE_ASSISTANT, t);
+    int ntools = reply_tool_count(r);
+    if (!ntools) {
+        if (proto) *proto = PROTO_PLAIN;
+        if (!t[0]) { free(t); return NULL; }
+        char *j = plain_json(ROLE_ASSISTANT, t);
+        free(t);
+        return j;
+    }
+    /* chiamate agli strumenti: il messaggio va rimandato com'e', con tool_calls */
+    if (proto) *proto = PROTO_OPENAI;
+    Buf b = { 0 };
+    buf_adds(&b, "{\"role\":\"assistant\",\"content\":");
+    if (t[0]) json_escape(&b, t); else buf_adds(&b, "null");
+    buf_adds(&b, ",\"tool_calls\":[");
+    for (int i = 0; i < ntools; i++) {
+        const Block *k = reply_tool(r, i);
+        buf_adds(&b, i ? ",{\"id\":" : "{\"id\":");
+        json_escape_n(&b, k->b.p ? k->b.p : "", k->b.len);
+        buf_adds(&b, ",\"type\":\"function\",\"function\":{\"name\":");
+        json_escape(&b, k->name);
+        buf_adds(&b, ",\"arguments\":");
+        if (k->a.len) json_escape_n(&b, k->a.p, k->a.len); else buf_adds(&b, "\"{}\"");
+        buf_adds(&b, "}}");
+    }
+    buf_adds(&b, "]}");
     free(t);
-    return j;
+    return buf_steal(&b);
+}
+
+int reply_tool_count(const Reply *r)
+{
+    int n = 0;
+    for (int i = 0; i < r->nblk; i++) if (r->blk[i].type == BLK_TOOL) n++;
+    return n;
+}
+
+const Block *reply_tool(const Reply *r, int i)
+{
+    for (int k = 0; k < r->nblk; k++)
+        if (r->blk[k].type == BLK_TOOL && i-- == 0) return &r->blk[k];
+    return NULL;
 }
 
 const char *reply_status(const Reply *r)
@@ -309,10 +387,10 @@ const char *reply_status(const Reply *r)
     case RS_WAITING: return N_("In attesa della risposta");
     case RS_THINKING: return N_("Sta pensando");
     case RS_WRITING: return N_("Scrive");
-    case RS_DONE: return r->fallback ? "Risposta da un modello di riserva" : "Fatto";
+    case RS_DONE: return r->fallback ? N_("Risposta da un modello di riserva") : N_("Fatto");
     case RS_REFUSED: return N_("Nessuna risposta");
     case RS_CANCELLED: return N_("Interrotta");
     case RS_ERROR: return N_("Errore");
     }
-    return N_("");
+    return "";
 }

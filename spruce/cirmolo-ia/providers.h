@@ -32,6 +32,7 @@ typedef struct {
     char note[120];                                   /* una riga di aiuto (gratis, limiti...) */
     char headers[200];                                /* intestazioni in piu' ("Nome: valore\n") */
     int needs_key, stream_options;
+    int no_tools;                                     /* il modello non accetta strumenti (si scopre al primo errore) */
     int stt, tts;
     char stt_model[64], tts_model[64], voices[200];   /* voci separate da virgole, la prima e' la predefinita */
     Model *models;

@@ -15,6 +15,7 @@
 #include "i18n.h"
 #include "llm.h"
 #include "png.h"
+#include "strumenti.h"
 #include "providers.h"
 #include "voice.h"
 #include "gfx.h"
@@ -324,7 +325,7 @@ static void test_conversation(void)
 
     const char *ids[] = { "claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5" };
     for (int m = 0; m < 3; m++) {
-        char *body = anthropic_request(&c, ids[m], "medium", m != 2);
+        char *body = anthropic_request(&c, ids[m], "medium", m != 2, NULL);
         JNode *j = json_parse(body, strlen(body));
         CHECK(j != NULL, "corpo della richiesta non valido");
         CHECK(j && !strcmp(json_str(j, "model"), ids[m]), "modello");
@@ -341,7 +342,7 @@ static void test_conversation(void)
         json_free(j);
         free(body);
     }
-    char *ob = openai_request(&c, "glm-4.7-flash", 0, 1);
+    char *ob = openai_request(&c, "glm-4.7-flash", 0, 1, NULL);
     JNode *j = json_parse(ob, strlen(ob));
     const JNode *msgs = json_get(j, "messages");
     CHECK(j && count_msgs(ob) == 6 && !strcmp(json_str(msgs->child, "role"), "system"), "OpenAI: system e 5 messaggi (%d)", count_msgs(ob));
@@ -349,7 +350,7 @@ static void test_conversation(void)
     CHECK(j && !json_get(j, "max_tokens"), "OpenAI: max_tokens omesso");
     json_free(j);
     free(ob);
-    ob = openai_request(&c, "x", 512, 0);
+    ob = openai_request(&c, "x", 512, 0, NULL);
     CHECK(!strstr(ob, "stream_options") && strstr(ob, "\"max_tokens\":512"), "OpenAI senza stream_options");
     free(ob);
 
@@ -363,7 +364,7 @@ static void test_conversation(void)
         CHECK(!strcmp(c.msg[i].json, d.msg[i].json) && c.msg[i].proto == d.msg[i].proto, "JSON o formato del messaggio %d", i);
         CHECK(!strcmp(c.msg[i].text, d.msg[i].text) && c.msg[i].excluded == d.msg[i].excluded, "testo o esclusione del messaggio %d", i);
     }
-    char *b1 = anthropic_request(&c, ids[0], "high", 1), *b2 = anthropic_request(&d, ids[0], "high", 1);
+    char *b1 = anthropic_request(&c, ids[0], "high", 1, NULL), *b2 = anthropic_request(&d, ids[0], "high", 1, NULL);
     CHECK(!strcmp(b1, b2), "la richiesta dopo il salvataggio e' identica");
     free(b1);
     free(b2);
@@ -666,7 +667,7 @@ static void test_ui(const char *outdir, const char *langdir)
     ChatApp *a = chat_create(48000.0f, state);
     uint32_t *px = malloc(sizeof(uint32_t) * 640 * 480);
     Canvas cv = { px, 640, 480 };
-#define SHOT(name) do { chat_update(a, 0.016f); chat_draw(a, &cv); snprintf(path, sizeof(path), "%s/%s.bmp", outdir, name); write_bmp(path, &cv); } while (0)
+#define SHOT(name) do { printf("schermata %s\n", name); chat_update(a, 0.016f); chat_draw(a, &cv); snprintf(path, sizeof(path), "%s/%s.bmp", outdir, name); write_bmp(path, &cv); } while (0)
     CHECK(!strcmp(chat_model_id(a), "claude-opus-5-5"), "predefinito: Claude Opus 5.5 (%s)", chat_model_id(a));
     SHOT("chat-01-senza-chiave");
 
@@ -876,8 +877,155 @@ static void test_ui(const char *outdir, const char *langdir)
     free(px);
 }
 
+/* ------------------------------------------------------------------ strumenti (azioni sulla console) */
+#define TOOL_A(i, id, name) "event: content_block_start\ndata: {\"type\":\"content_block_start\",\"index\":" i ",\"content_block\":{\"type\":\"tool_use\",\"id\":\"" id "\",\"name\":\"" name "\",\"input\":{}}}\n\n"
+#define TOOL_A_ARGS(i, j) "event: content_block_delta\ndata: {\"type\":\"content_block_delta\",\"index\":" i ",\"delta\":{\"type\":\"input_json_delta\",\"partial_json\":\"" j "\"}}\n\n"
+#define END_TOOL(out) \
+    "event: message_delta\ndata: {\"type\":\"message_delta\",\"delta\":{\"stop_reason\":\"tool_use\"},\"usage\":{\"output_tokens\":" out "}}\n\n" \
+    "event: message_stop\ndata: {\"type\":\"message_stop\"}\n\n\n@@CIRMOLO_HTTP 200\n"
+
+static void test_tools(const char *outdir)
+{
+    /* Claude: tool_use con gli argomenti a pezzi */
+    const char *sse = START("claude-opus-5-5", "100") THINK("0", "SIGT") TEXT_START("1") TEXT_DELTA("1", "Controllo.") STOP("1")
+                      TOOL_A("2", "toolu_01", "imposta_volume") TOOL_A_ARGS("2", "{\\\"livel") TOOL_A_ARGS("2", "lo\\\": 12}") STOP("2") END_TOOL("30");
+    Reply r;
+    reply_init(&r, PROTO_ANTHROPIC, "Claude");
+    feed_chunks(&r, sse, 7);
+    reply_finish(&r, 0, "");
+    int proto = -1;
+    char *j = reply_message_json(&r, &proto);
+    const Block *k = reply_tool(&r, 0);
+    CHECK(r.state == RS_DONE && !strcmp(r.stop_reason, "tool_use") && reply_tool_count(&r) == 1 && k && !strcmp(k->name, "imposta_volume") &&
+          !strcmp(k->b.p, "toolu_01") && !strcmp(k->a.p, "{\"livello\": 12}"), "Claude: chiamata letta");
+    CHECK(proto == PROTO_ANTHROPIC && j && strstr(j, "{\"type\":\"tool_use\",\"id\":\"toolu_01\",\"name\":\"imposta_volume\",\"input\":{\"livello\": 12}}") &&
+          strstr(j, "SIGT"), "Claude: messaggio con tool_use: %s", j ? j : "-");
+    JNode *jn = j ? json_parse(j, strlen(j)) : NULL;
+    CHECK(jn != NULL, "Claude: JSON valido");
+    json_free(jn);
+    free(j);
+    reply_free(&r);
+
+    /* compatibile OpenAI: tool_calls a pezzi, due chiamate */
+    const char *oa =
+        "data: {\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":null,\"tool_calls\":[{\"index\":0,\"id\":\"call_a\",\"type\":\"function\",\"function\":{\"name\":\"cerca_giochi\",\"arguments\":\"\"}}]}}]}\n\n"
+        "data: {\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"{\\\"testo\\\":\"}}]}}]}\n\n"
+        "data: {\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"\\\"zelda\\\"}\"}}]}}]}\n\n"
+        "data: {\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"index\":1,\"id\":\"call_b\",\"function\":{\"name\":\"stato_console\",\"arguments\":\"{}\"}}]}}]}\n\n"
+        "data: {\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"tool_calls\"}]}\n\ndata: [DONE]\n\n\n@@CIRMOLO_HTTP 200\n";
+    reply_init(&r, PROTO_OPENAI, "GLM");
+    feed_chunks(&r, oa, 3);
+    reply_finish(&r, 0, "");
+    j = reply_message_json(&r, &proto);
+    CHECK(r.state == RS_DONE && reply_tool_count(&r) == 2 && !strcmp(reply_tool(&r, 0)->a.p, "{\"testo\":\"zelda\"}") &&
+          !strcmp(reply_tool(&r, 1)->name, "stato_console"), "OpenAI: due chiamate lette");
+    CHECK(proto == PROTO_OPENAI && j && strstr(j, "\"content\":null,\"tool_calls\":[{\"id\":\"call_a\",\"type\":\"function\",\"function\":{\"name\":\"cerca_giochi\",\"arguments\":\"{\\\"testo\\\":\\\"zelda\\\"}\"}}"),
+          "OpenAI: messaggio con tool_calls: %s", j ? j : "-");
+    free(j);
+    reply_free(&r);
+
+    /* cronologia: risultati nel formato giusto e richieste con gli strumenti */
+    Conversation c;
+    conv_init(&c, "S");
+    conv_add_user(&c, "alza il volume");
+    conv_add(&c, ROLE_ASSISTANT, PROTO_ANTHROPIC, strdup("{\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"t1\",\"name\":\"imposta_volume\",\"input\":{\"livello\":12}}]}"), strdup(""));
+    const char *ids[1] = { "t1" }, *res[1] = { "volume set to 12/20" };
+    conv_add_tool_results(&c, PROTO_ANTHROPIC, 1, ids, res);
+    CHECK(c.n == 3 && c.msg[2].tool && strstr(c.msg[2].json, "{\"type\":\"tool_result\",\"tool_use_id\":\"t1\",\"content\":\"volume set to 12/20\"}"), "risultato per Claude");
+    char *b = anthropic_request(&c, "claude-opus-5-5", "low", 0, "[{\"name\":\"x\"}]");
+    CHECK(strstr(b, "\"tools\":[{\"name\":\"x\"}]") && strstr(b, "tool_use") && strstr(b, "tool_result"), "richiesta a Claude con strumenti e risultati");
+    free(b);
+    b = openai_request(&c, "m", 0, 1, NULL);
+    CHECK(!strstr(b, "tool_use") && !strstr(b, "tool_result") && strstr(b, "alza il volume"), "agli altri fornitori niente strumenti di Claude: %s", b);
+    free(b);
+    conv_add(&c, ROLE_ASSISTANT, PROTO_OPENAI, strdup("{\"role\":\"assistant\",\"content\":null,\"tool_calls\":[{\"id\":\"c1\",\"type\":\"function\",\"function\":{\"name\":\"stato_console\",\"arguments\":\"{}\"}}]}"), strdup(""));
+    const char *ids2[1] = { "c1" }, *res2[1] = { "battery 80%" };
+    conv_add_tool_results(&c, PROTO_OPENAI, 1, ids2, res2);
+    b = openai_request(&c, "m", 0, 1, strumenti_openai());
+    CHECK(strstr(b, "\"tool_calls\":[{\"id\":\"c1\"") && strstr(b, "{\"role\":\"tool\",\"tool_call_id\":\"c1\",\"content\":\"battery 80%\"}") &&
+          strstr(b, "\"name\":\"avvia_gioco\""), "richiesta OpenAI con chiamate, risultati e strumenti");
+    JNode *bj = json_parse(b, strlen(b));
+    CHECK(bj != NULL, "richiesta OpenAI valida");
+    json_free(bj);
+    free(b);
+    b = anthropic_request(&c, "claude-opus-5-5", NULL, 0, strumenti_anthropic());
+    bj = json_parse(b, strlen(b));
+    CHECK(bj && !strstr(b, "tool_call_id") && strstr(b, "\"input_schema\""), "a Claude niente strumenti degli altri, elenco valido");
+    json_free(bj);
+    free(b);
+    char *saved = conv_save(&c);
+    Conversation d;
+    conv_init(&d, "");
+    CHECK(conv_load(&d, saved, strlen(saved)) == 0 && d.n == 5 && d.msg[2].tool && d.msg[4].tool && !d.msg[3].tool && d.msg[4].proto == PROTO_OPENAI, "strumenti salvati e riletti");
+    free(saved);
+    conv_free(&d);
+    conv_free(&c);
+
+    /* esecuzione: ricerca, avvio, valori sbagliati, diario */
+    char root[600], cmd[700], path[800];
+    snprintf(root, sizeof(root), "%s/sd-strumenti", outdir);
+    MKDIR(root);
+    const char *dirs[] = { "Emu", "Emu/SFC", "Roms", "Roms/SFC", NULL };
+    for (int i = 0; dirs[i]; i++) { snprintf(path, sizeof(path), "%s/%s", root, dirs[i]); MKDIR(path); }
+    snprintf(path, sizeof(path), "%s/Emu/SFC/config.json", root);
+    write_text(path, "{\"label\":\"SNES\",\"launch\":\"launch.sh\",\"extlist\":\"sfc\"}");
+    snprintf(path, sizeof(path), "%s/Roms/SFC/Chrono Trigger (USA).sfc", root);
+    write_text(path, "x");
+    snprintf(path, sizeof(path), "%s/Roms/SFC/The Legend of Zelda - A Link to the Past (Europe).sfc", root);
+    write_text(path, "x");
+    snprintf(cmd, sizeof(cmd), "%s/ia-gioca.sh", outdir);
+    remove(cmd);
+    Collection coll;
+    int loaded = 0;
+    memset(&coll, 0, sizeof(coll));
+    ToolCtx ctx = { outdir, ".", root, cmd, &coll, &loaded, 0, "" };
+    char *o = strumento_esegui(&ctx, "cerca_giochi", "{\"testo\":\"link past\"}");
+    CHECK(!strcmp(o, "SFC | The Legend of Zelda - A Link to the Past"), "cerca_giochi: %s", o);
+    free(o);
+    o = strumento_esegui(&ctx, "imposta_volume", "{\"livello\":40}");
+    CHECK(strstr(o, "0-20") && !ctx.note[0], "volume fuori intervallo: %s", o);
+    free(o);
+    o = strumento_esegui(&ctx, "avvia_gioco", "{\"titolo\":\"Final Fantasy\"}");
+    CHECK(strstr(o, "not found") && !ctx.launched, "gioco che non c'e': %s", o);
+    free(o);
+    o = strumento_esegui(&ctx, "avvia_gioco", "{\"titolo\":\"Chrono Trigger\",\"sistema\":\"SFC\"}");
+    FILE *f = fopen(cmd, "rb");
+    CHECK(!strncmp(o, "ok: SFC | Chrono Trigger", 24) && ctx.launched && f && strstr(ctx.note, "Chrono Trigger"), "avvia_gioco: %s", o);
+    if (f) fclose(f);
+    free(o);
+    o = strumento_esegui(&ctx, "boh", "{}");
+    CHECK(strstr(o, "unknown"), "strumento sconosciuto");
+    free(o);
+    collection_free(&coll);
+
+    /* nell'interfaccia: domanda, chiamata, risultato, risposta finale, poi il gioco */
+    char state[600], dir[600];
+    snprintf(dir, sizeof(dir), "%s/claude-strumenti", outdir);
+    MKDIR(dir);
+    snprintf(state, sizeof(state), "%s/impostazioni.txt", dir);
+    snprintf(path, sizeof(path), "%s/conversazione.json", dir);
+    remove(path);
+    remove(cmd);
+    ChatApp *a = chat_create(48000.0f, state);
+    chat_set_offline(a, 1);
+    chat_set_key(a, "sk-ant-prova-0000000000000000000000");
+    chat_set_paths(a, root, cmd);
+    chat_text(a, "Apri Chrono Trigger", TEXT_CHARS);
+    chat_text(a, "", TEXT_ENTER);
+    chat_feed_reply(a, START("claude-opus-5-5", "100") TOOL_A("0", "toolu_9", "avvia_gioco") TOOL_A_ARGS("0", "{\\\"titolo\\\":\\\"Chrono Trigger\\\"}") STOP("0") END_TOOL("20"), 1);
+    Conversation *cv = chat_conversation(a);
+    CHECK(chat_busy(a) && cv->n == 3 && cv->msg[2].tool && strstr(cv->msg[2].json, "Chrono Trigger will start"), "chiamata eseguita, si aspetta la risposta finale (%d)", cv->n);
+    CHECK(chat_wants_launch(a), "gioco pronto");
+    chat_feed_reply(a, START("claude-opus-5-5", "200") TEXT_START("0") TEXT_DELTA("0", "Avvio Chrono Trigger, buon divertimento!") STOP("0") END("end_turn", "10"), 1);
+    CHECK(!chat_busy(a) && cv->n == 4 && !strcmp(cv->msg[3].text, "Avvio Chrono Trigger, buon divertimento!"), "risposta finale");
+    for (int i = 0; i < 120 && !chat_wants_quit(a); i++) chat_update(a, 0.016f);
+    CHECK(chat_wants_quit(a), "a fine risposta l'app si chiude per lanciare il gioco");
+    chat_destroy(a);
+}
+
 int main(int argc, char **argv)
 {
+    setvbuf(stdout, NULL, _IONBF, 0);             /* se una prova va in crash, si vede fin dove e' arrivata */
     const char *fonts = argc > 1 ? argv[1] : ".", *outdir = argc > 2 ? argv[2] : ".", *langdir = argc > 3 ? argv[3] : "lang";
     char f1[512], f2[512];
     snprintf(f1, sizeof(f1), "%s/BeVietnamPro-Regular.ttf", fonts);
@@ -897,6 +1045,8 @@ int main(int argc, char **argv)
     printf("voce: %d controlli, %d errori\n", checks, fails);
     test_ask_png();
     printf("domande con immagine e PNG: %d controlli, %d errori\n", checks, fails);
+    test_tools(outdir);
+    printf("strumenti: %d controlli, %d errori\n", checks, fails);
     test_i18n(outdir);
     printf("traduzioni: %d controlli, %d errori\n", checks, fails);
     test_ui(outdir, langdir);

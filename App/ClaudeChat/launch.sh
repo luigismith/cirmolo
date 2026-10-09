@@ -18,6 +18,20 @@ cd "$APP_DIR" || exit 1
 if grep -q '^mic=1' "$SETTINGS" 2>/dev/null; then
     sh "$APP_DIR/bt-microfono.sh" on &
 fi
+rm -f /tmp/ia-gioca.sh
 "$APP_DIR/claude-chat" > "/mnt/SDCARD/Saves/spruce/claude-chat.log" 2>&1
 sh "$APP_DIR/bt-microfono.sh" off
 sync
+
+# "apri Zelda": lo strumento avvia_gioco scrive il comando in /tmp/ia-gioca.sh e l'app si chiude;
+# il gioco parte da qui (principal.sh cancella /tmp/cmd_to_run.sh quando l'app esce), come da PyUI.
+if [ -s /tmp/ia-gioca.sh ] && sh -n /tmp/ia-gioca.sh 2>/dev/null; then
+    cmd="$(sed 's/[[:space:]]*$//' /tmp/ia-gioca.sh)"
+    cp /tmp/ia-gioca.sh "$FLAGS_DIR/lastgame.lock"
+    set_performance
+    log_activity_event "$cmd" "START"
+    sh /tmp/ia-gioca.sh > /dev/null 2>&1
+    log_activity_event "$cmd" "STOP"
+    rm -f /tmp/ia-gioca.sh
+    sync
+fi

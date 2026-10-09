@@ -27,6 +27,7 @@
 #include "mdtext.h"
 #include "platform.h"
 #include "providers.h"
+#include "strumenti.h"
 #include "voice.h"
 
 #ifdef _WIN32
@@ -143,6 +144,12 @@ struct ChatApp {
     Reply reply;
     Transfer xfer;
     int busy, offline, reply_prov, reply_model, retried;
+    /* strumenti: azioni sulla console chieste dal modello */
+    int actions, tools_sent, tool_rounds, launch_pending;
+    float launch_t;
+    Collection coll;
+    int coll_loaded;
+    char root[300], play_cmd[300];
 
     Transfer mxfer;                               /* elenco dei modelli dal fornitore */
     Buf mbody;
@@ -220,6 +227,9 @@ static char *dupstr(const char *s)
     return p;
 }
 
+/* Risultati degli strumenti e chiamate senza testo: si rimandano al modello ma non si mostrano. */
+static int shown(const ChatMsg *m) { return !m->tool && m->text && (m->text[0] || m->role == ROLE_USER || m->note); }
+
 static void click(ChatApp *a) { __atomic_add_fetch(&a->clicks, 1, __ATOMIC_RELEASE); }
 static void beep(ChatApp *a, int up) { a->beep_up = up; __atomic_add_fetch(&a->beeps, 1, __ATOMIC_RELEASE); }
 
@@ -267,8 +277,8 @@ static void path_in(const ChatApp *a, char *out, size_t n, const char *name) { s
 static void save_settings(ChatApp *a)
 {
     Buf b = { 0 };
-    buf_printf(&b, "# Chiedi all'IA\nprovider=%s\neffort=%d\nconcise=%d\nspeak=%d\nautosend=%d\nmic=%d\nstt=%s\ntts=%s\n",
-               cur_prov(a)->id, a->effort, a->concise, a->speak, a->autosend, a->mic,
+    buf_printf(&b, "# Chiedi all'IA\nprovider=%s\neffort=%d\nconcise=%d\nspeak=%d\nautosend=%d\nmic=%d\nazioni=%d\nstt=%s\ntts=%s\n",
+               cur_prov(a)->id, a->effort, a->concise, a->speak, a->autosend, a->mic, a->actions,
                a->stt_prov >= 0 ? a->reg.p[a->stt_prov].id : "none", a->tts_prov >= 0 ? a->reg.p[a->tts_prov].id : "none");
     buf_printf(&b, "traduzione=%d\ntraduzione.voce=%d\ntraduzione.lingua=%s\ndiario.ia=%d\ndiario.promemoria=%d\n",
                a->translate, a->tr_voice, a->tr_lang, a->diary_ai, a->remind);
@@ -362,6 +372,7 @@ static void load_settings(ChatApp *a)
             }
             else if (!strcmp(k, "effort") && iv >= 0 && iv < 3) a->effort = iv;
             else if (!strcmp(k, "concise")) a->concise = iv != 0;
+            else if (!strcmp(k, "azioni")) a->actions = iv != 0;
             else if (!strcmp(k, "speak")) a->speak = iv != 0;
             else if (!strcmp(k, "autosend")) a->autosend = iv != 0;
             else if (!strcmp(k, "mic")) a->mic = iv == MIC_BT ? MIC_BT : MIC_USB;
@@ -411,6 +422,8 @@ static char *system_prompt(int concise)
     else buf_printf(&b, " Rispondi nella lingua di chi scrive (l'interfaccia è in: %s).", lang);
     if (concise) buf_adds(&b, " Preferisci risposte brevi e dirette, con paragrafi corti; usa elenchi semplici solo quando aiutano.");
     buf_adds(&b, " Evita tabelle ed emoji: lo schermo mostra il Markdown solo in parte (titoli, elenchi, grassetto e codice).");
+    buf_adds(&b, " Se ti vengono dati degli strumenti, puoi agire sulla console (stato, volume, luminosità, cercare e avviare "
+                 "giochi, diario delle partite): usali quando la persona lo chiede o quando servono, poi conferma in una frase.");
     return buf_steal(&b);
 }
 
@@ -443,6 +456,7 @@ static void archive_conversation(ChatApp *a)
     Buf b = { 0 };
     for (int i = 0; i < a->conv.n; i++) {
         const ChatMsg *m = &a->conv.msg[i];
+        if (!shown(m)) continue;
         const char *who = m->role == ROLE_USER ? tr("Tu") : (m->model ? model_display_name(m->model) : tr("Assistente"));
         buf_printf(&b, "%s%s\n%s\n", who, m->excluded ? tr(" (non inviato)") : "", m->text ? m->text : "");
         if (m->note) buf_printf(&b, "[%s]\n", m->note);
@@ -586,12 +600,14 @@ static int start_request(ChatApp *a, char *msg, size_t msgn)
     provider_auth_headers(p, a->key, &h);
     buf_adds(&h, "Content-Type: application/json\n");
     char url[220], *body;
+    const char *tools = a->actions && !p->no_tools ? (p->proto == PROTO_ANTHROPIC ? strumenti_anthropic() : strumenti_openai()) : NULL;
+    a->tools_sent = tools != NULL;
     if (p->proto == PROTO_ANTHROPIC) {
-        body = anthropic_request(&a->conv, m->id, (m->flags & MF_EFFORT) ? EFFORTS[a->effort] : NULL, (m->flags & MF_FALLBACK) != 0);
+        body = anthropic_request(&a->conv, m->id, (m->flags & MF_EFFORT) ? EFFORTS[a->effort] : NULL, (m->flags & MF_FALLBACK) != 0, tools);
         if (m->flags & MF_FALLBACK) buf_adds(&h, "anthropic-beta: " ANTHROPIC_FALLBACK_BETA "\n");
         snprintf(url, sizeof(url), "%s/messages", p->base);
     } else {
-        body = openai_request(&a->conv, m->id, 0, p->stream_options);
+        body = openai_request(&a->conv, m->id, 0, p->stream_options, tools);
         snprintf(url, sizeof(url), "%s/chat/completions", p->base);
     }
     Request rq = { url, h.p, body, 0, NULL, NULL, 900 };
@@ -617,9 +633,61 @@ static void finish_reply(ChatApp *a)
         if (!start_request(a, msg, sizeof(msg))) return;
         reply_set_error(r, msg);
     }
+    /* modelli senza strumenti (alcuni gratuiti): si riprova senza, e da qui in poi niente strumenti */
+    if (r->state == RS_ERROR && a->tools_sent && p && !p->no_tools && r->http_status >= 400 && r->http_status < 500 &&
+        r->http_status != 401 && r->http_status != 429 && r->body.p && (strstr(r->body.p, "tool") || strstr(r->body.p, "function"))) {
+        p->no_tools = 1;
+        reply_reset(r);
+        r->state = RS_WAITING;
+        char msg[200];
+        if (!start_request(a, msg, sizeof(msg))) return;
+        reply_set_error(r, msg);
+    }
+    /* il modello ha chiamato degli strumenti: si eseguono e si rimanda tutto, fino a 6 giri per domanda */
+    if (r->state == RS_DONE && reply_tool_count(r) > 0 && a->tool_rounds < 6) {
+        int proto = PROTO_PLAIN;
+        char *json = reply_message_json(r, &proto);
+        char *text = reply_text(r);
+        if (r->model[0] || r->in_tokens || r->out_tokens) cost_add(a, r);
+        ChatMsg *m = conv_add(&a->conv, ROLE_ASSISTANT, proto, json, text);
+        m->model = dupstr(r->model[0] ? r->model : (p && a->reply_model >= 0 && a->reply_model < p->nmodels ? p->models[a->reply_model].id : ""));
+        int n = reply_tool_count(r);
+        if (n > 16) n = 16;
+        const char *ids[16];
+        char *results[16];
+        ToolCtx ctx;
+        memset(&ctx, 0, sizeof(ctx));
+        ctx.saves = a->dir;
+        ctx.app_dir = "";
+        ctx.root = a->root;
+        ctx.play_cmd = a->play_cmd;
+        ctx.coll = &a->coll;
+        ctx.coll_loaded = &a->coll_loaded;
+        for (int i = 0; i < n; i++) {
+            const Block *k = reply_tool(r, i);
+            ids[i] = k->b.p ? k->b.p : "";
+            results[i] = strumento_esegui(&ctx, k->name, k->a.p ? k->a.p : "{}");
+            if (ctx.note[0]) toast(a, ctx.note);
+        }
+        if (ctx.launched) a->launch_pending = 1;
+        conv_add_tool_results(&a->conv, r->proto == PROTO_ANTHROPIC ? PROTO_ANTHROPIC : PROTO_OPENAI, n, ids, (const char *const *)results);
+        for (int i = 0; i < n; i++) free(results[i]);
+        a->tool_rounds++;
+        free(a->live_text);
+        a->live_text = NULL;
+        wrap_free(&a->live);
+        reply_reset(r);
+        r->state = RS_WAITING;
+        save_conversation(a);
+        char msg[200];
+        if (!a->offline && start_request(a, msg, sizeof(msg))) reply_set_error(r, msg);
+        else return;
+    }
     a->busy = 0;
     ChatMsg *user = NULL;
-    for (int i = a->conv.n - 1; i >= 0; i--) if (a->conv.msg[i].role == ROLE_USER) { user = &a->conv.msg[i]; break; }
+    int user_i = -1;
+    for (int i = a->conv.n - 1; i >= 0; i--)
+        if (a->conv.msg[i].role == ROLE_USER && !a->conv.msg[i].tool) { user = &a->conv.msg[i]; user_i = i; break; }
     int proto = PROTO_PLAIN;
     char *json = r->state == RS_DONE ? reply_message_json(r, &proto) : NULL;
     char *text = reply_text(r);
@@ -651,7 +719,8 @@ static void finish_reply(ChatApp *a)
         case RS_DONE: snprintf(note, sizeof(note), "%s", tr("Nessuna risposta.")); break;
         default: snprintf(note, sizeof(note), "%s", r->error[0] ? tr(r->error) : tr("Errore sconosciuto."));
         }
-        if (user) user->excluded = 1;
+        /* via tutto lo scambio, strumenti compresi: domanda, chiamate e risultati */
+        if (user_i >= 0) for (int i = user_i; i < a->conv.n; i++) a->conv.msg[i].excluded = 1;
         if (text[0]) {
             ChatMsg *m = conv_add(&a->conv, ROLE_ASSISTANT, PROTO_PLAIN, dupstr("{\"role\":\"assistant\",\"content\":[]}"), text);
             m->excluded = 1;
@@ -698,6 +767,7 @@ static int send_text(ChatApp *a, const char *text_in)
     a->reply_prov = a->prov;
     a->reply_model = a->model;
     a->retried = 0;
+    a->tool_rounds = 0;
     a->busy = 1;
     a->follow = 1;
     a->typing = 0;
@@ -1075,7 +1145,7 @@ static int tr_lang_index(const ChatApp *a)
 
 /* ------------------------------------------------------------------ impostazioni */
 enum { K_TRANSLATE, K_PROV, K_MODEL, K_LANG, K_VOICE, K_DIARY, K_REMIND, K_HOW, K_COUNT };
-enum { S_PROVIDER, S_MODEL, S_EFFORT, S_STYLE, S_KEY, S_NEW, S_USAGE, S_COUNT };
+enum { S_PROVIDER, S_MODEL, S_EFFORT, S_STYLE, S_KEY, S_ACTIONS, S_NEW, S_USAGE, S_COUNT };
 enum { W_SPEAK, W_TTS, W_VOICE, W_STT, W_AUTOSEND, W_MIC, W_STATUS, W_COUNT };
 
 static int tab_count(const ChatApp *a) { return a->tab == TAB_CHAT ? S_COUNT : (a->tab == TAB_VOICE ? W_COUNT : K_COUNT); }
@@ -1176,6 +1246,7 @@ static void settings_change(ChatApp *a, int dir)
             a->effort = (a->effort + dir + 3) % 3;
             break;
         case S_STYLE: a->concise = !a->concise; toast(a, tr("Vale dalla prossima conversazione.")); break;
+        case S_ACTIONS: a->actions = !a->actions; break;
         default: return;
         }
     } else {
@@ -1444,6 +1515,9 @@ ChatApp *chat_create(float sample_rate, const char *state_path)
     a->concise = 1;
     a->speak = 1;
     a->autosend = 1;
+    a->actions = 1;
+    snprintf(a->root, sizeof(a->root), "/mnt/SDCARD");
+    snprintf(a->play_cmd, sizeof(a->play_cmd), "/tmp/ia-gioca.sh");
     a->follow = 1;
     a->mfetch = -1;
     a->xfer.pid = a->mxfer.pid = -1;
@@ -1482,6 +1556,7 @@ void chat_destroy(ChatApp *a)
     rec_free(&a->rec);
     player_free(&a->pl);
     registry_free(&a->reg);
+    collection_free(&a->coll);
     free(a->prefs);
     free(a);
 }
@@ -1551,6 +1626,10 @@ void chat_update(ChatApp *a, float dt)
         free(t);
     }
     fetch_poll(a);
+    if (a->launch_pending && !a->busy && !speech_busy(a)) {   /* avvia_gioco: si esce, il gioco lo lancia launch.sh */
+        if (a->launch_t <= 0) a->launch_t = a->time + 1.2f;
+        else if (a->time >= a->launch_t) a->quit = 1;
+    }
     voice_update(a, dt);
     speech_pump(a, dt);
     a->toast_t = fmaxf(0.0f, a->toast_t - dt);
@@ -1560,6 +1639,14 @@ int chat_wants_quit(const ChatApp *a) { return a->quit; }
 
 /* prove */
 void chat_set_offline(ChatApp *a, int offline) { a->offline = offline; }
+void chat_set_paths(ChatApp *a, const char *root, const char *play_cmd)
+{
+    snprintf(a->root, sizeof(a->root), "%s", root);
+    snprintf(a->play_cmd, sizeof(a->play_cmd), "%s", play_cmd);
+    collection_free(&a->coll);
+    a->coll_loaded = 0;
+}
+int chat_wants_launch(const ChatApp *a) { return a->launch_pending; }
 Conversation *chat_conversation(ChatApp *a) { return &a->conv; }
 const char *chat_input(const ChatApp *a) { return a->input.p ? a->input.p : ""; }
 int chat_busy(const ChatApp *a) { return a->busy; }
@@ -1600,7 +1687,7 @@ int chat_needs_draw(ChatApp *a)
 {
     int v[] = { a->page, a->tab, a->typing, a->quit_dialog, a->quick_open, a->quick_sel, a->confirm_new, a->entering_key, a->set_sel,
                 a->cursor, a->layer, a->shift, a->kr, a->kc, a->busy, a->reply.state, a->conv.n, a->prov, a->model, a->effort,
-                a->concise, a->speak, a->autosend, a->mic, a->stt_prov, a->tts_prov, a->picker_open, a->picker_sel, a->mfetch, a->translate, a->tr_voice, a->diary_ai, a->remind, a->ia_prov, (int)a->ia_model[0], tr_lang_index(a),
+                a->concise, a->speak, a->autosend, a->mic, a->actions, a->launch_pending, a->stt_prov, a->tts_prov, a->picker_open, a->picker_sel, a->mfetch, a->translate, a->tr_voice, a->diary_ai, a->remind, a->ia_prov, (int)a->ia_model[0], tr_lang_index(a),
                 (int)a->scroll, a->follow, a->toast_t > 0.0f, a->key[0] != 0, a->vstate, a->cap_rate > 0, speech_busy(a),
                 a->busy || a->vstate >= V_RECORDING ? (int)(a->time * 8.0f) : 0,
                 a->typing ? (int)(a->time * 2.0f) : 0 };
@@ -1739,6 +1826,7 @@ static void draw_chat(ChatApp *a, Canvas *c, int y0, int y1)
     int total = 8;
     for (int i = 0; i < a->conv.n; i++) {
         const ChatMsg *m = &a->conv.msg[i];
+        if (!shown(m)) continue;
         total += msg_height(wrap_for(a, i, m->role == ROLE_USER ? avail_user : avail_ai), m->note);
     }
     char *live = NULL;
@@ -1760,6 +1848,7 @@ static void draw_chat(ChatApp *a, Canvas *c, int y0, int y1)
     int y = y0 + 8 - (int)a->scroll;
     for (int i = 0; i < a->conv.n; i++) {
         const ChatMsg *m = &a->conv.msg[i];
+        if (!shown(m)) continue;
         Wrap *w = wrap_for(a, i, m->role == ROLE_USER ? avail_user : avail_ai);
         int h = msg_height(w, m->note);
         if (y + h >= y0 - 10 && y <= y1 + 10)
@@ -1948,7 +2037,8 @@ static void draw_settings(ChatApp *a, Canvas *c)
             snprintf(help[1], 160, "%s", tr("Ogni traduzione è una richiesta al modello (gratis o a pagamento)."));
         }
     } else if (a->tab == TAB_CHAT) {
-        static const char *L[S_COUNT] = { N_("Fornitore"), N_("Modello"), N_("Impegno"), N_("Stile delle risposte"), N_("Chiave API"), N_("Nuova conversazione"), N_("Consumo") };
+        static const char *L[S_COUNT] = { N_("Fornitore"), N_("Modello"), N_("Impegno"), N_("Stile delle risposte"), N_("Chiave API"),
+                                          N_("Azioni sulla console"), N_("Nuova conversazione"), N_("Consumo") };
         static const char *EFF[3] = { N_("Basso"), N_("Medio"), N_("Alto") };
         for (int i = 0; i < S_COUNT; i++) labels[i] = tr(L[i]);
         snprintf(vals[S_PROVIDER], 96, "%s", p->name);
@@ -1961,6 +2051,7 @@ static void draw_settings(ChatApp *a, Canvas *c)
         if (!p->needs_key) snprintf(vals[S_KEY], 96, "%s", tr("non serve"));
         else if (a->key[0]) snprintf(vals[S_KEY], 96, tr("presente (...%s)"), a->key + strlen(a->key) - 4);
         else { snprintf(vals[S_KEY], 96, "%s", tr("mancante")); cols[S_KEY] = C_RED; }
+        snprintf(vals[S_ACTIONS], 96, "%s", a->actions ? tr("Sì") : tr("No"));
         snprintf(vals[S_NEW], 96, "%s", tr("A: archivia e ricomincia"));
         long tok = a->conv.in_tokens + a->conv.cache_read + a->conv.cache_write + a->conv.out_tokens;
         snprintf(vals[S_USAGE], 96, tr("%ld token, circa %.3f $"), tok, a->conv.cost);
@@ -1985,6 +2076,10 @@ static void draw_settings(ChatApp *a, Canvas *c)
         case S_KEY:
             snprintf(help[0], 160, "%s", tr("A: scrivila con la tastiera, oppure mettila dal PC nel file sulla SD."));
             snprintf(help[1], 160, "%s", tr("Meglio una chiave con un limite di spesa."));
+            break;
+        case S_ACTIONS:
+            snprintf(help[0], 160, "%s", tr("Il modello può agire sulla console: stato, volume, luminosità,"));
+            snprintf(help[1], 160, "%s", tr("cercare e avviare giochi, leggere il diario. Prova: «apri Zelda»."));
             break;
         case S_NEW:
             snprintf(help[0], 160, "%s", tr("Salva la chat in Saves/claude/archivio come testo"));

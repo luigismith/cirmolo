@@ -1,7 +1,7 @@
 {
-  "label": "Ask Claude",
+  "label": "Ask AI",
   "icon": "claudechat.png",
   "launch": "launch.sh",
-  "description": "Chat with Claude through the Anthropic API (Wi-Fi and API key needed)",
+  "description": "Chat with Claude and other AI models, also by voice (Wi-Fi and API key needed)",
   "devices": ["MIYOO_FLIP"]
 }

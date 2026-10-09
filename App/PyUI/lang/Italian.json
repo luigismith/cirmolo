@@ -742,7 +742,7 @@
         "Cirmolo Synth": "Cirmolo Synth",
         "Diapason": "Diapason",
         "OpenOrc": "OpenOrc",
-        "Ask Claude": "Chiedi a Claude"
+        "Ask AI": "Chiedi all'IA"
     },
     "appDescriptions": {
         "32-bit RetroArch frontend": "RetroArch a 32 bit",
@@ -770,7 +770,7 @@
         "Synthesizer, drum machine and 16-step sequencer": "Sintetizzatore, batteria e sequencer a 16 passi",
         "Tuner, reference tones and metronome": "Accordatore, note di riferimento e metronomo",
         "Chord synthesizer for the Akai MPK mini keyboard": "Sintetizzatore di accordi per la tastiera Akai MPK mini",
-        "Chat with Claude through the Anthropic API (Wi-Fi and API key needed)": "Chatta con Claude tramite l'API di Anthropic (servono Wi-Fi e chiave API)"
+        "Chat with Claude and other AI models, also by voice (Wi-Fi and API key needed)": "Chatta con Claude e altri modelli di IA, anche a voce (servono Wi-Fi e chiave API)"
     },
     "taskLabels": {
         "Bug report": "Segnala un problema",

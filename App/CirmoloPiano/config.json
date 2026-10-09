@@ -1,0 +1,7 @@
+{
+  "label": "Cirmolo Piano",
+  "icon": "cirmolopiano.png",
+  "launch": "launch.sh",
+  "description": "General MIDI instrument for a USB MIDI keyboard",
+  "devices": ["MIYOO_FLIP"]
+}

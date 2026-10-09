@@ -1,3 +1,6 @@
 stb_truetype.h v1.26, pubblico dominio (o MIT), https://github.com/nothings/stb
 commit 6e9f34d5429cf16790ec43c9bac3f1ee4ad1f760
 SHA-256 ecd30b05e0dd4fea3a13c26810dd9e1992dc379049482c393d5a19e6b5090aab
+tsf.h v0.9 (TinySoundFont), MIT, https://github.com/schellingb/TinySoundFont
+commit 790a219810cb0fca5defa8cdbd88e2487e5efc7a (2025-06-05)
+SHA-256 70d55963c98f60ebb81518eaa1f25d46888d5180eb5f5289fd6b74ffc177d197

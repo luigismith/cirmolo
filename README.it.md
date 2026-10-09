@@ -1,65 +1,64 @@
 <p align="center">
-  <img src="App/BootLogo/Imgs/Cirmolo.png" alt="Cirmolo logo: the violet cone of the Swiss stone pine between two tufts of needles" width="420">
+  <img src="App/BootLogo/Imgs/Cirmolo.png" alt="Logo di Cirmolo: la pigna viola del pino cembro tra due ciuffi di aghi" width="420">
 </p>
 
 # Cirmolo
 
-*English · [Italiano](README.it.md)*
+*[English](README.md) · Italiano*
 
-**Cirmolo** is a fork of [spruceOS](https://github.com/spruceUI/spruceOS) built for the **Miyoo Flip**.
-The interface is **Italian by default**, in honour of the fork's origins; English and the other spruceOS languages stay one setting away (Language Settings).
-The name comes from *cirmolo*, the Swiss stone pine of the Dolomites: a fragrant, tough wood and a cousin of the spruce.
+**Cirmolo** è un fork di [spruceOS](https://github.com/spruceUI/spruceOS) pensato per la **Miyoo Flip**, con l'interfaccia completamente in italiano.
+Il nome viene dal cirmolo, il pino cembro delle Dolomiti: un legno profumato e resistente, parente dell'abete rosso (*spruce*).
 
-> **Status:** in development, tested on the Miyoo Flip only. Use it at your own risk, like spruceOS.
+> **Stato:** in sviluppo, testato solo sulla Miyoo Flip. Lo usi a tuo rischio, come spruceOS.
 
 <p align="center">
-  <img src=".github/branding/schermate/menu.png" width="32%" alt="Main menu">
-  <img src=".github/branding/schermate/app.png" width="32%" alt="Apps grouped into areas">
-  <img src=".github/branding/schermate/musica.png" width="32%" alt="Music area">
-  <img src=".github/branding/schermate/giochi.png" width="32%" alt="Games">
+  <img src=".github/branding/schermate/menu.png" width="32%" alt="Menu principale">
+  <img src=".github/branding/schermate/app.png" width="32%" alt="App divise in aree">
+  <img src=".github/branding/schermate/musica.png" width="32%" alt="Area Musica">
+  <img src=".github/branding/schermate/giochi.png" width="32%" alt="Giochi">
   <img src=".github/branding/schermate/synth.png" width="32%" alt="Cirmolo Synth">
   <img src=".github/branding/schermate/openorc.png" width="32%" alt="OpenOrc">
 </p>
 
-## What changes compared to spruceOS
-- **Complete Italian localization:** the interface (PyUI), the settings menus, descriptions and values. The style guide is in [`.github/i18n/it/GLOSSARIO.md`](.github/i18n/it/GLOSSARIO.md).
-- **Translation tooling** in [`.github/i18n/`](.github/i18n/), useful for every language: it extracts the keys the code actually uses, aligns `English.json` and validates the files.
-- **OTA updates from the Cirmolo feed:** an update never brings back plain spruceOS.
-- **Bug reports:** the report stays on the SD card and goes into a [Cirmolo issue](https://github.com/luigismith/cirmolo/issues) instead of the spruce team's server.
-- **Cirmolo version** in About this Device.
-- **Cirmolo boot logo** (the violet pine cone) and a **safer logo change on the Flip:** before rewriting the internal flash, the Boot Logo app checks the battery, copies the whole internal flash to the SD card with checksums, verifies the boot partition and restores the copy by itself if the write fails.
-- **Cirmolo theme**, the default: the logo's colours (night, violet cone, green needles) across menus, app and area icons, loading and charging animations and system screens, with the pine cone in place of the spruce tree. It is derived from tenlevels' Spruce theme ([`.github/branding/tema_cirmolo.py`](.github/branding/tema_cirmolo.py)), which is still available.
-- **Apps grouped into folders** (Music, Games, System, Other...).
+## Cosa cambia rispetto a spruceOS
+- **Italiano completo:** interfaccia (PyUI), menu delle impostazioni, descrizioni e valori. La guida di stile è in [`.github/i18n/it/GLOSSARIO.md`](.github/i18n/it/GLOSSARIO.md).
+- **Strumenti per le traduzioni** in [`.github/i18n/`](.github/i18n/), utili a tutte le lingue: estrazione delle chiavi usate dal codice, allineamento di `English.json`, validatore.
+- **Aggiornamenti OTA dal feed di Cirmolo:** un aggiornamento non riporta la versione originale.
+- **Segnalazioni di bug:** il report resta sulla SD e si allega alle [issue di Cirmolo](https://github.com/luigismith/cirmolo/issues), invece di andare al server del team spruce.
+- **Versione di Cirmolo** in Impostazioni → Informazioni.
+- **Logo di avvio di Cirmolo** (la pigna viola del cirmolo) e **cambio del logo più sicuro sulla Flip:** prima di riscrivere la memoria interna, l'app «Logo di avvio» controlla la batteria, copia sulla SD tutta la memoria interna con i checksum, verifica la partizione di avvio e, se la scrittura fallisce, rimette da sola la copia.
+- **Tema Cirmolo**, predefinito: i colori del logo (notte, viola della pigna, verde degli aghi) nei menu, nelle icone delle app e delle aree, nelle animazioni di caricamento e di ricarica e nelle schermate di sistema, con la pigna al posto dell'albero di spruce. È ricavato dal tema Spruce di tenlevels ([`.github/branding/tema_cirmolo.py`](.github/branding/tema_cirmolo.py)), che resta tra i temi.
+- **App raggruppate in cartelle** (Musica, Giochi, Sistema, Altro...).
 
-### New native apps
-Written in C for the Flip on a shared kit ([`spruce/cirmolo-kit`](spruce/cirmolo-kit)): graphics, buttons, audio and USB MIDI keyboards. Cirmolo Synth, Diapason and OpenOrc are in Italian only for now.
-- **Cirmolo Synth** ([`App/CirmoloSynth`](App/CirmoloSynth)): 8-voice synthesizer with a resonant filter, drums and a 16-step sequencer, patterns A-D, arpeggiator, presets and WAV recording. Play it with the buttons or a USB MIDI keyboard.
-- **Diapason** ([`App/Diapason`](App/Diapason)): tuner, reference notes and metronome.
-- **OpenOrc** ([`App/OpenOrc`](App/OpenOrc)): a chord synthesizer for the Akai MPK mini IV keyboard, inspired by the Orchid. Four sound engines, six ways to play a chord (strum, arpeggio, harp...), drums, a looper, an oscilloscope and a MIDI page that learns controls. The keyboard preset and a setup sheet for the MPK are in [`App/OpenOrc/tastiere`](App/OpenOrc/tastiere/akai-mpk-mini-iv.md). Without a keyboard you play it with the Flip's buttons.
-- **Ask AI** ([`App/ClaudeChat`](App/ClaudeChat), *Chiedi all'IA* in Italian): chat with AI models, by voice too. Claude comes first and is the default; there are also OpenAI, Gemini, DeepSeek, Qwen, GLM, Kimi, MiniMax, Groq, OpenRouter, Mistral, Cerebras and any OpenAI-compatible server (for example Ollama on your home PC, through `fornitori.json`). Some have free models (GLM Flash, Groq, OpenRouter `:free`, Mistral). Hold R2 to talk (USB microphone or headset; Bluetooth headsets are experimental), and answers can be read aloud (transcription with Groq, OpenAI or Gemini; speech with OpenAI or Gemini). The interface is available in ten languages. It needs Wi-Fi and your own API keys, which are stored on the SD card only.
-- **Console-wide AI features** (Console tab of Ask AI, with a model that reads images; GLM-4.6V-Flash is free):
-  - **Game translator**: in RetroArch games, SELECT + Down pauses and shows a translation of the on-screen text (for example from Japanese), and can read it aloud. A small server for RetroArch's AI service starts and stops with the game; translations are kept in `Saves/claude/traduzioni`.
-  - **Game card**: from a game's menu in PyUI (MENU, "Game card (AI)"), a card with box art: summary, story, how to play, tips and trivia, to read or listen to. It is saved, so the next time it opens instantly.
-  - **Play diary**: at the end of every session it records the game, the playing time and the last screen; with AI also where you left off, shown as a reminder when you reopen the game and in the game card.
-- **What should I play?** ([`App/CosaGioco`](App/CosaGioco)): three questions (time, mood, new or unfinished) and the model picks four games from your SD card, taking the diary into account; A starts the game.
+### App native nuove
+Scritte in C per la Flip, con un kit comune ([`spruce/cirmolo-kit`](spruce/cirmolo-kit)): grafica, tasti, audio e tastiere MIDI USB.
+- **Cirmolo Synth** ([`App/CirmoloSynth`](App/CirmoloSynth)): sintetizzatore a 8 voci con filtro risonante, batteria e sequencer a 16 passi, pattern A-D, arpeggiatore, preset e registrazione in WAV. Si suona con i tasti o con una tastiera MIDI USB.
+- **Diapason** ([`App/Diapason`](App/Diapason)): accordatore, note di riferimento e metronomo.
+- **OpenOrc** ([`App/OpenOrc`](App/OpenOrc)): sintetizzatore di accordi per la tastiera Akai MPK mini IV, ispirato all'Orchid. Ha 4 motori di suono, 6 modi di suonare l'accordo (strum, arpeggio, arpa...), batteria, looper e una pagina MIDI che impara i controlli. Un oscilloscopio mostra l'uscita. Il preset della tastiera e la scheda per configurare la MPK sono in [`App/OpenOrc/tastiere`](App/OpenOrc/tastiere/akai-mpk-mini-iv.it.md). Senza tastiera si suona con i tasti della Flip.
+- **Chiedi all'IA** ([`App/ClaudeChat`](App/ClaudeChat)): chat con i modelli di intelligenza artificiale, anche a voce. Claude è il primo e il predefinito; ci sono anche OpenAI, Gemini, DeepSeek, Qwen, GLM, Kimi, MiniMax, Groq, OpenRouter, Mistral, Cerebras e qualunque server compatibile OpenAI (per esempio Ollama sul PC di casa, con `fornitori.json`). Alcuni hanno modelli gratuiti (GLM Flash, Groq, OpenRouter `:free`, Mistral). Tenendo premuto R2 si parla (microfono o cuffie USB, cuffie Bluetooth in prova) e le risposte si possono far leggere ad alta voce (trascrizione con Groq, OpenAI o Gemini; voce con OpenAI o Gemini). Interfaccia in italiano e in altre nove lingue. Servono il Wi-Fi e le proprie chiavi API, salvate solo sulla SD.
+- **Funzioni IA per tutta la console** (scheda Console di Chiedi all'IA, con un modello che legge le immagini; GLM-4.6V-Flash è gratuito):
+  - **Traduttore dei giochi**: nei giochi di RetroArch, SELECT + giù mette in pausa e mostra la traduzione del testo sullo schermo (per esempio dal giapponese), anche letta ad alta voce. È un piccolo server per il servizio IA di RetroArch che parte e si ferma con il gioco; le traduzioni restano in `Saves/claude/traduzioni`.
+  - **Scheda del gioco**: dal menu di un gioco in PyUI (MENU, «Scheda del gioco (IA)»), una scheda con copertina: in breve, di cosa parla, come si gioca, consigli e curiosità, da leggere o ascoltare. Si salva e la volta dopo si legge subito.
+  - **Diario delle partite**: a ogni fine partita si annotano gioco, durata e ultima schermata; con l'IA anche dove eri rimasto, che compare in un promemoria quando riapri il gioco e nella scheda.
+- **Cosa gioco?** ([`App/CosaGioco`](App/CosaGioco)): tre domande (tempo, voglia, nuovo o da riprendere) e il modello sceglie quattro giochi tra quelli sulla SD, tenendo conto del diario; A avvia il gioco.
 
-**Coming next:** more apps and improvements to the interface and performance on the Flip.
+**In arrivo:** altre app, miglioramenti dell'interfaccia e delle prestazioni sulla Flip.
 
-## Branches and versions
-- **`cirmolo`** (default): Cirmolo development.
-- **`release/0.2`**: the published version, see the [releases](https://github.com/luigismith/cirmolo/releases); `release/0.1` stays as it was for 0.1.0.
-- **`Development`**: an exact mirror of spruceOS, used to pull in upstream updates. The other branches come from spruceOS.
+## Rami e versioni
+- **`cirmolo`** (predefinito): lo sviluppo di Cirmolo.
+- **`release/0.2`**: la versione pubblicata, vedi le [release](https://github.com/luigismith/cirmolo/releases); `release/0.1` resta com'era per la 0.1.0.
+- **`Development`**: copia identica di spruceOS, da cui si prendono gli aggiornamenti dell'originale. Gli altri rami vengono da spruceOS.
 
-## Credits and license
-- Cirmolo exists thanks to the work of the **spruceUI** team and the spruceOS contributors: all credit for the base goes to them.
-- Like spruceOS, it is licensed **CC BY-NC 4.0** (non-commercial use, with attribution): see [LICENSE](LICENSE). Third-party components keep their own licenses.
-- It does not and never will contain games or BIOS files.
-- Please report problems and ideas in the [Cirmolo issues](https://github.com/luigismith/cirmolo/issues), not to the spruce team.
+## Crediti e licenza
+- Cirmolo esiste grazie al lavoro del team **spruceUI** e dei contributori di spruceOS: il merito della base è tutto loro.
+- Come spruceOS, è distribuito con licenza **CC BY-NC 4.0** (uso non commerciale, con attribuzione): vedi [LICENSE](LICENSE). I componenti di terze parti mantengono le loro licenze.
+- Non contiene e non conterrà mai giochi o BIOS.
+- Problemi e proposte vanno nelle [issue di Cirmolo](https://github.com/luigismith/cirmolo/issues), non al team spruce.
 
 ---
 
 <details>
-<summary><b>Original spruceOS README</b>: features, devices, spruceUI team credits</summary>
+<summary><b>README originale di spruceOS</b> (in inglese): funzioni, dispositivi, crediti del team spruceUI</summary>
 
 # spruceOS 
 

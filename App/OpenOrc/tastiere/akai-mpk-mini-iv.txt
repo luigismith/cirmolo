@@ -1,9 +1,11 @@
 # OpenOrc - preset della tastiera MIDI: Akai MPK mini IV
+# OpenOrc keyboard preset. Setup sheet: akai-mpk-mini-iv.md (English), akai-mpk-mini-iv.it.md (italiano).
+# The keys are the control names of the MIDI page, which is in Italian.
 #
 # In OpenOrc: pagina MIDI (SELECT fino a «MIDI»), poi Y. Y carica i preset uno dopo l'altro;
 # R2 salva la mappa attuale in Saves/openorc/tastiere/mia-tastiera.txt.
 # Sono i valori di fabbrica dei preset utente della MPK: di solito non serve configurare nulla.
-# Se qualcosa non risponde, la scheda akai-mpk-mini-iv.md (stessa cartella) spiega come impostarla.
+# Se qualcosa non risponde, la scheda akai-mpk-mini-iv.it.md (stessa cartella) spiega come impostarla.
 #
 # Ogni riga: controllo = nota N | cc N, poi «canale 1-16» e «porta 1-8» se servono; «-» = nessuno.
 # Senza canale o porta va bene qualunque. La porta 1 è «MPK Mini IV MIDI Port».

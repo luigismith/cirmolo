@@ -1,78 +1,83 @@
-# Akai MPK mini IV per OpenOrc
+# Akai MPK mini IV for OpenOrc
 
-OpenOrc usa i **valori di fabbrica dei preset utente** della MPK mini IV:
-- pad sulle note 36–51, canale 10;
-- manopole sui CC 24–31, modo Abs.
+*English · [Italiano](akai-mpk-mini-iv.it.md)*
 
-Il file `akai-mpk-mini-iv.txt` li contiene, quindi di solito **non serve configurare la tastiera**.
-Questi valori non vengono da Akai, che non pubblica la sua MIDI implementation: vengono da due progetti
-della community (configurazione REAPER/ReaLearn, codec per Reason). Per questo qui sotto c'è come
-controllarli e, se serve, come impostarli. La MPK non ha un programma per il computer e non importa
-file: si imposta solo dal pannello (manuale v1.0, pagine 20-22; FAQ Akai).
+OpenOrc uses the **factory values of the MPK mini IV user presets**:
+- pads on notes 36–51, channel 10;
+- knobs on CC 24–31, Abs mode.
 
-## 1. Controllo veloce (2 minuti)
-1. Sulla MPK: **SHIFT + PLUGIN/DAW** (User Presets), scegli un preset **utente** e premi l'encoder.
-   I preset DAW e Plugin mandano i controlli agli script delle DAW.
-2. Collega la MPK alla porta USB-C della Flip e apri OpenOrc.
-3. Premi **SELECT** fino alla pagina **MIDI**, poi **Y**: compare «Tastiera: Akai MPK mini IV».
-4. Tocca un pad e gira una manopola. In basso, alla riga «Ultimo messaggio», devono comparire
-   «Nota 36…51 · canale 10» e «CC 24…31».
+The file `akai-mpk-mini-iv.txt` contains these values, so usually **the keyboard needs no setup**.
+Akai does not publish the MIDI implementation, so the values come from two community projects (a
+REAPER/ReaLearn configuration and a Reason codec). For that reason this sheet shows how to check them
+and, if needed, how to set them. The MPK has no editor software and cannot import files: it is set up
+from its own panel only (user guide v1.0, pages 20-22; Akai FAQ).
 
-Se torna tutto, hai finito. Altrimenti passa al punto 2, oppure fai imparare i controlli a OpenOrc dalla
-pagina MIDI (A su una riga, poi muovi il controllo) e salva con **R2**.
+OpenOrc's screens are in Italian: the labels you will see are quoted below, with a translation.
 
-## 2. Impostare la MPK a mano (solo se serve)
-**Menu globale (SHIFT + LOOP)**
+## 1. Quick check (2 minutes)
+1. On the MPK: **SHIFT + PLUGIN/DAW** (User Presets), pick a **user** preset and press the encoder.
+   The DAW and Plugin presets send their controls to DAW scripts.
+2. Connect the MPK to the Flip's USB-C port and open OpenOrc.
+3. Press **SELECT** until the **MIDI** page, then **Y**: "Tastiera: Akai MPK mini IV" appears.
+4. Hit a pad and turn a knob. At the bottom, the "Ultimo messaggio" line (last message) must show
+   "Nota 36…51 · canale 10" and "CC 24…31".
 
-| Voce | Valore |
+If it all matches, you are done. Otherwise go to step 2, or let OpenOrc learn the controls on the MIDI
+page (A on a row, then move the control) and save with **R2**.
+
+## 2. Setting up the MPK by hand (only if needed)
+**Global menu (SHIFT + LOOP)**
+
+| Setting | Value |
 |---|---|
-| MidiCh | 1 (tasti e manopole) |
+| MidiCh | 1 (keys and knobs) |
 | PadCh | **10** |
 | KnobM | **Abs** |
 | Toggle | Off |
 
-Esci con **PLUGIN/DAW**.
+Leave with **PLUGIN/DAW**.
 
-**Program Edit (SHIFT + OCT -)**: tocca o muovi il controllo da modificare, poi regola con l'encoder.
+**Program Edit (SHIFT + OCT -)**: touch or move the control you want to edit, then set it with the
+encoder.
 
-Per i pad: MidiCh **10**. Il banco si cambia con **BANK A/B**.
+For the pads: MidiCh **10**. **BANK A/B** switches the bank.
 
-| | sinistra | 2° | 3° | destra |
+| | left | 2nd | 3rd | right |
 |---|---|---|---|---|
-| **Banco A, fila in alto** | 40 Dim | 41 Min | 42 Maj | 43 Sus |
-| **Banco A, fila in basso** | 36 6 | 37 m7 | 38 M7 | 39 9 |
-| **Banco B, fila in alto** | 48 Modo tonalità | 49 Esecuzione | 50 Suono prec. | 51 Suono succ. |
-| **Banco B, fila in basso** | 44 Batteria | 45 Loop: registra | 46 Loop: suona/ferma | 47 Loop: cancella |
+| **Bank A, top row** | 40 Dim | 41 Min | 42 Maj | 43 Sus |
+| **Bank A, bottom row** | 36 6 | 37 m7 | 38 M7 | 39 9 |
+| **Bank B, top row** | 48 Key mode | 49 Next playing style | 50 Previous sound | 51 Next sound |
+| **Bank B, bottom row** | 44 Drums | 45 Loop: record | 46 Loop: play/stop | 47 Loop: clear |
 
-È lo schema MPC: la nota è 35 + il numero del pad, contando da quello in basso a sinistra.
+This is the MPC layout: the note is 35 + the pad number, counting from the bottom-left pad.
 
-Per le manopole: CC#, LoVal 0, HiVal 127, Mode **Abs**.
+For the knobs: CC#, LoVal 0, HiVal 127, Mode **Abs**.
 
 | K1 | K2 | K3 | K4 | K5 | K6 | K7 | K8 |
 |---|---|---|---|---|---|---|---|
 | 24 | 25 | 26 | 27 | 28 | 29 | 30 | 31 |
-| Voicing | Basso | Esecuzione | Tono | Chorus | Delay | Riverbero | Volume |
+| Voicing | Bass | Playing style amount | Tone | Chorus | Delay | Reverb | Volume |
 
-Le serigrafie della fila in alto valgono per le funzioni dell'arpeggiatore (ARP + manopola), non per
-OpenOrc.
+The labels printed above the knobs are for the arpeggiator (ARP + knob), not for OpenOrc.
 
-**Salva:** **SHIFT + OCT +**, scegli lo slot utente con l'encoder e premilo. Da quel momento lo richiami
-con **SHIFT + PLUGIN/DAW**.
+**Save:** **SHIFT + OCT +**, choose the user slot with the encoder and press it. From then on you recall
+it with **SHIFT + PLUGIN/DAW**.
 
-## 3. Da sapere
-- **Chords, Scales, ARP e Note Repeat della MPK vanno spenti.** Gli accordi li costruisce OpenOrc: la
-  tastiera deve mandare note singole.
-- **Manopole in Rel:** OpenOrc le capisce. Nella pagina MIDI imposta «Tipo di manopole» su **Relative**:
-  con ogni probabilità la MPK manda 1–63 per salire e 65–127 per scendere (da verificare: se una
-  manopola va al contrario o a scatti, prova «Relative (64)»). Così non saltano di valore.
-- **Tasti di trasporto:** il preset li legge come CC sulla porta 2 (Play 76, Record 77, Loop 74,
-  Undo 73), come gli script della community. Il manuale invece dice che nei preset utente mandano note
-  (voce Trnspt del menu globale). Se non rispondono, impara il gruppo «Tasti di trasporto» e salva con R2.
-- **Firmware:** conviene aggiornarlo una volta dal PC (inMusic Software Center) prima dell'uso. Con un
-  firmware vecchio le porte possono essere diverse.
-- Da evitare: SysEx inviati alla cieca. Alcuni codici mettono la MPK in modalità aggiornamento firmware.
+## 3. Good to know
+- **Turn off the MPK's own Chords, Scales, ARP and Note Repeat.** OpenOrc builds the chords: the keyboard
+  must send single notes.
+- **Knobs in Rel mode:** OpenOrc understands them. On the MIDI page set "Tipo di manopole" (knob type) to
+  **Relative**. Most likely the MPK sends 1–63 to go up and 65–127 to go down (not verified: if a knob
+  runs backwards or jumps, try "Relative (64)"). This way values never jump.
+- **Transport buttons:** the preset reads them as CC on port 2 (Play 76, Record 77, Loop 74, Undo 73),
+  like the community scripts. The user guide says instead that in user presets they send notes (Trnspt
+  in the global menu). If they do not respond, learn the "Tasti di trasporto" group (transport buttons)
+  and save with R2.
+- **Firmware:** update it once from a computer (inMusic Software Center) before use. With old firmware
+  the ports may differ.
+- Never send SysEx to the MPK at random. Some function codes put it into firmware update mode.
 
-## Altre tastiere
-Copia `akai-mpk-mini-iv.txt` in `Saves/openorc/tastiere/` con un altro nome e cambia i numeri: Y lo trova.
-Oppure fai imparare i controlli dalla pagina MIDI e salva con R2. I file in `Saves/openorc/tastiere/`
-restano anche dopo gli aggiornamenti di Cirmolo.
+## Other keyboards
+Copy `akai-mpk-mini-iv.txt` into `Saves/openorc/tastiere/` under another name and change the numbers:
+Y finds it. Or let the MIDI page learn the controls and save with R2. Files in `Saves/openorc/tastiere/`
+survive Cirmolo updates.

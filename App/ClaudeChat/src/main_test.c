@@ -11,8 +11,10 @@
 #include <string.h>
 
 #include "chat_app.h"
+#include "ask.h"
 #include "i18n.h"
 #include "llm.h"
+#include "png.h"
 #include "providers.h"
 #include "voice.h"
 #include "gfx.h"
@@ -558,6 +560,47 @@ static void test_voice(void)
     CHECK(!strcmp(lang_code("Italian"), "it") && !strcmp(lang_code("Chinese (S)"), "zh") && !strcmp(lang_code("Klingon"), ""), "codici delle lingue");
 }
 
+/* ------------------------------------------------------------------ domande con immagine e PNG */
+static void test_ask_png(void)
+{
+    Registry reg;
+    registry_load(&reg, ".");
+    Provider *an = &reg.p[registry_find(&reg, "anthropic")], *zai = &reg.p[registry_find(&reg, "zai")];
+    AskSpec q = { "Sistema", "Traduci", "QUJD", NULL, 0, "low" };
+    char url[260];
+    char *b = ask_request(an, &an->models[2], &q, url, sizeof(url));
+    JNode *j = json_parse(b, strlen(b));
+    CHECK(j && !strcmp(url, "https://api.anthropic.com/v1/messages") && !strcmp(json_str(j, "system"), "Sistema") &&
+          json_num(j, "max_tokens", 0) == 4096 && strstr(b, "{\"type\":\"image\",\"source\":{\"type\":\"base64\",\"media_type\":\"image/png\",\"data\":\"QUJD\"}}") &&
+          !strcmp(json_path_str(j, "output_config", "effort"), "low"), "domanda con immagine a Claude: %s", b);
+    json_free(j);
+    free(b);
+    b = ask_request(zai, &zai->models[1], &q, url, sizeof(url));
+    j = json_parse(b, strlen(b));
+    CHECK(j && !strcmp(url, "https://api.z.ai/api/paas/v4/chat/completions") && strstr(b, "\"url\":\"data:image/png;base64,QUJD\"") &&
+          strstr(b, "{\"role\":\"system\",\"content\":\"Sistema\"}") && !strstr(b, "effort"), "domanda con immagine compatibile OpenAI: %s", b);
+    json_free(j);
+    free(b);
+    AskSpec t = { NULL, "Ciao", NULL, NULL, 100, NULL };
+    b = ask_request(an, &an->models[0], &t, url, sizeof(url));
+    CHECK(!strstr(b, "image") && !strstr(b, "system") && strstr(b, "\"max_tokens\":100"), "domanda senza immagine: %s", b);
+    free(b);
+    registry_free(&reg);
+
+    uint32_t px[6] = { 0xFF102030, 0x80FFFFFF, 0, 0xFFFF0000, 0xFF00FF00, 0xFF0000FF };
+    size_t n = 0;
+    unsigned char *png = png_encode_argb(px, 3, 2, &n);
+    int w = 0, h = 0;
+    CHECK(png && png_size(png, n, &w, &h) == 0 && w == 3 && h == 2 && png[25] == 6, "PNG: %dx%d", w, h);
+    /* il dato non compresso: dopo l'intestazione zlib e del blocco, riga 0 = filtro 0 + 3 pixel RGBA */
+    const unsigned char *idat = NULL;
+    for (size_t i = 8; i + 8 < n; i++) if (!memcmp(png + i, "IDAT", 4)) { idat = png + i + 4; break; }
+    CHECK(idat && idat[0] == 0x78 && idat[2] == 1 && idat[7] == 0 && idat[8] == 0x10 && idat[9] == 0x20 && idat[10] == 0x30 && idat[11] == 0xFF && idat[15] == 0x80,
+          "PNG: pixel RGBA");
+    free(png);
+    CHECK(png_size((const unsigned char *)"nopng", 5, &w, &h) != 0, "non e' un PNG");
+}
+
 /* ------------------------------------------------------------------ traduzioni */
 static void test_i18n(const char *outdir)
 {
@@ -783,6 +826,27 @@ static void test_ui(const char *outdir, const char *langdir)
     chat_button(a, PAD_R2, 0);
     CHECK(chat_voice_state(a) == 0 && strstr(chat_toast(a), "microfono"), "senza microfono: %s", chat_toast(a));
 
+    /* scheda Console: traduzione dei giochi con un modello per le immagini */
+    chat_open_settings(a, 2, 0);
+    tap(a, PAD_A);
+    CHECK(strstr(chat_toast(a), "SELECT + giù") != NULL, "traduzione accesa: %s", chat_toast(a));
+    tap(a, PAD_DOWN);
+    for (int i = 0; i < 6; i++) tap(a, PAD_RIGHT);   /* fornitori: come la chat, Claude, OpenAI, Gemini, DeepSeek, Qwen, GLM */
+    tap(a, PAD_DOWN);
+    tap(a, PAD_A);
+    tap(a, PAD_DOWN);
+    SHOT("chat-14a-console-modelli");
+    tap(a, PAD_A);
+    tap(a, PAD_DOWN);
+    tap(a, PAD_RIGHT);
+    SHOT("chat-14b-console");
+    f = fopen(state, "rb");
+    char sb[2048] = "";
+    if (f) { size_t got = fread(sb, 1, sizeof(sb) - 1, f); sb[got] = 0; fclose(f); }
+    CHECK(strstr(sb, "traduzione=1\n") && strstr(sb, "ia.provider=zai\n") && strstr(sb, "ia.model=glm-4.6v-flash\n") &&
+          strstr(sb, "traduzione.lingua=it\n"), "impostazioni della console:\n%s", sb);
+    chat_set_view(a, PAGE_CHAT, 0);
+
     tap(a, PAD_MENU);
     SHOT("chat-14-uscita");
     tap(a, PAD_B);
@@ -831,6 +895,8 @@ int main(int argc, char **argv)
     printf("fornitori: %d controlli, %d errori\n", checks, fails);
     test_voice();
     printf("voce: %d controlli, %d errori\n", checks, fails);
+    test_ask_png();
+    printf("domande con immagine e PNG: %d controlli, %d errori\n", checks, fails);
     test_i18n(outdir);
     printf("traduzioni: %d controlli, %d errori\n", checks, fails);
     test_ui(outdir, langdir);

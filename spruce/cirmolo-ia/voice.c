@@ -744,3 +744,37 @@ void tts_cancel(Tts *t)
     t->active = 0;
     buf_free(&t->body);
 }
+
+/* ------------------------------------------------------------------ sintesi bloccante */
+#ifndef _WIN32
+#define TTS_NAP() usleep(20000)
+#else
+#define TTS_NAP() ((void)0)
+#endif
+
+char *tts_wav_blocking(const Provider *p, const char *key, const char *model, const char *voice, const char *text,
+                       size_t *wav_len, char *err, size_t errn)
+{
+    Player pl;
+    Tts t;
+    memset(&t, 0, sizeof(t));
+    t.xfer.pid = -1;
+    player_init(&pl);
+    char *wav = NULL;
+    err[0] = 0;
+    if (tts_start(&t, p, key, model, voice, text, "", &pl, err, errn) == 0) {
+        while (!tts_poll(&t, &pl, err, errn)) TTS_NAP();
+        int n = player_queued(&pl);
+        if (!err[0] && n > 0) {
+            int16_t *pcm = malloc(sizeof(int16_t) * (size_t)n);
+            if (!pcm) abort();
+            for (int i = 0; i < n; i++) pcm[i] = pl.ring[(pl.rd + (unsigned)i) & RING_M];
+            wav = wav_encode(pcm, n, pl.src_rate, wav_len);
+            free(pcm);
+        } else if (!err[0]) snprintf(err, errn, "%s", tr("La sintesi vocale non ha restituito audio."));
+    }
+    tts_cancel(&t);
+    buf_free(&t.pending);
+    player_free(&pl);
+    return wav;
+}

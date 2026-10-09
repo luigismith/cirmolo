@@ -285,7 +285,7 @@ static void wrap_plain(Wrap *w, const char *src, int avail)
 /* ------------------------------------------------------------------ stato */
 enum { V_IDLE, V_HOLD, V_RECORDING, V_TRANSCRIBING };
 enum { MIC_USB, MIC_BT };
-enum { TAB_CHAT, TAB_VOICE };
+enum { TAB_CHAT, TAB_VOICE, TAB_CONSOLE, TAB_COUNT };
 static const char *const EFFORTS[3] = { "low", "medium", "high" };
 
 typedef struct { char model[96]; char voice[32]; } ProvPrefs;
@@ -309,7 +309,13 @@ struct ChatApp {
     int mfetch;
 
     int page, tab, typing, quit_dialog, quit, quick_open, quick_sel, confirm_new, entering_key, key_target;
-    int picker_open, picker_sel, picker_top;
+    int picker_open, picker_sel, picker_top, picker_prov, picker_console;
+
+    /* funzioni IA della console: modello per le immagini e traduzione dei giochi */
+    int ia_prov;                                  /* -1 = come la chat */
+    char ia_model[96];
+    int translate, tr_voice;
+    char tr_lang[8];                              /* "" = come l'interfaccia */
     int set_sel;
     int down[PAD_COUNT];
     float rep[PAD_COUNT];
@@ -424,6 +430,8 @@ static void save_settings(ChatApp *a)
     buf_printf(&b, "# Chiedi all'IA\nprovider=%s\neffort=%d\nconcise=%d\nspeak=%d\nautosend=%d\nmic=%d\nstt=%s\ntts=%s\n",
                cur_prov(a)->id, a->effort, a->concise, a->speak, a->autosend, a->mic,
                a->stt_prov >= 0 ? a->reg.p[a->stt_prov].id : "none", a->tts_prov >= 0 ? a->reg.p[a->tts_prov].id : "none");
+    buf_printf(&b, "traduzione=%d\ntraduzione.voce=%d\ntraduzione.lingua=%s\n", a->translate, a->tr_voice, a->tr_lang);
+    if (a->ia_prov >= 0) buf_printf(&b, "ia.provider=%s\nia.model=%s\n", a->reg.p[a->ia_prov].id, a->ia_model);
     for (int i = 0; i < a->reg.n; i++) {
         if (a->prefs[i].model[0]) buf_printf(&b, "model.%s=%s\n", a->reg.p[i].id, a->prefs[i].model);
         if (a->prefs[i].voice[0]) buf_printf(&b, "voice.%s=%s\n", a->reg.p[i].id, a->prefs[i].voice);
@@ -492,7 +500,7 @@ static void load_settings(ChatApp *a)
 {
     char *s = read_file(a->settings_path, NULL);
     int prov = 0, stt_set = 0, tts_set = 0;
-    a->stt_prov = a->tts_prov = -1;
+    a->stt_prov = a->tts_prov = a->ia_prov = -1;
     if (s) {
         for (char *line = strtok(s, "\n"); line; line = strtok(NULL, "\n")) {
             line[strcspn(line, "\r")] = 0;
@@ -517,6 +525,11 @@ static void load_settings(ChatApp *a)
             else if (!strcmp(k, "autosend")) a->autosend = iv != 0;
             else if (!strcmp(k, "mic")) a->mic = iv == MIC_BT ? MIC_BT : MIC_USB;
             else if (!strcmp(k, "stt")) { stt_set = 1; a->stt_prov = registry_find(&a->reg, v); }
+            else if (!strcmp(k, "ia.provider")) a->ia_prov = registry_find(&a->reg, v);
+            else if (!strcmp(k, "ia.model")) snprintf(a->ia_model, sizeof(a->ia_model), "%s", v);
+            else if (!strcmp(k, "traduzione")) a->translate = iv != 0;
+            else if (!strcmp(k, "traduzione.voce")) a->tr_voice = iv != 0;
+            else if (!strcmp(k, "traduzione.lingua")) snprintf(a->tr_lang, sizeof(a->tr_lang), "%s", v);
             else if (!strcmp(k, "tts")) { tts_set = 1; a->tts_prov = registry_find(&a->reg, v); }
         }
         free(s);
@@ -889,19 +902,24 @@ static void retry_last(ChatApp *a)
 }
 
 /* ------------------------------------------------------------------ elenco dei modelli dal fornitore */
-static void fetch_models(ChatApp *a)
+static void fetch_models(ChatApp *a, int prov)
 {
     if (a->mfetch >= 0) { toast(a, tr("Sto già scaricando l'elenco dei modelli.")); return; }
-    Provider *p = cur_prov(a);
-    if (p->needs_key && !a->key[0]) { toastf(a, tr("Prima metti la chiave di %s."), p->name); return; }
+    Provider *p = prov_at(a, prov);
+    if (!p) return;
+    char key[256];
+    provider_key(p, a->dir, key, sizeof(key));
+    if (prov == a->prov && a->key[0]) snprintf(key, sizeof(key), "%s", a->key);
+    if (p->needs_key && !key[0]) { toastf(a, tr("Prima metti la chiave di %s."), p->name); return; }
     Buf h = { 0 };
-    provider_auth_headers(p, a->key, &h);
+    provider_auth_headers(p, key, &h);
+    memset(key, 0, sizeof(key));
     char url[220], msg[200];
     snprintf(url, sizeof(url), "%s/models%s", p->base, p->proto == PROTO_ANTHROPIC ? "?limit=1000" : "");
     Request rq = { url, h.p, NULL, 0, "GET", NULL, 60 };
     buf_free(&a->mbody);
     if (net_start(&a->mxfer, &rq, msg, sizeof(msg))) toast(a, msg);
-    else { a->mfetch = a->prov; toast(a, tr("Scarico l'elenco dei modelli...")); }
+    else { a->mfetch = prov; toast(a, tr("Scarico l'elenco dei modelli...")); }
     if (h.p) memset(h.p, 0, h.len);
     buf_free(&h);
 }
@@ -1166,11 +1184,67 @@ static void move_key(ChatApp *a, int dr, int dc)
     a->kc = best;
 }
 
+/* ------------------------------------------------------------------ funzioni IA della console */
+static int ia_prov_index(const ChatApp *a) { return a->ia_prov >= 0 ? a->ia_prov : a->prov; }
+
+static int ia_model_index(ChatApp *a)
+{
+    Provider *p = &a->reg.p[ia_prov_index(a)];
+    if (a->ia_prov < 0) return a->model;
+    int k = provider_find_model(p, a->ia_model);
+    return k >= 0 ? k : 0;
+}
+
+static Model *ia_model(ChatApp *a)
+{
+    Provider *p = &a->reg.p[ia_prov_index(a)];
+    int k = ia_model_index(a);
+    return k >= 0 && k < p->nmodels ? &p->models[k] : NULL;
+}
+
+/* Riscrive la configurazione di RetroArch (ia-console.sh applica), senza aspettare. */
+static void console_apply(ChatApp *a)
+{
+#ifndef _WIN32
+    if (a->offline) return;
+    pid_t pid = fork();
+    if (pid == 0) {
+        for (int fd = 3; fd < 1024; fd++) close(fd);
+        execlp("sh", "sh", "ia-console.sh", "applica", (char *)NULL);
+        _exit(127);
+    }
+#else
+    (void)a;
+#endif
+}
+
+static const char *const TR_LANGS[][2] = {
+    { "", N_("Come l'interfaccia") }, { "it", "Italiano" }, { "en", "English" }, { "es", "Español" }, { "fr", "Français" },
+    { "de", "Deutsch" }, { "pt", "Português" }, { "ca", "Català" }, { "pl", "Polski" }, { "ro", "Română" }, { "tr", "Türkçe" },
+};
+#define TR_LANG_COUNT ((int)(sizeof(TR_LANGS) / sizeof(TR_LANGS[0])))
+
+static int tr_lang_index(const ChatApp *a)
+{
+    for (int i = 0; i < TR_LANG_COUNT; i++) if (!strcmp(a->tr_lang, TR_LANGS[i][0])) return i;
+    return 0;
+}
+
 /* ------------------------------------------------------------------ impostazioni */
+enum { K_TRANSLATE, K_PROV, K_MODEL, K_LANG, K_VOICE, K_HOW, K_COUNT };
 enum { S_PROVIDER, S_MODEL, S_EFFORT, S_STYLE, S_KEY, S_NEW, S_USAGE, S_COUNT };
 enum { W_SPEAK, W_TTS, W_VOICE, W_STT, W_AUTOSEND, W_MIC, W_STATUS, W_COUNT };
 
-static int tab_count(const ChatApp *a) { return a->tab == TAB_CHAT ? S_COUNT : W_COUNT; }
+static int tab_count(const ChatApp *a) { return a->tab == TAB_CHAT ? S_COUNT : (a->tab == TAB_VOICE ? W_COUNT : K_COUNT); }
+
+static void open_picker(ChatApp *a, int prov, int console)
+{
+    a->picker_open = 1;
+    a->picker_prov = prov;
+    a->picker_console = console;
+    a->picker_sel = console ? ia_model_index(a) : a->model;
+    a->picker_top = a->picker_sel - 4;
+}
 
 /* Prossimo fornitore con trascrizione o sintesi (-1 = spenta). */
 static int next_voice_prov(ChatApp *a, int cur, int dir, int tts)
@@ -1200,8 +1274,45 @@ static void cycle_voice(ChatApp *a, int dir)
     snprintf(a->prefs[a->tts_prov].voice, sizeof(a->prefs[a->tts_prov].voice), "%s", v[at]);
 }
 
+static void console_change(ChatApp *a, int dir)
+{
+    switch (a->set_sel) {
+    case K_TRANSLATE:
+        a->translate = !a->translate;
+        console_apply(a);
+        toast(a, a->translate ? tr("Traduzione accesa: nel gioco premi SELECT + giù.") : tr("Traduzione spenta."));
+        break;
+    case K_PROV: {                                /* -1 = come la chat, poi i fornitori con modelli */
+        int n = a->reg.n + 1, i = a->ia_prov + 1;
+        for (int k = 0; k < n; k++) { i = (i + dir + n) % n; if (i == 0 || a->reg.p[i - 1].nmodels) break; }
+        a->ia_prov = i - 1;
+        if (a->ia_prov >= 0) snprintf(a->ia_model, sizeof(a->ia_model), "%s", a->reg.p[a->ia_prov].models[0].id);
+        break;
+    }
+    case K_MODEL: {
+        if (a->ia_prov < 0) { a->ia_prov = a->prov; snprintf(a->ia_model, sizeof(a->ia_model), "%s", cur_model_id(a)); }
+        Provider *p = &a->reg.p[a->ia_prov];
+        if (!p->nmodels) break;
+        int k = (ia_model_index(a) + dir + p->nmodels) % p->nmodels;
+        snprintf(a->ia_model, sizeof(a->ia_model), "%s", p->models[k].id);
+        break;
+    }
+    case K_LANG:
+        snprintf(a->tr_lang, sizeof(a->tr_lang), "%s", TR_LANGS[(tr_lang_index(a) + dir + TR_LANG_COUNT) % TR_LANG_COUNT][0]);
+        console_apply(a);
+        break;
+    case K_VOICE:
+        a->tr_voice = !a->tr_voice;
+        if (a->tr_voice && !voice_ready(a, 1)) toast(a, tr("Scegli anche la sintesi vocale e mettine la chiave."));
+        break;
+    default: return;
+    }
+    save_settings(a);
+}
+
 static void settings_change(ChatApp *a, int dir)
 {
+    if (a->tab == TAB_CONSOLE) { console_change(a, dir); return; }
     if (a->tab == TAB_CHAT) {
         switch (a->set_sel) {
         case S_PROVIDER: {                       /* i fornitori solo per la voce non si scelgono qui */
@@ -1242,9 +1353,14 @@ static void settings_change(ChatApp *a, int dir)
 
 static void settings_activate(ChatApp *a)
 {
+    if (a->tab == TAB_CONSOLE) {
+        if (a->set_sel == K_MODEL) open_picker(a, ia_prov_index(a), 1);
+        else if (a->set_sel != K_HOW) console_change(a, 1);
+        return;
+    }
     if (a->tab == TAB_CHAT) {
         switch (a->set_sel) {
-        case S_MODEL: a->picker_open = 1; a->picker_sel = a->model; a->picker_top = a->model - 4; break;
+        case S_MODEL: open_picker(a, a->prov, 0); break;
         case S_KEY: begin_key_entry(a, a->prov); break;
         case S_NEW: a->confirm_new = 1; break;
         case S_USAGE: break;
@@ -1274,16 +1390,27 @@ static int repeats(const ChatApp *a, int b)
     return 0;
 }
 
+static void picker_choose(ChatApp *a)
+{
+    Provider *p = &a->reg.p[a->picker_prov];
+    if (a->picker_sel < 0 || a->picker_sel >= p->nmodels) return;
+    if (a->picker_console) {
+        a->ia_prov = a->picker_prov;
+        snprintf(a->ia_model, sizeof(a->ia_model), "%s", p->models[a->picker_sel].id);
+    } else set_model(a, a->picker_sel);
+    save_settings(a);
+}
+
 static void picker_press(ChatApp *a, int b)
 {
-    int n = cur_prov(a)->nmodels;
+    int n = a->reg.p[a->picker_prov].nmodels;
     switch (b) {
     case PAD_UP: if (n) a->picker_sel = (a->picker_sel + n - 1) % n; break;
     case PAD_DOWN: if (n) a->picker_sel = (a->picker_sel + 1) % n; break;
     case PAD_LEFT: a->picker_sel = a->picker_sel > 8 ? a->picker_sel - 8 : 0; break;
     case PAD_RIGHT: a->picker_sel = a->picker_sel + 8 < n ? a->picker_sel + 8 : (n ? n - 1 : 0); break;
-    case PAD_A: if (n) { set_model(a, a->picker_sel); save_settings(a); } a->picker_open = 0; break;
-    case PAD_X: fetch_models(a); break;
+    case PAD_A: picker_choose(a); a->picker_open = 0; break;
+    case PAD_X: fetch_models(a, a->picker_prov); break;
     case PAD_B: case PAD_SELECT: a->picker_open = 0; break;
     }
 }
@@ -1337,9 +1464,13 @@ static void press(ChatApp *a, int b)
         case PAD_DOWN: a->set_sel = (a->set_sel + 1) % n; break;
         case PAD_LEFT: settings_change(a, -1); break;
         case PAD_RIGHT: settings_change(a, 1); break;
-        case PAD_L1: case PAD_R1: a->tab = !a->tab; a->set_sel = 0; break;
+        case PAD_L1: a->tab = (a->tab + TAB_COUNT - 1) % TAB_COUNT; a->set_sel = 0; break;
+        case PAD_R1: a->tab = (a->tab + 1) % TAB_COUNT; a->set_sel = 0; break;
         case PAD_A: settings_activate(a); break;
-        case PAD_X: if (a->tab == TAB_CHAT && a->set_sel == S_MODEL) fetch_models(a); break;
+        case PAD_X:
+            if (a->tab == TAB_CHAT && a->set_sel == S_MODEL) fetch_models(a, a->prov);
+            if (a->tab == TAB_CONSOLE && a->set_sel == K_MODEL) fetch_models(a, ia_prov_index(a));
+            break;
         case PAD_SELECT: case PAD_B: a->page = PAGE_CHAT; a->typing = 0; break;
         }
         return;
@@ -1598,7 +1729,7 @@ void chat_set_voice(ChatApp *a, const char *stt, const char *tts)
 void chat_feed_transcript(ChatApp *a, const char *text) { if (a->vstate == V_TRANSCRIBING) { a->vstate = V_IDLE; got_transcript(a, text); } }
 char *chat_speech_text(ChatApp *a) { return a->speak_text ? dupstr(a->speak_text) : NULL; }
 void chat_open_settings(ChatApp *a, int tab, int sel) { a->page = PAGE_SETTINGS; a->tab = tab; a->set_sel = sel; }
-void chat_open_picker(ChatApp *a) { a->picker_open = 1; a->picker_sel = a->model; a->picker_top = 0; }
+void chat_open_picker(ChatApp *a) { open_picker(a, a->prov, 0); }
 
 void chat_feed_reply(ChatApp *a, const char *sse, int finish)
 {
@@ -1620,7 +1751,7 @@ int chat_needs_draw(ChatApp *a)
 {
     int v[] = { a->page, a->tab, a->typing, a->quit_dialog, a->quick_open, a->quick_sel, a->confirm_new, a->entering_key, a->set_sel,
                 a->cursor, a->layer, a->shift, a->kr, a->kc, a->busy, a->reply.state, a->conv.n, a->prov, a->model, a->effort,
-                a->concise, a->speak, a->autosend, a->mic, a->stt_prov, a->tts_prov, a->picker_open, a->picker_sel, a->mfetch,
+                a->concise, a->speak, a->autosend, a->mic, a->stt_prov, a->tts_prov, a->picker_open, a->picker_sel, a->mfetch, a->translate, a->tr_voice, a->ia_prov, (int)a->ia_model[0], tr_lang_index(a),
                 (int)a->scroll, a->follow, a->toast_t > 0.0f, a->key[0] != 0, a->vstate, a->cap_rate > 0, speech_busy(a),
                 a->busy || a->vstate >= V_RECORDING ? (int)(a->time * 8.0f) : 0,
                 a->typing ? (int)(a->time * 2.0f) : 0 };
@@ -1897,8 +2028,8 @@ static void draw_row(Canvas *c, int y, int sel, const char *label, const char *v
 static void draw_settings(ChatApp *a, Canvas *c)
 {
     /* schede */
-    const char *tabs[2] = { tr("Chat"), tr("Voce") };
-    for (int i = 0; i < 2; i++) {
+    const char *tabs[TAB_COUNT] = { tr("Chat"), tr("Voce"), tr("Console") };
+    for (int i = 0; i < TAB_COUNT; i++) {
         int x = 14 + i * 130;
         gfx_round_rect(c, x, 54, 122, 30, 15, i == a->tab ? C_GOLD_D : C_PANEL, 1.0f);
         gfx_text_center(c, FONT_BOLD, x + 61, 75, tabs[i], i == a->tab ? C_TEXT : C_MUTED);
@@ -1911,7 +2042,52 @@ static void draw_settings(ChatApp *a, Canvas *c)
     for (int i = 0; i < 8; i++) { vals[i][0] = 0; cols[i] = C_TEXT; }
     help[0][0] = help[1][0] = 0;
     Provider *p = cur_prov(a);
-    if (a->tab == TAB_CHAT) {
+    if (a->tab == TAB_CONSOLE) {
+        static const char *L[K_COUNT] = { N_("Traduzione dei giochi"), N_("Fornitore per le immagini"), N_("Modello per le immagini"),
+                                          N_("Lingua della traduzione"), N_("Leggi la traduzione"), N_("Come si usa") };
+        for (int i = 0; i < K_COUNT; i++) labels[i] = tr(L[i]);
+        snprintf(vals[K_TRANSLATE], 96, "%s", a->translate ? tr("Sì") : tr("No"));
+        if (a->translate) cols[K_TRANSLATE] = C_GREEN;
+        Provider *ip = &a->reg.p[ia_prov_index(a)];
+        int ik = 0;
+        char ikey[256];
+        provider_key(ip, a->dir, ikey, sizeof(ikey));
+        ik = !ip->needs_key || ikey[0];
+        memset(ikey, 0, sizeof(ikey));
+        if (a->ia_prov < 0) snprintf(vals[K_PROV], 96, tr("come la chat (%s)"), ip->name);
+        else snprintf(vals[K_PROV], 96, "%s%s", ip->name, ik ? "" : tr(" (manca la chiave)"));
+        if (!ik) cols[K_PROV] = C_RED;
+        Model *im = ia_model(a);
+        char tag[40];
+        price_tag(im, tag, sizeof(tag));
+        snprintf(vals[K_MODEL], 96, "%s%s%s%s", im ? im->name : "-", tag[0] ? " (" : "", tag, tag[0] ? ")" : "");
+        int li = tr_lang_index(a);
+        if (li == 0) snprintf(vals[K_LANG], 96, "%s", tr(TR_LANGS[0][1]));
+        else snprintf(vals[K_LANG], 96, "%s", TR_LANGS[li][1]);
+        snprintf(vals[K_VOICE], 96, "%s", a->tr_voice ? tr("Sì") : tr("No"));
+        snprintf(vals[K_HOW], 96, "%s", tr("SELECT + giù nel gioco"));
+        switch (a->set_sel) {
+        case K_TRANSLATE:
+            snprintf(help[0], 160, "%s", tr("Nei giochi di RetroArch: SELECT + giù mette in pausa e traduce"));
+            snprintf(help[1], 160, "%s", tr("il testo sullo schermo; di nuovo SELECT + giù e si continua."));
+            break;
+        case K_PROV: case K_MODEL:
+            snprintf(help[0], 160, "%s", tr("Serve un modello che legge le immagini: Claude, GPT, Gemini,"));
+            snprintf(help[1], 160, "%s", tr("GLM-4.6V-Flash (gratis), Qwen-VL... A apre l'elenco, X lo aggiorna."));
+            break;
+        case K_LANG:
+            snprintf(help[0], 160, "%s", tr("In che lingua tradurre. La lingua di partenza la riconosce il modello"));
+            snprintf(help[1], 160, "%s", tr("(spesso è il giapponese)."));
+            break;
+        case K_VOICE:
+            snprintf(help[0], 160, "%s", tr("Legge anche ad alta voce la traduzione, con la sintesi vocale"));
+            snprintf(help[1], 160, "%s", tr("scelta nella scheda Voce."));
+            break;
+        default:
+            snprintf(help[0], 160, "%s", tr("Le traduzioni si salvano in Saves/claude/traduzioni, una per gioco."));
+            snprintf(help[1], 160, "%s", tr("Ogni traduzione è una richiesta al modello (gratis o a pagamento)."));
+        }
+    } else if (a->tab == TAB_CHAT) {
         static const char *L[S_COUNT] = { N_("Fornitore"), N_("Modello"), N_("Impegno"), N_("Stile delle risposte"), N_("Chiave API"), N_("Nuova conversazione"), N_("Consumo") };
         static const char *EFF[3] = { N_("Basso"), N_("Medio"), N_("Alto") };
         for (int i = 0; i < S_COUNT; i++) labels[i] = tr(L[i]);
@@ -2014,7 +2190,9 @@ static void draw_settings(ChatApp *a, Canvas *c)
 
 static void draw_picker(ChatApp *a, Canvas *c)
 {
-    Provider *p = cur_prov(a);
+    Provider *p = &a->reg.p[a->picker_prov];
+    int current = a->picker_console ? (a->picker_prov == ia_prov_index(a) ? ia_model_index(a) : -1)
+                                    : (a->picker_prov == a->prov ? a->model : -1);
     gfx_rect_alpha(c, 0, 0, c->w, c->h, RGB(0, 0, 0), 0.6f);
     gfx_round_rect(c, 40, 40, 560, 400, 16, C_PANEL_HI, 1.0f);
     gfx_round_frame(c, 40, 40, 560, 400, 16, 2, C_GOLD, 1.0f);
@@ -2032,7 +2210,7 @@ static void draw_picker(ChatApp *a, Canvas *c)
         const Model *m = &p->models[k];
         if (k == a->picker_sel) gfx_round_rect(c, 52, y, 536, rh - 3, 8, C_GOLD_D, 1.0f);
         char name[100], tag[40];
-        snprintf(name, sizeof(name), "%s%s", k == a->model ? "\xe2\x80\xa2 " : "", m->name);
+        snprintf(name, sizeof(name), "%s%s", k == current ? "\xe2\x80\xa2 " : "", m->name);
         while (gfx_text_width(FONT_BODY, name) > 380 && strlen(name) > 4) { name[strlen(name) - 4] = 0; strcat(name, "..."); }
         gfx_text(c, FONT_BODY, 64, y + 20, name, k == a->picker_sel ? C_TEXT : C_MUTED);
         price_tag(m, tag, sizeof(tag));

@@ -286,6 +286,10 @@ run_retroarch() {
 			;;
 	esac
 
+	# Cirmolo: funzioni IA dei giochi (traduttore con SELECT + giu'), solo mentre RetroArch e' aperto.
+	IA_CONSOLE="/mnt/SDCARD/App/ClaudeChat/ia-console.sh"
+	[ -f "$IA_CONSOLE" ] && sh "$IA_CONSOLE" avvia
+
 	if [ "$VERBOSE_EMU" = "1" ]; then
 		log_message "Running CMD: HOME=\"$RA_DIR/\" \"$RA_DIR/$RA_BIN\" $RA_PARAMS --log-file /mnt/SDCARD/Saves/spruce/retroarch.log -L \"$CORE_PATH\" \"$ROM_FILE\""
 		HOME="$RA_DIR/" "$RA_DIR/$RA_BIN" $RA_PARAMS --log-file /mnt/SDCARD/Saves/spruce/retroarch.log -L "$CORE_PATH" "$ROM_FILE"
@@ -293,6 +297,7 @@ run_retroarch() {
 		log_message "Running CMD: HOME=\"$RA_DIR/\" \"$RA_DIR/$RA_BIN\" $RA_PARAMS -L \"$CORE_PATH\" \"$ROM_FILE\""
 		HOME="$RA_DIR/" "$RA_DIR/$RA_BIN" $RA_PARAMS -L "$CORE_PATH" "$ROM_FILE"
 	fi
+	[ -f "$IA_CONSOLE" ] && sh "$IA_CONSOLE" ferma
 	backup_rac_creds_to_spruce_cfg
 	ra_close_setup_saves_and_states_for_core_differences
 }

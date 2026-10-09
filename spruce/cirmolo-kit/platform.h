@@ -64,6 +64,10 @@ typedef struct {
 
 enum { TEXT_CHARS, TEXT_BACKSPACE, TEXT_ENTER, TEXT_LEFT, TEXT_RIGHT, TEXT_UP, TEXT_DOWN, TEXT_DELETE };
 
+/* Immagine (PNG, JPG...) letta con la SDL_image di PyUI e ridotta per stare in maxw x maxh: pixel ARGB
+   (malloc, li libera l'app) e dimensioni. -1 se non c'e' l'immagine o la libreria. */
+int cirmolo_load_image(const char *path, int maxw, int maxh, uint32_t **px, int *w, int *h);
+
 /* Definita da ogni app. */
 const CirmoloApp *cirmolo_app(void);
 

@@ -41,6 +41,7 @@
 #include "ask.h"
 #include "gfx.h"
 #include "i18n.h"
+#include "iaconf.h"
 #include "json.h"
 #include "png.h"
 #include "providers.h"
@@ -52,47 +53,6 @@
 #define OUT_H 480
 
 static char g_saves[400] = SAVES;
-
-/* ------------------------------------------------------------------ impostazioni */
-typedef struct {
-    char provider[32], model[96], lang[16], tts[32], voice[32];
-    int speak;
-} Settings;
-
-static void read_settings(Settings *s)
-{
-    memset(s, 0, sizeof(*s));
-    char path[480], chat_prov[32] = "", chat_model[96] = "", line[300];
-    snprintf(path, sizeof(path), "%s/impostazioni.txt", g_saves);
-    FILE *f = fopen(path, "rb");
-    if (!f) return;
-    char models[24][2][96];
-    int nm = 0;
-    char voices[24][2][40];
-    int nv = 0;
-    while (fgets(line, sizeof(line), f)) {
-        line[strcspn(line, "\r\n")] = 0;
-        char *eq = strchr(line, '=');
-        if (!eq || line[0] == '#') continue;
-        *eq = 0;
-        const char *k = line, *v = eq + 1;
-        if (!strcmp(k, "provider")) snprintf(chat_prov, sizeof(chat_prov), "%s", v);
-        else if (!strcmp(k, "ia.provider")) snprintf(s->provider, sizeof(s->provider), "%s", v);
-        else if (!strcmp(k, "ia.model")) snprintf(s->model, sizeof(s->model), "%s", v);
-        else if (!strcmp(k, "traduzione.lingua")) snprintf(s->lang, sizeof(s->lang), "%s", v);
-        else if (!strcmp(k, "traduzione.voce")) s->speak = atoi(v) != 0;
-        else if (!strcmp(k, "tts")) snprintf(s->tts, sizeof(s->tts), "%s", v);
-        else if (!strncmp(k, "model.", 6) && nm < 24) { snprintf(models[nm][0], 96, "%s", k + 6); snprintf(models[nm][1], 96, "%s", v); nm++; }
-        else if (!strncmp(k, "voice.", 6) && nv < 24) { snprintf(voices[nv][0], 40, "%s", k + 6); snprintf(voices[nv][1], 40, "%s", v); nv++; }
-    }
-    fclose(f);
-    if (!s->provider[0]) {                        /* senza scelta: il fornitore e il modello della chat */
-        snprintf(s->provider, sizeof(s->provider), "%s", chat_prov);
-        for (int i = 0; i < nm; i++) if (!strcmp(models[i][0], chat_prov)) snprintf(chat_model, sizeof(chat_model), "%s", models[i][1]);
-        snprintf(s->model, sizeof(s->model), "%s", chat_model);
-    }
-    for (int i = 0; i < nv; i++) if (!strcmp(voices[i][0], s->tts)) snprintf(s->voice, sizeof(s->voice), "%s", voices[i][1]);
-}
 
 /* ------------------------------------------------------------------ lingue */
 static const char *lang_name(const char *code)
@@ -239,8 +199,8 @@ static void log_translation(const char *game, const char *model, const char *tex
 /* Risposta JSON per RetroArch (malloc). */
 static char *translate(const char *query, const char *body, size_t body_len)
 {
-    Settings st;
-    read_settings(&st);
+    IaSettings st;
+    ia_settings_read(g_saves, &st);
     char target[16], source[16], output[64];
     query_param(query, "target_lang", target, sizeof(target));
     query_param(query, "source_lang", source, sizeof(source));
@@ -260,16 +220,13 @@ static char *translate(const char *query, const char *body, size_t body_len)
     int error = 1;
     Registry reg;
     registry_load(&reg, g_saves);
-    int pi = registry_find(&reg, st.provider);
-    Provider *p = pi >= 0 ? &reg.p[pi] : NULL;
-    int mi = p ? provider_find_model(p, st.model) : -1;
-    Model *m = p && p->nmodels ? &p->models[mi >= 0 ? mi : 0] : NULL;
-    char key[256] = "";
-    if (p) provider_key(p, g_saves, key, sizeof(key));
+    const Provider *p = NULL;
+    const Model *m = NULL;
+    char key[256] = "", cfg_err[300] = "";
+    int cfg_ok = ia_console_model(&reg, &st, g_saves, &p, &m, key, sizeof(key), cfg_err, sizeof(cfg_err)) == 0;
     snprintf(title, sizeof(title), "%s", tr("Traduzione"));
     if (!image) snprintf(err, sizeof(err), "%s", tr("RetroArch non ha mandato la schermata."));
-    else if (!p || !m) snprintf(err, sizeof(err), "%s", tr("Scegli il modello per le immagini in Chiedi all'IA, scheda Console."));
-    else if (p->needs_key && !key[0]) snprintf(err, sizeof(err), tr("Manca la chiave API di %s: mettila in Chiedi all'IA."), p->name);
+    else if (!cfg_ok) snprintf(err, sizeof(err), "%s", cfg_err);
     else {
         char sysmsg[900], prompt[600];
         snprintf(sysmsg, sizeof(sysmsg),
@@ -311,14 +268,12 @@ static char *translate(const char *query, const char *body, size_t body_len)
     buf_adds(&out, "\"");
     free(b64);
     /* voce: se e' attiva nelle impostazioni o RetroArch e' in modalita' parlato */
-    int tp = registry_find(&reg, st.tts);
-    if (text && (st.speak || strstr(output, "sound")) && tp >= 0 && reg.p[tp].tts) {
-        char tkey[256], terr[200], voice[40];
-        provider_key(&reg.p[tp], g_saves, tkey, sizeof(tkey));
-        snprintf(voice, sizeof(voice), "%s", st.voice);
-        if (!voice[0]) { snprintf(voice, sizeof(voice), "%s", reg.p[tp].voices); voice[strcspn(voice, ",")] = 0; }
+    char tkey[256], voice[40];
+    const Provider *tp = text && (st.speak || strstr(output, "sound")) ? ia_tts(&reg, &st, g_saves, tkey, sizeof(tkey), voice, sizeof(voice)) : NULL;
+    if (tp) {
+        char terr[200];
         size_t wl = 0;
-        char *wav = tts_wav_blocking(&reg.p[tp], tkey, reg.p[tp].tts_model, voice, text, &wl, terr, sizeof(terr));
+        char *wav = tts_wav_blocking(tp, tkey, tp->tts_model, voice, text, &wl, terr, sizeof(terr));
         memset(tkey, 0, sizeof(tkey));
         if (wav) {
             char *wb = b64_encode((unsigned char *)wav, wl);

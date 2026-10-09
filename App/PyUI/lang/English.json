@@ -16,6 +16,7 @@
         "SHADOWED_SMALL": "Shadowed Small Size",
         "SHADOWED_BACKDROP_SMALL": "Shadowed Backdrop Small Size"
     },
+    "aiGameCard": "Game card (AI)",
     "abortingBoxartPatching": "Aborting boxart patching",
     "allBoxartOptimized": "All boxart is optimized",
     "boxartScannedPatched": "Scanned {scanned}, Patched {patched}",

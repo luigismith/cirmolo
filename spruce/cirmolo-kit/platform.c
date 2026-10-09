@@ -52,7 +52,7 @@ _Static_assert(PAD_A == 4 && PAD_SELECT == 12 && PAD_COUNT == 17, "nomi dei tast
     X(SDL_CloseAudioDevice) X(SDL_Delay) X(SDL_GetTicks) X(SDL_ShowCursor) X(SDL_NumJoysticks) \
     X(SDL_IsGameController) X(SDL_GameControllerOpen) X(SDL_GetRendererInfo) \
     X(SDL_SetHint) X(SDL_GetCurrentDisplayMode) X(SDL_GetNumAudioDevices) X(SDL_GetAudioDeviceName) \
-    X(SDL_StartTextInput)
+    X(SDL_StartTextInput) X(SDL_ConvertSurfaceFormat) X(SDL_FreeSurface)
 
 #define DECL(f) static __typeof__(f) *p_##f;
 SDL_FUNCS(DECL)
@@ -81,6 +81,72 @@ static int load_sdl(void)
 #define LOAD(f) if (!(p_##f = (__typeof__(f) *)LIB_SYM(h, #f))) { fprintf(stderr, "SDL2: manca %s\n", #f); return -1; }
     SDL_FUNCS(LOAD)
 #undef LOAD
+    return 0;
+}
+
+/* ------------------------------------------------------------------ immagini (SDL_image, facoltativa) */
+typedef SDL_Surface *(*IMG_Load_fn)(const char *file);
+
+int cirmolo_load_image(const char *path, int maxw, int maxh, uint32_t **px, int *w, int *h)
+{
+    static IMG_Load_fn img_load;
+    static int tried;
+    *px = NULL;
+    *w = *h = 0;
+    if (!p_SDL_ConvertSurfaceFormat || !path || !*path) return -1;
+    if (!tried) {
+        tried = 1;
+        const char *libs[] = {
+#ifdef _WIN32
+            "SDL2_image.dll",
+#else
+            "/mnt/SDCARD/App/PyUI/dll/libSDL2_image-2.0.so", "libSDL2_image-2.0.so.0", "libSDL2_image-2.0.so",
+#endif
+        };
+        for (size_t i = 0; i < sizeof(libs) / sizeof(libs[0]) && !img_load; i++) {
+            void *hl = LIB_OPEN(libs[i]);
+            if (hl) img_load = (IMG_Load_fn)LIB_SYM(hl, "IMG_Load");
+        }
+        if (!img_load) fprintf(stderr, "SDL_image non trovata: niente immagini\n");
+    }
+    if (!img_load) return -1;
+    SDL_Surface *s = img_load(path);
+    if (!s) return -1;
+    SDL_Surface *c = p_SDL_ConvertSurfaceFormat(s, SDL_PIXELFORMAT_ARGB8888, 0);
+    p_SDL_FreeSurface(s);
+    if (!c) return -1;
+    /* ridotta per stare in maxw x maxh, con la media dei pixel coperti */
+    float k = 1.0f;
+    if (c->w > maxw) k = (float)maxw / (float)c->w;
+    if (c->h * k > maxh) k = (float)maxh / (float)c->h;
+    int ow = (int)(c->w * k + 0.5f), oh = (int)(c->h * k + 0.5f);
+    if (ow < 1) ow = 1;
+    if (oh < 1) oh = 1;
+    uint32_t *o = malloc(sizeof(uint32_t) * (size_t)ow * (size_t)oh);
+    if (!o) { p_SDL_FreeSurface(c); return -1; }
+    for (int y = 0; y < oh; y++) {
+        int y0 = (int)(y / k), y1 = (int)((y + 1) / k);
+        if (y1 <= y0) y1 = y0 + 1;
+        if (y1 > c->h) y1 = c->h;
+        for (int x = 0; x < ow; x++) {
+            int x0 = (int)(x / k), x1 = (int)((x + 1) / k);
+            if (x1 <= x0) x1 = x0 + 1;
+            if (x1 > c->w) x1 = c->w;
+            unsigned sa = 0, sr = 0, sg = 0, sb = 0, n = 0;
+            for (int yy = y0; yy < y1; yy++) {
+                const uint32_t *row = (const uint32_t *)((const uint8_t *)c->pixels + (size_t)yy * (size_t)c->pitch);
+                for (int xx = x0; xx < x1; xx++) {
+                    uint32_t p = row[xx];
+                    sa += p >> 24; sr += p >> 16 & 255; sg += p >> 8 & 255; sb += p & 255; n++;
+                }
+            }
+            o[(size_t)y * (size_t)ow + (size_t)x] = (sa / n) << 24 | (sr / n) << 16 | (sg / n) << 8 | (sb / n);
+        }
+    }
+    p_SDL_FreeSurface(c);
+    *px = o;
+    *w = ow;
+    *h = oh;
     return 0;
 }
 

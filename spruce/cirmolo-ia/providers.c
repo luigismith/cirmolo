@@ -60,7 +60,7 @@ static const PProvider PRESETS[] = {
     { "zai", "GLM (Z.ai)", PROTO_OPENAI, "https://api.z.ai/api/paas/v4", "z.ai",
       N_("Cinese. I modelli Flash sono gratuiti."), NULL, 1, 1, STT_NONE, TTS_NONE, NULL, NULL, NULL,
       { { "glm-4.7-flash", "GLM-4.7 Flash", 0, 0, 0, MF_FREE },
-        { "glm-4.6v-flash", "GLM-4.6V Flash (immagini)", 0, 0, 0, MF_FREE },
+        { "glm-4.6v-flash", "GLM-4.6V Flash", 0, 0, 0, MF_FREE },
         { "glm-4.5-flash", "GLM-4.5 Flash", 0, 0, 0, MF_FREE },
         { "glm-5.3", "GLM-5.3", -1, -1, -1, 0 },
         { "glm-4.7", "GLM-4.7", -1, -1, -1, 0 } } },

@@ -2,8 +2,8 @@
 #
 # In OpenOrc: pagina MIDI (SELECT fino a «MIDI»), poi Y. Y carica i preset uno dopo l'altro;
 # R2 salva la mappa attuale in Saves/openorc/tastiere/mia-tastiera.txt.
-# Perché la tastiera mandi proprio questi valori va preparato un suo preset utente: istruzioni passo
-# passo in akai-mpk-mini-iv.md, nella stessa cartella.
+# Sono i valori di fabbrica dei preset utente della MPK: di solito non serve configurare nulla.
+# Se qualcosa non risponde, la scheda akai-mpk-mini-iv.md (stessa cartella) spiega come impostarla.
 #
 # Ogni riga: controllo = nota N | cc N, poi «canale 1-16» e «porta 1-8» se servono; «-» = nessuno.
 # Senza canale o porta va bene qualunque. La porta 1 è «MPK Mini IV MIDI Port».
@@ -31,20 +31,20 @@ Esecuzione successiva = nota 49 canale 10 porta 1
 Suono precedente = nota 50 canale 10 porta 1
 Suono successivo = nota 51 canale 10 porta 1
 
-# Manopole K1-K8
-K1 Voicing = cc 70 porta 1
-K2 Basso = cc 71 porta 1
-K3 Esecuzione = cc 72 porta 1
-K4 Tono = cc 73 porta 1
-K5 Chorus = cc 74 porta 1
-K6 Delay = cc 75 porta 1
-K7 Riverbero = cc 76 porta 1
-K8 Volume = cc 77 porta 1
+# Manopole K1-K8 (di fabbrica CC 24-31, modo Abs)
+K1 Voicing = cc 24 porta 1
+K2 Basso = cc 25 porta 1
+K3 Esecuzione = cc 26 porta 1
+K4 Tono = cc 27 porta 1
+K5 Chorus = cc 28 porta 1
+K6 Delay = cc 29 porta 1
+K7 Riverbero = cc 30 porta 1
+K8 Volume = cc 31 porta 1
 
-# Tasti di trasporto: escono su un'altra porta con valori che il manuale Akai non elenca.
-# Si imparano dalla pagina MIDI (gruppo «Tasti di trasporto», A, poi premili in fila) e si salvano con R2.
-Play/Stop = -
-Record = -
+# Tasti di trasporto: CC sulla porta 2 (DAW), come li leggono gli script per REAPER e Reason.
+# Overdub non è documentato. Se non rispondono si imparano dalla pagina MIDI e si salvano con R2.
+Play/Stop = cc 76 porta 2
+Record = cc 77 porta 2
 Overdub = -
-Loop = -
-Undo = -
+Loop = cc 74 porta 2
+Undo = cc 73 porta 2

@@ -324,23 +324,23 @@ static void test_session(const char *outdir)
     pad(a, 48, 1); pad(a, 48, 0);
     CHECK(!orcapp_keymode(a), "modo tonalita' spento");
 
-    /* K1 (CC 70): registro del voicing */
+    /* K1 (CC 24): registro del voicing */
     pad(a, 42, 1); key(a, 60, 1);
-    cc(a, 70, 0); run(a, 0.03f);
+    cc(a, 24, 0); run(a, 0.03f);
     n = orcapp_chord_notes(a, notes, NULL);
     float low = mean_note(notes, n);
-    cc(a, 70, 127); run(a, 0.03f);
+    cc(a, 24, 127); run(a, 0.03f);
     n = orcapp_chord_notes(a, notes, NULL);
     float high = mean_note(notes, n);
     CHECK(high - low > 18.0f, "K1 sposta il registro: %.1f -> %.1f", low, high);
-    cc(a, 70, 64);
+    cc(a, 24, 64);
     key(a, 60, 0); pad(a, 42, 0);
 
-    /* K4 (CC 73): tono; rotelle */
-    cc(a, 73, 0); run(a, 0.02f);
-    CHECK(orcapp_sound(a)->tone < 0.01f, "CC 73 = 0 porta il tono a 0");
-    cc(a, 73, 127); run(a, 0.02f);
-    CHECK(orcapp_sound(a)->tone > 0.99f, "CC 73 = 127 porta il tono a 1");
+    /* K4 (CC 27): tono; rotelle */
+    cc(a, 27, 0); run(a, 0.02f);
+    CHECK(orcapp_sound(a)->tone < 0.01f, "CC 27 = 0 porta il tono a 0");
+    cc(a, 27, 127); run(a, 0.02f);
+    CHECK(orcapp_sound(a)->tone > 0.99f, "CC 27 = 127 porta il tono a 1");
     midi3(a, 0, 0xE0, 0, 127); midi3(a, 0, 0xB0, 1, 100); run(a, 0.05f);
     midi3(a, 0, 0xE0, 0, 64); midi3(a, 0, 0xB0, 1, 0);
 
@@ -383,8 +383,8 @@ static void test_session(const char *outdir)
     cc(a, 21, 0); run(a, 0.02f);
     cc(a, 21, 10); run(a, 0.02f);
     CHECK(fabsf(orcapp_sound(a)->tone - 10.0f / 127.0f) < 0.01f, "CC 21 imparato come K4 (tono %.3f)", orcapp_sound(a)->tone);
-    cc(a, 73, 127); run(a, 0.02f);
-    CHECK(orcapp_sound(a)->tone < 0.1f, "il vecchio CC 73 non comanda piu' il tono");
+    cc(a, 27, 127); run(a, 0.02f);
+    CHECK(orcapp_sound(a)->tone < 0.1f, "il vecchio CC 27 non comanda piu' il tono");
 
     /* in fila: i pad delle funzioni sul canale 2, note 60-67 */
     orcapp_select(a, 9);
@@ -705,6 +705,21 @@ static void test_keyboard(const char *outdir, const char *repo)
 
     orcapp_destroy(a);
     remove(state); remove(mine); remove(def); remove(rep); remove(bad);
+
+    /* stato delle versioni con le manopole sui CC 70-77: passa ai valori di fabbrica della MPK */
+    f = fopen(state, "w");
+    if (f) {
+        for (int i = 0; i < 8; i++) fprintf(f, "map%d=2,0,-1,%d\n", 16 + i, 70 + i);
+        for (int i = 24; i < 29; i++) fprintf(f, "map%d=0,-1,-1,0\n", i);
+        fclose(f);
+    }
+    a = orcapp_create(SR, state);
+    cc(a, 27, 0); run(a, 0.02f);
+    CHECK(orcapp_sound(a)->tone < 0.01f, "stato vecchio: K4 passa al CC 27");
+    cc(a, 73, 127); run(a, 0.02f);
+    CHECK(orcapp_sound(a)->tone < 0.01f, "stato vecchio: il CC 73 non comanda piu' il tono");
+    orcapp_destroy(a);
+    remove(state);
 }
 
 /* ------------------------------------------------------------------ ridisegno solo se serve */
@@ -743,7 +758,7 @@ static void demo(OrcApp *a, const char *outdir)
     g_rec = calloc((size_t)g_rec_cap * 2, sizeof(float));
     g_rec_pos = 0;
     pad(a, 48, 1); pad(a, 48, 0);                 /* modo tonalita' */
-    cc(a, 77, 100);
+    cc(a, 31, 100);
     pad(a, 44, 1); pad(a, 44, 0);                 /* batteria */
     const int prog[8] = { 60, 67, 69, 65, 60, 67, 69, 65 };   /* I V vi IV */
     for (int i = 0; i < 8; i++) {
@@ -791,7 +806,7 @@ static void screenshots(OrcApp *a, const char *outdir)
     run(a, 0.3f);
     pad(a, 37, 1);
     key(a, 69, 1);
-    cc(a, 73, 90);
+    cc(a, 27, 90);
     run(a, 0.15f);
     SHOT("orc-2-suona");
     key(a, 69, 0);

@@ -6,13 +6,14 @@
  * scala prendono il grado sotto). Il voicing sceglie da solo il rivolto piu' vicino al registro della
  * manopola K1, cosi' le voci passano da un accordo all'altro muovendosi poco.
  *
- * MPK mini IV (valori di partenza, tutti riassegnabili nella pagina MIDI):
+ * MPK mini IV (i valori di fabbrica dei suoi preset utente, cosi' non va configurata; tutti riassegnabili
+ * nella pagina MIDI o con un preset in tastiere/):
  *   pad banco A, canale 10: 40-43 Dim Min Maj Sus (fila in alto), 36-39 6 m7 M7 9 (fila in basso);
  *   pad banco B: 44-47 batteria, loop registra, loop suona/ferma, loop cancella (fila in basso),
  *                48-51 modo tonalita', esecuzione successiva, suono precedente, suono successivo;
- *   manopole CC 70-77: voicing, basso, quantita' dell'esecuzione, tono, chorus, delay, riverbero, volume;
+ *   manopole CC 24-31: voicing, basso, quantita' dell'esecuzione, tono, chorus, delay, riverbero, volume;
  *   rotelle: pitch bend (+-2 semitoni) e modulazione (vibrato); pedale sustain (CC 64);
- *   program change: suono. I tasti di trasporto escono su un'altra porta e si collegano dalla pagina MIDI.
+ *   program change: suono. Trasporto sulla porta 2 (DAW): Play CC 76, Rec 77, Loop 74, Undo 73.
  * Sulla Flip, nella pagina Suona, croce e A B X Y suonano gli accordi della tonalita' (I IV V vi sulla
  * croce) e i dorsali li cambiano (L1 maggiore/minore, R1 sus4, L2 settima, R2 nona).
  */
@@ -649,8 +650,13 @@ static void default_map(MidiMap *m)
     for (int i = 0; i < 8; i++) {
         m[T_CHORD + i] = (MidiMap){ MAP_NOTE, 0, 9, chord_notes[i] };
         m[T_FUNC + i] = (MidiMap){ MAP_NOTE, 0, 9, 44 + i };
-        m[T_KNOB + i] = (MidiMap){ MAP_CC, 0, -1, 70 + i };
+        m[T_KNOB + i] = (MidiMap){ MAP_CC, 0, -1, 24 + i };
     }
+    /* trasporto: CC sulla porta DAW, come li leggono gli script della community (Overdub non noto) */
+    m[T_TRANS + X_PLAY] = (MidiMap){ MAP_CC, 1, -1, 76 };
+    m[T_TRANS + X_RECORD] = (MidiMap){ MAP_CC, 1, -1, 77 };
+    m[T_TRANS + X_LOOP] = (MidiMap){ MAP_CC, 1, -1, 74 };
+    m[T_TRANS + X_UNDO] = (MidiMap){ MAP_CC, 1, -1, 73 };
 }
 
 static void map_text(const MidiMap *m, char *out, size_t n)
@@ -1103,6 +1109,18 @@ OrcApp *orcapp_create(float sample_rate, const char *state_path)
     if (state_path) snprintf(a->path, sizeof(a->path), "%s", state_path);
     settings_default(&a->set);
     load(a);
+    /* stato salvato dalle versioni con le manopole sui CC 70-77: si passa ai valori di fabbrica della MPK */
+    int old = 1;
+    for (int i = 0; i < 8; i++) {
+        const MidiMap *k = &a->set.map[T_KNOB + i];
+        old &= k->kind == MAP_CC && k->port == 0 && k->ch < 0 && k->num == 70 + i;
+    }
+    for (int i = T_TRANS; i < T_COUNT; i++) old &= a->set.map[i].kind == MAP_NONE;
+    if (old) {
+        MidiMap d[T_COUNT];
+        default_map(d);
+        memcpy(&a->set.map[T_KNOB], &d[T_KNOB], sizeof(MidiMap) * (T_COUNT - T_KNOB));
+    }
     a->set.beat_on = 0;                           /* si parte sempre in silenzio */
     a->learn = -1;
     a->degree = -1;

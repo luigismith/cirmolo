@@ -85,6 +85,8 @@
   "Modello per le immagini": "Model dla obrazów",
   "Lingua della traduzione": "Język tłumaczenia",
   "Leggi la traduzione": "Czytaj tłumaczenie",
+  "Diario con l'IA": "Dziennik z AI",
+  "Promemoria all'avvio": "Przypomnienie przy starcie",
   "Come si usa": "Jak używać",
   "Sì": "Tak",
   "No": "Nie",
@@ -97,6 +99,10 @@
   "GLM-4.6V-Flash (gratis), Qwen-VL... A apre l'elenco, X lo aggiorna.": "GLM-4.6V-Flash (za darmo), Qwen-VL... A otwiera listę, X ją odświeża.",
   "In che lingua tradurre. La lingua di partenza la riconosce il modello": "Na jaki język tłumaczyć. Język źródłowy rozpoznaje model",
   "(spesso è il giapponese).": "(często japoński).",
+  "A fine partita il modello guarda l'ultima schermata e scrive dove": "Po wyjściu model patrzy na ostatni ekran i pisze, gdzie",
+  "eri rimasto. Il diario (data, durata) si tiene comunque, senza IA.": "skończyłeś. Dziennik (data, czas) jest prowadzony i tak, bez AI.",
+  "Quando riapri un gioco, per qualche secondo vedi l'ultima": "Gdy znów otworzysz grę, przez kilka sekund widzisz ostatni",
+  "schermata e dove eri rimasto; un tasto qualsiasi e si gioca.": "ekran i miejsce, w którym skończyłeś; dowolny przycisk i grasz.",
   "Legge anche ad alta voce la traduzione, con la sintesi vocale": "Czyta też tłumaczenie na głos, syntezą mowy",
   "scelta nella scheda Voce.": "wybraną na karcie Głos.",
   "Le traduzioni si salvano in Saves/claude/traduzioni, una per gioco.": "Tłumaczenia zapisują się w Saves/claude/traduzioni, jedno na grę.",
@@ -176,6 +182,10 @@
   "La risposta si è interrotta.": "Odpowiedź się urwała.",
   "Per la lettura scegli la sintesi vocale e la sua chiave (Chiedi all'IA, scheda Voce).": "Aby czytać na głos, wybierz syntezę mowy i jej klucz (Zapytaj AI, karta Głos).",
   "Apri la scheda dal menu di un gioco (tasto del menu sul gioco).": "Otwórz kartę z menu gry (przycisk menu na grze).",
+  "Ultima partita: %s, %s. In tutto %s (%d partite).": "Ostatnia sesja: %s, %s. Łącznie %s (sesje: %d).",
+  "Dove eri rimasto": "Gdzie skończyłeś",
+  "Ultima partita: %s, %s.": "Ostatnia sesja: %s, %s.",
+  "Un tasto qualsiasi per giocare subito": "Dowolny przycisk, by grać od razu",
   "Scrivo la scheda": "Piszę kartę",
   "Scheda del gioco": "Karta gry",
   "legge...": "czyta...",
@@ -244,5 +254,6 @@
   "Impossibile preparare la richiesta in /tmp.": "Nie można przygotować żądania w /tmp.",
   "Sul PC questa app non si collega a Internet.": "Na PC ta aplikacja nie łączy się z Internetem.",
   "Scegli il modello per le immagini in Chiedi all'IA, scheda Console.": "Wybierz model dla obrazów w Zapytaj AI, karta Konsola.",
-  "Manca la chiave API di %s: mettila in Chiedi all'IA.": "Brak klucza API %s: wpisz go w Zapytaj AI."
+  "Manca la chiave API di %s: mettila in Chiedi all'IA.": "Brak klucza API %s: wpisz go w Zapytaj AI.",
+  "meno di un minuto": "mniej niż minuta"
 }

@@ -10,6 +10,7 @@
 #include <time.h>
 
 #include "ask.h"
+#include "diario.h"
 #include "i18n.h"
 #include "iaconf.h"
 #include "json.h"
@@ -59,6 +60,12 @@ struct Scheda {
     Reply reply;
     uint32_t *img;
     int img_w, img_h;
+    /* diario: ultima partita; promemoria prima di giocare */
+    DiaryEntry last;
+    int has_diary, sessions, remind;
+    long total;
+    uint32_t *shot;
+    int shot_w, shot_h;
     /* lettura ad alta voce */
     Player pl;
     Tts tts;
@@ -87,6 +94,7 @@ int scheda_read_request(const char *path, GameInfo *g)
     if ((v = json_str(j, "system_name"))) snprintf(g->system_name, sizeof(g->system_name), "%s", v);
     if ((v = json_str(j, "name"))) snprintf(g->name, sizeof(g->name), "%s", v);
     if ((v = json_str(j, "image"))) snprintf(g->image, sizeof(g->image), "%s", v);
+    if ((v = json_str(j, "mode"))) snprintf(g->mode, sizeof(g->mode), "%s", v);
     json_free(j);
     buf_free(&b);
     if (!g->name[0] && g->rom[0]) {               /* senza nome: quello del file */
@@ -327,6 +335,17 @@ Scheda *scheda_create(float sample_rate, const char *saves_dir, const GameInfo *
     reply_init(&s->reply, PROTO_ANTHROPIC, "");
     scheda_card_path(s->saves, g, s->card_path, sizeof(s->card_path));
     if (g->image[0]) cirmolo_load_image(g->image, IMG_W, IMG_H, &s->img, &s->img_w, &s->img_h);
+    s->has_diary = diary_last(s->saves, g->rom, &s->last, &s->total, &s->sessions) == 0;
+    if (!strcmp(g->mode, "promemoria")) {
+        s->remind = 1;
+        if (s->has_diary && s->last.img[0]) {
+            char shot[800];
+            snprintf(shot, sizeof(shot), "%s/diario/%s", s->saves, s->last.img);
+            cirmolo_load_image(shot, 440, 260, &s->shot, &s->shot_w, &s->shot_h);
+        }
+        if (!s->g.name[0] || !strcmp(s->g.name, s->last.name)) snprintf(s->g.name, sizeof(s->g.name), "%s", s->has_diary ? s->last.name : "");
+        return s;
+    }
     if (!g->rom[0]) snprintf(s->error, sizeof(s->error), "%s", tr("Apri la scheda dal menu di un gioco (tasto del menu sul gioco)."));
     char *saved = read_file(s->card_path, NULL);
     if (saved && saved[0]) set_text(s, saved);
@@ -345,6 +364,7 @@ void scheda_destroy(Scheda *s)
     registry_free(&s->reg);
     free(s->text);
     free(s->img);
+    free(s->shot);
     free(s);
 }
 
@@ -362,6 +382,7 @@ static void scroll_by(Scheda *s, float dy)
 
 static void press(Scheda *s, int b)
 {
+    if (s->remind) { s->quit = 1; return; }      /* qualunque tasto: si gioca */
     switch (b) {
     case PAD_UP: scroll_by(s, -46); break;
     case PAD_DOWN: scroll_by(s, 46); break;
@@ -404,6 +425,10 @@ void scheda_update(Scheda *s, float dt)
     }
     speech_pump(s);
     /* prima apertura: la scheda non c'e' ancora, si scrive subito */
+    if (s->remind) {                             /* il promemoria si chiude da solo */
+        if (s->time > 8.0f || !s->has_diary) s->quit = 1;
+        return;
+    }
     if (!s->text && !s->busy && !s->error[0] && s->time > 0.2f) start_generation(s);
 }
 
@@ -419,7 +444,7 @@ static uint32_t fnv(uint32_t h, const void *p, size_t n)
 
 int scheda_needs_draw(Scheda *s)
 {
-    int v[] = { (int)s->scroll, s->busy, s->busy ? (int)(s->time * 3) : 0, speaking(s), (int)strlen(s->error),
+    int v[] = { s->remind ? (int)(s->time * 10) : 0, (int)s->scroll, s->busy, s->busy ? (int)(s->time * 3) : 0, speaking(s), (int)strlen(s->error),
                 s->text ? (int)strlen(s->text) : -1, (int)(s->busy ? s->reply.nblk : 0) };
     uint32_t h = fnv(2166136261u, v, sizeof(v));
     if (s->busy) for (int i = 0; i < s->reply.nblk; i++) h = fnv(h, &s->reply.blk[i].a.len, sizeof(size_t));
@@ -453,13 +478,72 @@ static void blit(Canvas *c, const uint32_t *px, int w, int h, int x0, int y0)
     }
 }
 
+/* Riquadro in cima alla scheda: ultima partita, tempo totale e "dove eri rimasto". */
+static char *diary_header(Scheda *s, const char *text)
+{
+    char date[40], dur[40], tot[40];
+    diary_date(s->last.start, date, sizeof(date));
+    diary_duration(s->last.secs, dur, sizeof(dur));
+    diary_duration(s->total, tot, sizeof(tot));
+    Buf b = { 0 };
+    buf_adds(&b, "> ");
+    buf_printf(&b, tr("Ultima partita: %s, %s. In tutto %s (%d partite)."), date, dur, tot, s->sessions);
+    buf_adds(&b, "\n");
+    if (s->last.summary[0]) { buf_adds(&b, "> "); buf_adds(&b, s->last.summary); buf_adds(&b, "\n"); }
+    buf_adds(&b, "\n");
+    buf_adds(&b, text);
+    return buf_steal(&b);
+}
+
+/* Promemoria prima di giocare: l'ultima schermata e dove eri rimasto. */
+static void draw_remind(Scheda *s, Canvas *c)
+{
+    gfx_vgradient(c, 0, 0, c->w, c->h, C_BG_TOP, C_BG_BOT);
+    gfx_text_center(c, FONT_SMALL, 320, 34, tr("Dove eri rimasto"), C_GOLD);
+    char title[220];
+    snprintf(title, sizeof(title), "%s", s->g.name);
+    while (gfx_text_width(FONT_TITLE, title) > 600 && strlen(title) > 4) { title[strlen(title) - 4] = 0; strcat(title, "..."); }
+    gfx_text_center(c, FONT_TITLE, 320, 64, title, C_TEXT);
+    int y = 80;
+    if (s->shot) {
+        int x = 320 - s->shot_w / 2;
+        gfx_round_rect(c, x - 5, y - 5, s->shot_w + 10, s->shot_h + 10, 8, C_PANEL, 1.0f);
+        blit(c, s->shot, s->shot_w, s->shot_h, x, y);
+        y += s->shot_h + 16;
+    } else y += 20;
+    char date[40], dur[40], line[200];
+    diary_date(s->last.start, date, sizeof(date));
+    diary_duration(s->last.secs, dur, sizeof(dur));
+    snprintf(line, sizeof(line), tr("Ultima partita: %s, %s."), date, dur);
+    gfx_text_center(c, FONT_SMALL, 320, y + 4, line, C_MUTED);
+    if (s->last.summary[0]) {
+        Wrap w = { 0 };
+        wrap_plain(&w, s->last.summary, 560);
+        int ly = y + 30;
+        for (int i = 0; i < w.n && i < 4; i++) {
+            char tmp[600];
+            int n = w.line[i].len < (int)sizeof(tmp) - 1 ? w.line[i].len : (int)sizeof(tmp) - 1;
+            memcpy(tmp, w.disp.p + w.line[i].start, (size_t)n);
+            tmp[n] = 0;
+            gfx_text_center(c, FONT_BODY, 320, ly, tmp, C_TEXT);
+            ly += 24;
+        }
+        wrap_free(&w);
+    }
+    float left = 8.0f - s->time;
+    gfx_rect(c, 0, 470, (int)(c->w * (left > 0 ? left / 8.0f : 0)), 3, C_VIOLET);
+    gfx_text_center(c, FONT_SMALL, 320, 462, tr("Un tasto qualsiasi per giocare subito"), C_DIM);
+}
+
 void scheda_draw(Scheda *s, Canvas *c)
 {
     gfx_vgradient(c, 0, 0, c->w, c->h, C_BG_TOP, C_BG_BOT);
     /* testo: la scheda salvata, quella in arrivo o niente */
+    if (s->remind) { draw_remind(s, c); return; }
     const char *src = s->text;
     char *live = NULL;
     if (s->busy) { live = reply_text(&s->reply); src = live; }
+    else if (s->text && s->has_diary) { live = diary_header(s, s->text); src = live; }
     int x0 = s->img ? 14 + IMG_W + 18 : 18, avail = 622 - x0;
     if (src && (strlen(src) != s->wrapped_len || s->wrap_w != avail)) {
         wrap_text(&s->wrap, src, avail);
@@ -527,6 +611,7 @@ void scheda_draw(Scheda *s, Canvas *c)
 /* prove */
 void scheda_set_offline(Scheda *s, int offline) { s->offline = offline; }
 int scheda_busy(const Scheda *s) { return s->busy; }
+int scheda_diary_sessions(const Scheda *s) { return s->has_diary ? s->sessions : 0; }
 const char *scheda_text(const Scheda *s) { return s->text ? s->text : ""; }
 const char *scheda_error(const Scheda *s) { return s->error; }
 void scheda_feed(Scheda *s, const char *sse, int finish)

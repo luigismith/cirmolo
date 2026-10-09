@@ -27,6 +27,8 @@ void ia_settings_read(const char *saves_dir, IaSettings *s)
         else if (!strcmp(k, "ia.model")) snprintf(s->model, sizeof(s->model), "%s", v);
         else if (!strcmp(k, "traduzione.lingua")) snprintf(s->lang, sizeof(s->lang), "%s", v);
         else if (!strcmp(k, "traduzione.voce")) s->speak = atoi(v) != 0;
+        else if (!strcmp(k, "diario.ia")) s->diary_ai = atoi(v) != 0;
+        else if (!strcmp(k, "diario.promemoria")) s->remind = atoi(v) != 0;
         else if (!strcmp(k, "tts")) snprintf(s->tts, sizeof(s->tts), "%s", v);
         else if (!strncmp(k, "model.", 6) && nm < 32) { snprintf(models[nm][0], 96, "%s", k + 6); snprintf(models[nm][1], 96, "%s", v); nm++; }
         else if (!strncmp(k, "voice.", 6) && nv < 32) { snprintf(voices[nv][0], 40, "%s", k + 6); snprintf(voices[nv][1], 40, "%s", v); nv++; }

@@ -14,6 +14,7 @@ typedef struct Scheda Scheda;
 
 typedef struct {
     char rom[512], system[64], system_name[96], name[200], image[512];
+    char mode[16];                     /* "promemoria": "dove eri rimasto" prima di giocare */
 } GameInfo;
 
 /* Legge i dati del gioco dal JSON di PyUI; 0 se va bene. */
@@ -38,6 +39,7 @@ int  scheda_wants_quit(const Scheda *s);
 void scheda_set_offline(Scheda *s, int offline);
 void scheda_feed(Scheda *s, const char *sse, int finish);
 int  scheda_busy(const Scheda *s);
+int  scheda_diary_sessions(const Scheda *s);
 const char *scheda_text(const Scheda *s);
 const char *scheda_error(const Scheda *s);
 

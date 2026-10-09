@@ -11,6 +11,8 @@ typedef struct {
     char lang[16];                     /* lingua della traduzione ("" = dell'interfaccia) */
     char tts[32], voice[32];           /* sintesi vocale e voce scelte */
     int speak;                         /* traduzione letta ad alta voce */
+    int diary_ai;                      /* diario: riassunto del modello a fine partita */
+    int remind;                        /* promemoria "dove eri rimasto" all'avvio del gioco */
 } IaSettings;
 
 void ia_settings_read(const char *saves_dir, IaSettings *s);

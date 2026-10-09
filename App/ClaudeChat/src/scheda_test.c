@@ -169,6 +169,57 @@ int main(int argc, char **argv)
     SHOT(s, "scheda-7-inglese");
     scheda_destroy(s);
 
+    /* diario: due partite dello stesso gioco, il riquadro in cima alla scheda e il promemoria */
+    i18n_set(lang, "Italian");
+    snprintf(path, sizeof(path), "%s/diario", saves);
+    MKDIR(path);
+    snprintf(path, sizeof(path), "%s/diario/img", saves);
+    MKDIR(path);
+    snprintf(path, sizeof(path), "%s/diario/diario.jsonl", saves);
+    write_text(path,
+        "{\"rom\":\"/mnt/SDCARD/Roms/SFC/Chrono Trigger (USA).sfc\",\"system\":\"SFC\",\"name\":\"Chrono Trigger (USA)\",\"start\":1760000000,\"secs\":1500,\"img\":\"\",\"summary\":\"\"}\n"
+        "{\"rom\":\"/mnt/SDCARD/Roms/GBA/Altro.gba\",\"system\":\"GBA\",\"name\":\"Altro\",\"start\":1760001000,\"secs\":60,\"img\":\"\",\"summary\":\"\"}\n"
+        "{\"rom\":\"/mnt/SDCARD/Roms/SFC/Chrono Trigger (USA).sfc\",\"system\":\"SFC\",\"name\":\"Chrono Trigger (USA)\",\"start\":1760086400,\"secs\":4200,"
+        "\"img\":\"img/1760086400.png\",\"summary\":\"Eri nella foresta di Guardia con Lucca, appena dopo il salvataggio vicino all'uscita nord.\"}\n");
+    snprintf(path, sizeof(path), "%s/diario/img/1760086400.png", saves);
+    write_text(path, "finta");                   /* l'immagine la "carica" la copertina finta qui sopra */
+    write_text(card, "## In breve\n1995, Square, gioco di ruolo.\n\n## Di cosa parla\nViaggi nel tempo per salvare il futuro.\n");
+    s = scheda_create(48000.0f, saves, &g);
+    scheda_set_offline(s, 1);
+    for (int i = 0; i < 20; i++) scheda_update(s, 0.016f);
+    CHECK(scheda_diary_sessions(s) == 2, "partite nel diario: %d", scheda_diary_sessions(s));
+    {
+        GameInfo low = g;                        /* /mnt/sdcard (standard_launch.sh) = /mnt/SDCARD (PyUI) */
+        memcpy(low.rom, "/mnt/sdcard", 11);
+        Scheda *t = scheda_create(48000.0f, saves, &low);
+        CHECK(scheda_diary_sessions(t) == 2, "percorso in minuscolo: %d partite", scheda_diary_sessions(t));
+        scheda_destroy(t);
+    }
+    SHOT(s, "scheda-8-diario");
+    scheda_destroy(s);
+    GameInfo r = g;
+    snprintf(r.mode, sizeof(r.mode), "promemoria");
+    s = scheda_create(48000.0f, saves, &r);
+    scheda_set_offline(s, 1);
+    for (int i = 0; i < 60; i++) scheda_update(s, 0.016f);
+    CHECK(!scheda_busy(s) && !scheda_wants_quit(s), "promemoria aperto, senza richieste al modello");
+    SHOT(s, "scheda-9-promemoria");
+    for (int i = 0; i < 500; i++) scheda_update(s, 0.016f);
+    CHECK(scheda_wants_quit(s), "il promemoria si chiude da solo");
+    scheda_destroy(s);
+    s = scheda_create(48000.0f, saves, &r);
+    scheda_update(s, 0.016f);
+    scheda_button(s, PAD_START, 1);
+    CHECK(scheda_wants_quit(s), "un tasto chiude il promemoria");
+    scheda_destroy(s);
+    GameInfo nuovo = g;
+    snprintf(nuovo.rom, sizeof(nuovo.rom), "/mnt/SDCARD/Roms/SFC/Mai giocato.sfc");
+    snprintf(nuovo.mode, sizeof(nuovo.mode), "promemoria");
+    s = scheda_create(48000.0f, saves, &nuovo);
+    scheda_update(s, 0.016f);
+    CHECK(scheda_wants_quit(s), "gioco mai giocato: niente promemoria");
+    scheda_destroy(s);
+
     free(px);
     gfx_free_fonts();
     printf("TOTALE: %d controlli, %d errori\n", checks, fails);

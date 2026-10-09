@@ -104,6 +104,11 @@ int  tts_start(Tts *t, const Provider *p, const char *key, const char *model, co
 int  tts_poll(Tts *t, Player *pl, char *err, size_t errn);
 void tts_cancel(Tts *t);
 
+/* Sintesi bloccante (per i servizi in sottofondo): restituisce un WAV mono 16 bit (malloc) o NULL con
+   l'errore in err. Usa un anello temporaneo, quindi va bene per testi brevi (meno di tre minuti). */
+char *tts_wav_blocking(const Provider *p, const char *key, const char *model, const char *voice, const char *text,
+                       size_t *wav_len, char *err, size_t errn);
+
 /* Codice ISO della lingua di PyUI ("Italian" -> "it"); "" se non la conosce. */
 const char *lang_code(const char *language);
 

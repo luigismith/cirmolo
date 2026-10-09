@@ -2,8 +2,8 @@
 """Testi da tradurre delle app native di Cirmolo (C, kit spruce/cirmolo-kit).
 
 I testi nel codice sono in italiano e passano da tr("...") o, se stanno in una tabella, sono segnati con
-N_("..."). Questo script li raccoglie da App/<app>/src/*.c (piu' i file del kit che l'app compila, indicati
-in src/build.sh) e aggiorna App/<app>/lang/<Lingua>.json: conserva le traduzioni che ci sono, aggiunge le
+N_("..."). Questo script li raccoglie da App/<app>/src/*.c (piu' i file delle librerie comuni che l'app
+compila, $KIT/ e $IA/ in src/build.sh) e aggiorna App/<app>/lang/<Lingua>.json: conserva le traduzioni che ci sono, aggiunge le
 chiavi nuove vuote (una traduzione vuota vale "resta in italiano") e toglie quelle non piu' usate.
 
 Uso:
@@ -56,9 +56,9 @@ def sources(app):
     files = [os.path.join(src, f) for f in sorted(os.listdir(src)) if f.endswith('.c') and not f.startswith('main_test')]
     build = os.path.join(src, 'build.sh')
     if os.path.exists(build):
-        kit = os.path.normpath(os.path.join(src, '../../../spruce/cirmolo-kit'))
-        for name in re.findall(r'\$KIT/(\w+\.c)', open(build, encoding='utf-8').read()):
-            p = os.path.join(kit, name)
+        libs = {'KIT': 'cirmolo-kit', 'IA': 'cirmolo-ia'}   # librerie comuni in spruce/
+        for var, name in re.findall(r'\$(KIT|IA)/(\w+\.c)', open(build, encoding='utf-8').read()):
+            p = os.path.normpath(os.path.join(src, '../../../spruce', libs[var], name))
             if p not in files and os.path.exists(p):
                 files.append(p)
     return files

@@ -16,6 +16,29 @@
         "SHADOWED_SMALL": "Testo ombreggiato piccolo",
         "SHADOWED_BACKDROP_SMALL": "Sfondo ombreggiato piccolo"
     },
+    "cacheRecentCheevos": "Memorizza i giochi recenti",
+    "cachedCheevosCount": "Memorizzati: {cached}",
+    "cachingCheevosProgress": "Memorizzazione {current} di {total}...",
+    "checkingCheevosFolder": "Controllo dei giochi...",
+    "cheevosFolderGames": "Fino a {games} giochi da memorizzare.",
+    "cheevosFolderOnline": "Per memorizzarli serve il Wi-Fi.",
+    "cheevosFolderTime": "Avviene in sottofondo, in circa {time}.",
+    "cheevosNoResponse": "Nessuna risposta",
+    "cheevosRecentGames": "{games} giochi giocati di recente.",
+    "cheevosRecentQueue": "I primi 100 si memorizzano subito, gli altri un po' alla volta.",
+    "keepLibraryOffline": "Tieni offline tutta la libreria",
+    "keepLibraryOfflineDesc": "Memorizza ogni gioco, anche quelli aggiunti dopo",
+    "keepSystemOffline": "Tieni offline il sistema",
+    "keepSystemOfflineState": "Tieni offline: {state}",
+    "loadingCheevos": "Caricamento...",
+    "noPendingAwards": "Nessun obiettivo da inviare",
+    "noRecentCheevosGames": "Nessun gioco giocato di recente",
+    "pendingCheevosAwards": "Obiettivi da inviare",
+    "queuedCheevosCount": "In coda: {queued}",
+    "screensaverClockAnalog": "Analogico",
+    "screensaverClockDigital": "Digitale",
+    "screensaverClockStyle": "Stile dell'orologio",
+    "screensaverClockStyleDesc": "Mostra l'ora in cifre o con il quadrante e le lancette",
     "aiGameCard": "Scheda del gioco (IA)",
     "abortingBoxartPatching": "Interruzione ottimizzazione copertine",
     "allBoxartOptimized": "Tutte le copertine sono ottimizzate",
@@ -551,7 +574,9 @@
         "Top bar LED brightness": "Luminosità LED barra superiore",
         "Top bar LED color": "Colore LED barra superiore",
         "Volume buttons": "Tasti volume",
-        "Wait for WiFi at game launch": "Attendi il Wi-Fi all'avvio gioco"
+        "Wait for WiFi at game launch": "Attendi il Wi-Fi all'avvio gioco",
+        "RAOfflineProxy": "RAOfflineProxy",
+        "Web API Key": "Chiave Web API"
     },
     "settingsCategories": {
         "Audio Settings": "Audio",
@@ -620,7 +645,8 @@
         "smb://{ip_addr}/SDCARD (user/pass=spruce/happygaming)": "smb://{ip_addr}/SDCARD (utente/password=spruce/happygaming)",
         "ssh spruce@{ip_addr} (password=happygaming)": "ssh spruce@{ip_addr} (password=happygaming)",
         "use widescreen hacked core when available": "usa il core widescreen se disponibile",
-        "when launching GS from menu": "quando Game Switcher parte dal menu"
+        "when launching GS from menu": "quando Game Switcher parte dal menu",
+        "For the Cheevos app: retroachievements.org > Settings > Keys": "Per l'app Cheevos: retroachievements.org > Settings > Keys"
     },
     "menuOptionValues": {
         "128MB": "128MB",
@@ -744,7 +770,8 @@
         "Diapason": "Diapason",
         "OpenOrc": "OpenOrc",
         "Ask AI": "Chiedi all'IA",
-        "What should I play?": "Cosa gioco?"
+        "What should I play?": "Cosa gioco?",
+        "Cheevos": "Cheevos"
     },
     "appDescriptions": {
         "32-bit RetroArch frontend": "RetroArch a 32 bit",
@@ -773,7 +800,8 @@
         "Tuner, reference tones and metronome": "Accordatore, note di riferimento e metronomo",
         "Chord synthesizer for the Akai MPK mini keyboard": "Sintetizzatore di accordi per la tastiera Akai MPK mini",
         "Chat with Claude and other AI models, also by voice (Wi-Fi and API key needed)": "Chatta con Claude e altri modelli di IA, anche a voce (servono Wi-Fi e chiave API)",
-        "Three questions, and the AI picks games from your collection (Wi-Fi and API key needed)": "Tre domande e l'IA sceglie tra i tuoi giochi (servono Wi-Fi e chiave API)"
+        "Three questions, and the AI picks games from your collection (Wi-Fi and API key needed)": "Tre domande e l'IA sceglie tra i tuoi giochi (servono Wi-Fi e chiave API)",
+        "RetroAchievements hub": "I tuoi obiettivi RetroAchievements"
     },
     "taskLabels": {
         "Bug report": "Segnala un problema",
@@ -1052,7 +1080,8 @@
         "Update file failed verification:\n{filename}\nRun 'Check for Updates' to download it again.": "La verifica del file di aggiornamento non è riuscita:\n{filename}\nUsa 'Cerca aggiornamenti' per scaricarlo di nuovo.",
         "Updater error! Check updater.log": "Errore dell'aggiornamento! Controlla updater.log",
         "Verifying update {index} of {value}...": "Verifica dell'aggiornamento {index} di {value} in corso...",
-        "{count} / {total} files": "File: {count} / {total}"
+        "{count} / {total} files": "File: {count} / {total}",
+        "Battery has {current_battery_percent}% left. Charge or shutdown your device.": "Batteria al {current_battery_percent}%. Metti in carica o spegni la console."
     },
     "governorOptions": {
         "Smart": "Intelligente",

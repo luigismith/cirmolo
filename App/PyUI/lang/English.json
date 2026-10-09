@@ -16,6 +16,29 @@
         "SHADOWED_SMALL": "Shadowed Small Size",
         "SHADOWED_BACKDROP_SMALL": "Shadowed Backdrop Small Size"
     },
+    "cacheRecentCheevos": "Cache recently played games",
+    "cachedCheevosCount": "Cached {cached}",
+    "cachingCheevosProgress": "Caching {current} of {total}...",
+    "checkingCheevosFolder": "Checking games...",
+    "cheevosFolderGames": "Up to {games} games to cache.",
+    "cheevosFolderOnline": "Caching needs WiFi.",
+    "cheevosFolderTime": "This happens in the background over about {time}.",
+    "cheevosNoResponse": "No response",
+    "cheevosRecentGames": "{games} recently played games.",
+    "cheevosRecentQueue": "The first 100 are cached now, the rest over time.",
+    "keepLibraryOffline": "Keep library offline",
+    "keepLibraryOfflineDesc": "Cache every game, including ones added later",
+    "keepSystemOffline": "Keep system offline",
+    "keepSystemOfflineState": "Keep offline: {state}",
+    "loadingCheevos": "Loading...",
+    "noPendingAwards": "No pending awards",
+    "noRecentCheevosGames": "No recently played games found",
+    "pendingCheevosAwards": "Pending Awards",
+    "queuedCheevosCount": "{queued} queued",
+    "screensaverClockAnalog": "Analog",
+    "screensaverClockDigital": "Digital",
+    "screensaverClockStyle": "Clock style",
+    "screensaverClockStyleDesc": "Show the time as digits or as a clock face with hands",
     "aiGameCard": "Game card (AI)",
     "abortingBoxartPatching": "Aborting boxart patching",
     "allBoxartOptimized": "All boxart is optimized",
@@ -551,7 +574,9 @@
         "Top bar LED brightness": "Top bar LED brightness",
         "Top bar LED color": "Top bar LED color",
         "Volume buttons": "Volume buttons",
-        "Wait for WiFi at game launch": "Wait for WiFi at game launch"
+        "Wait for WiFi at game launch": "Wait for WiFi at game launch",
+        "RAOfflineProxy": "RAOfflineProxy",
+        "Web API Key": "Web API Key"
     },
     "settingsCategories": {
         "Audio Settings": "Audio Settings",
@@ -620,7 +645,8 @@
         "smb://{ip_addr}/SDCARD (user/pass=spruce/happygaming)": "smb://{ip_addr}/SDCARD (user/pass=spruce/happygaming)",
         "ssh spruce@{ip_addr} (password=happygaming)": "ssh spruce@{ip_addr} (password=happygaming)",
         "use widescreen hacked core when available": "use widescreen hacked core when available",
-        "when launching GS from menu": "when launching GS from menu"
+        "when launching GS from menu": "when launching GS from menu",
+        "For the Cheevos app: retroachievements.org > Settings > Keys": "For the Cheevos app: retroachievements.org > Settings > Keys"
     },
     "menuOptionValues": {
         "128MB": "128MB",
@@ -744,7 +770,8 @@
         "Diapason": "Diapason",
         "OpenOrc": "OpenOrc",
         "Ask AI": "Ask AI",
-        "What should I play?": "What should I play?"
+        "What should I play?": "What should I play?",
+        "Cheevos": "Cheevos"
     },
     "appDescriptions": {
         "32-bit RetroArch frontend": "32-bit RetroArch frontend",
@@ -773,7 +800,8 @@
         "Tuner, reference tones and metronome": "Tuner, reference tones and metronome",
         "Chord synthesizer for the Akai MPK mini keyboard": "Chord synthesizer for the Akai MPK mini keyboard",
         "Chat with Claude and other AI models, also by voice (Wi-Fi and API key needed)": "Chat with Claude and other AI models, also by voice (Wi-Fi and API key needed)",
-        "Three questions, and the AI picks games from your collection (Wi-Fi and API key needed)": "Three questions, and the AI picks games from your collection (Wi-Fi and API key needed)"
+        "Three questions, and the AI picks games from your collection (Wi-Fi and API key needed)": "Three questions, and the AI picks games from your collection (Wi-Fi and API key needed)",
+        "RetroAchievements hub": "RetroAchievements hub"
     },
     "taskLabels": {
         "Bug report": "Bug report",
@@ -1052,7 +1080,8 @@
         "Update file failed verification:\n{filename}\nRun 'Check for Updates' to download it again.": "Update file failed verification:\n{filename}\nRun 'Check for Updates' to download it again.",
         "Updater error! Check updater.log": "Updater error! Check updater.log",
         "Verifying update {index} of {value}...": "Verifying update {index} of {value}...",
-        "{count} / {total} files": "{count} / {total} files"
+        "{count} / {total} files": "{count} / {total} files",
+        "Battery has {current_battery_percent}% left. Charge or shutdown your device.": "Battery has {current_battery_percent}% left. Charge or shutdown your device."
     },
     "governorOptions": {
         "Smart": "Smart",

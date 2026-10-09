@@ -37,6 +37,9 @@ void collection_clean_title(const char *name, char *out, size_t n);
 char *collection_catalog(const Collection *c);
 /* Gioco per sistema e titolo come li ha scritti il modello (anche approssimati); -1 se non c'e'. */
 int collection_find(const Collection *c, const char *system, const char *title);
+/* Ricerca per parole (tutte devono esserci nel titolo, anche a pezzi), facoltativamente in un sistema:
+   indici dei giochi in out, al massimo max; restituisce quanti. */
+int collection_search(const Collection *c, const char *text, const char *system, int *out, int max);
 /* Comando per avviare il gioco come fa PyUI (malloc). */
 char *collection_launch_cmd(const Collection *c, int game);
 

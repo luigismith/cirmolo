@@ -282,6 +282,29 @@ int collection_find(const Collection *c, const char *system, const char *title)
     return best;
 }
 
+int collection_search(const Collection *c, const char *text, const char *system, int *out, int max)
+{
+    char words[8][64];
+    int nw = 0;
+    char tmp[200];
+    snprintf(tmp, sizeof(tmp), "%s", text ? text : "");
+    for (char *w = strtok(tmp, " -:,.'"); w && nw < 8; w = strtok(NULL, " -:,.'")) {
+        squash(w, words[nw], sizeof(words[nw]));
+        if (words[nw][0]) nw++;
+    }
+    if (!nw) return 0;
+    int n = 0;
+    char have[200];
+    for (int i = 0; i < c->n && n < max; i++) {
+        if (system && *system && strcasecmp(c->sys[c->g[i].sys].id, system)) continue;
+        squash(c->g[i].title, have, sizeof(have));
+        int ok = 1;
+        for (int k = 0; k < nw && ok; k++) if (!strstr(have, words[k])) ok = 0;
+        if (ok) out[n++] = i;
+    }
+    return n;
+}
+
 char *collection_launch_cmd(const Collection *c, int game)
 {
     Buf b = { 0 };

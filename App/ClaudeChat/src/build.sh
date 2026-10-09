@@ -17,7 +17,7 @@ IA=../../../spruce/cirmolo-ia
 CFLAGS="-O2 -std=gnu11 -Wall -Wextra -Wno-unused-parameter -Wno-missing-field-initializers -Wno-unused-function -I. -I$KIT -I$IA"
 AI="$IA/conv.c $IA/claude.c $IA/openai.c $IA/providers.c $IA/voice.c $IA/net.c $IA/json.c $KIT/i18n.c"
 ARM="-s -target aarch64-linux-gnu.2.27 -mcpu=cortex_a55"
-SRC="chat_app.c $IA/mdtext.c $AI $KIT/gfx.c"
+SRC="chat_app.c strumenti.c $IA/mdtext.c $IA/collezione.c $IA/diario.c $AI $KIT/gfx.c"
 TRAD="traduttore.c $IA/iaconf.c $IA/ask.c $IA/png.c $AI $KIT/gfx.c"
 SCHEDA="scheda_app.c $IA/iaconf.c $IA/ask.c $IA/mdtext.c $IA/diario.c $AI $KIT/gfx.c"
 DIARIO="diario_main.c $IA/diario.c $IA/iaconf.c $IA/ask.c $AI"

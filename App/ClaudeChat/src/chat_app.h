@@ -40,5 +40,7 @@ void chat_set_voice(ChatApp *a, const char *stt, const char *tts);
 char *chat_speech_text(ChatApp *a);                 /* testo in attesa di essere letto (malloc) o NULL */
 void chat_open_settings(ChatApp *a, int tab, int sel);
 void chat_open_picker(ChatApp *a);
+void chat_set_paths(ChatApp *a, const char *root, const char *play_cmd);
+int  chat_wants_launch(const ChatApp *a);
 
 #endif

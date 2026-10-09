@@ -60,6 +60,10 @@ static void handle(Reply *r, const JNode *ev, const char *src)
             b->type = BLK_REDACTED;
             buf_adds(&b->a, json_str(cb, "data") ? json_str(cb, "data") : "");
             r->state = RS_THINKING;
+        } else if (!strcmp(bt, "tool_use")) {
+            b->type = BLK_TOOL;                   /* gli argomenti arrivano a pezzi (input_json_delta) */
+            buf_adds(&b->b, json_str(cb, "id") ? json_str(cb, "id") : "");
+            snprintf(b->name, sizeof(b->name), "%s", json_str(cb, "name") ? json_str(cb, "name") : "");
         } else if (!strcmp(bt, "fallback")) {
             b->type = BLK_FALLBACK;
             const char *from = json_path_str(cb, "from", "model"), *to = json_path_str(cb, "to", "model");
@@ -77,6 +81,7 @@ static void handle(Reply *r, const JNode *ev, const char *src)
         if (!strcmp(dt, "text_delta") && b->type == BLK_TEXT) { buf_adds(&b->a, json_str(d, "text") ? json_str(d, "text") : ""); r->state = RS_WRITING; }
         else if (!strcmp(dt, "thinking_delta") && b->type == BLK_THINKING) buf_adds(&b->a, json_str(d, "thinking") ? json_str(d, "thinking") : "");
         else if (!strcmp(dt, "signature_delta") && b->type == BLK_THINKING) buf_adds(&b->b, json_str(d, "signature") ? json_str(d, "signature") : "");
+        else if (!strcmp(dt, "input_json_delta") && b->type == BLK_TOOL) buf_adds(&b->a, json_str(d, "partial_json") ? json_str(d, "partial_json") : "");
     } else if (!strcmp(type, "content_block_stop")) {
         r->cur = -1;
     } else if (!strcmp(type, "message_delta")) {
@@ -152,6 +157,16 @@ char *anthropic_message_json(const Reply *r)
             buf_adds(&b, "{\"type\":\"redacted_thinking\",\"data\":");
             json_escape_n(&b, k->a.p ? k->a.p : "", k->a.len);
             buf_adds(&b, "}");
+            break;
+        case BLK_TOOL:
+            buf_adds(&b, "{\"type\":\"tool_use\",\"id\":");
+            json_escape_n(&b, k->b.p ? k->b.p : "", k->b.len);
+            buf_adds(&b, ",\"name\":");
+            json_escape(&b, k->name);
+            buf_adds(&b, ",\"input\":");
+            buf_adds(&b, k->a.len ? k->a.p : "{}");
+            buf_adds(&b, "}");
+            any_text = 1;                         /* un messaggio con soli strumenti va rimandato lo stesso */
             break;
         default:
             buf_add(&b, k->a.p, k->a.len);

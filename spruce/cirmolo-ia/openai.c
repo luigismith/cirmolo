@@ -80,6 +80,24 @@ void openai_line(Reply *r, const char *data, size_t n)
             int open = b && strstr(b->a.p, "<think>") && !strstr(b->a.p, "</think>");
             r->state = open ? RS_THINKING : RS_WRITING;
         }
+        /* strumenti: tool_calls[] con index, id e nome nel primo pezzo, argomenti a pezzi */
+        const JNode *tc = json_get(d, "tool_calls");
+        for (const JNode *t = tc && tc->type == J_ARRAY ? tc->child : NULL; t; t = t->next) {
+            int idx = (int)json_num(t, "index", 0);
+            if (idx < 0 || idx >= 16) continue;
+            Block *b = r->tool_blk[idx] ? &r->blk[r->tool_blk[idx] - 1] : NULL;
+            if (!b) {
+                b = reply_new_block(r, BLK_TOOL);
+                if (!b) continue;
+                r->tool_blk[idx] = r->cur + 1;
+            }
+            const char *id = json_str(t, "id"), *name = json_path_str(t, "function", "name");
+            const char *args = json_path_str(t, "function", "arguments");
+            if (id && !b->b.len) buf_adds(&b->b, id);
+            if (name && !b->name[0]) snprintf(b->name, sizeof(b->name), "%s", name);
+            if (args) buf_adds(&b->a, args);
+            r->state = RS_WRITING;
+        }
         const char *fr = json_str(c0, "finish_reason");
         if (fr) {
             snprintf(r->stop_reason, sizeof(r->stop_reason), "%s", fr);

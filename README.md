@@ -4,6 +4,8 @@
 
 # Cirmolo
 
+**AI & Music OS for handhelds**
+
 *English · [Italiano](README.it.md)*
 
 **Cirmolo** is a fork of [spruceOS](https://github.com/spruceUI/spruceOS) built for the **Miyoo Flip**.

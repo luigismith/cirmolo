@@ -1,0 +1,7 @@
+{
+  "label": "Picoloop",
+  "icon": "picoloop.png",
+  "launch": "launch.sh",
+  "description": "Synth and step sequencer, 10 sound engines",
+  "devices": ["MIYOO_FLIP"]
+}

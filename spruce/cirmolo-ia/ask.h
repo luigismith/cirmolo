@@ -18,6 +18,7 @@ typedef struct {
     const char *image_mime;            /* "image/png" (predefinito), "image/jpeg"... */
     int max_tokens;                    /* 0 = 4096 */
     const char *effort;                /* solo Claude: "low", "medium", "high" (NULL = predefinito) */
+    int cache;                         /* solo Claude: cache automatica (istruzioni lunghe e sempre uguali) */
 } AskSpec;
 
 /* Corpo JSON della richiesta (stream) e URL; restituisce il corpo (malloc). */

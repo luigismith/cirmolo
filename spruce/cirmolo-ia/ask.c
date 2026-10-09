@@ -19,6 +19,7 @@ char *ask_request(const Provider *p, const Model *m, const AskSpec *q, char *url
         snprintf(url, urln, "%s/messages", p->base);
         buf_printf(&b, ",\"max_tokens\":%d,\"stream\":true,", max);
         if (q->effort && (m->flags & MF_EFFORT)) buf_printf(&b, "\"output_config\":{\"effort\":\"%s\"},", q->effort);
+        if (q->cache) buf_adds(&b, "\"cache_control\":{\"type\":\"ephemeral\"},");
         if (q->system) { buf_adds(&b, "\"system\":"); json_escape(&b, q->system); buf_adds(&b, ","); }
         buf_adds(&b, "\"messages\":[{\"role\":\"user\",\"content\":[");
         if (q->image_b64) {

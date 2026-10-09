@@ -21,6 +21,9 @@ void diary_name_from_rom(const char *rom, char *out, size_t n);
 void diary_duration(long secs, char *out, size_t n);
 /* "09/10, 21:30" */
 void diary_date(long epoch, char *out, size_t n);
+/* Partite recenti per i consigli (malloc), una riga per gioco dalla piu' recente, al massimo max:
+   "SFC | Chrono Trigger (USA) | 3 partite, 4 h 10 min, ultima il 09/10 | dove eri rimasto". NULL se vuoto. */
+char *diary_digest(const char *saves_dir, int max);
 /* Istruzioni per il riassunto dell'ultima schermata (malloc), nella lingua indicata. */
 char *diary_summary_prompt(const char *language, const DiaryEntry *e);
 

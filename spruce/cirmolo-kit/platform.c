@@ -590,7 +590,7 @@ int main(int argc, char **argv)
 #endif
         /* vince la sorgente che si sta muovendo di piu' */
         Axes use = (fabsf(pad.lx) + fabsf(pad.ly) + fabsf(pad.rx) + fabsf(pad.ry) > fabsf(ax.lx) + fabsf(ax.ly) + fabsf(ax.rx) + fabsf(ax.ry)) ? pad : ax;
-        g_desc->axes(app, use.lx, use.ly, use.rx, use.ry, fmaxf(ax.l2, pad.l2), fmaxf(ax.r2, pad.r2));
+        if (g_desc->axes) g_desc->axes(app, use.lx, use.ly, use.rx, use.ry, fmaxf(ax.l2, pad.l2), fmaxf(ax.r2, pad.r2));
 
         uint32_t now = p_SDL_GetTicks();
         if (g_desc->wants_capture && !cap && now >= cap_retry) {

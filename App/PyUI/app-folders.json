@@ -33,6 +33,7 @@
         "-OTA": "system",
         "-FirmwareUpdate-": "system",
         "-Updater": "system",
+        "CosaGioco": "games",
         "ClaudeChat": "other"
     },
     "pyui": {

@@ -1,0 +1,7 @@
+{
+  "label": "What should I play?",
+  "icon": "cosagioco.png",
+  "launch": "launch.sh",
+  "description": "Three questions, and the AI picks games from your collection (Wi-Fi and API key needed)",
+  "devices": ["MIYOO_FLIP"]
+}

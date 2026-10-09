@@ -10,6 +10,7 @@
 . "/mnt/SDCARD/spruce/scripts/platform/device_functions/utils/cpu_control_functions.sh"
 . "/mnt/SDCARD/spruce/scripts/platform/device_functions/utils/legacy_display.sh"
 . "/mnt/SDCARD/spruce/scripts/platform/device_functions/utils/watchdog_launcher.sh"
+. "/mnt/SDCARD/spruce/scripts/platform/device_functions/utils/rk817_pmic.sh"
 . "/mnt/SDCARD/spruce/scripts/retroarch_utils.sh"
 . "/mnt/SDCARD/spruce/scripts/platform/device_functions/utils/flip_a30_brightness.sh"
 . "/mnt/SDCARD/spruce/scripts/platform/device_functions/utils/sleep_functions.sh"
@@ -415,6 +416,7 @@ device_init() {
     export LD_LIBRARY_PATH=/usr/miyoo/lib:/usr/lib:/lib
 
     init_gpio_Flip
+    clear_stale_pmic_power_en &
 
     insmod /lib/modules/rtk_btusb.ko
     /mnt/SDCARD/spruce/scripts/bluetooth.sh boot &
@@ -440,7 +442,7 @@ device_init() {
 }
 
 set_event_arg_for_idlemon() {
-    EVENT_ARG="-e /dev/input/event5"
+    EVENT_ARG="-e $EVENT_PATH_READ_INPUTS_SPRUCE"
 }
 
 set_default_ra_hotkeys() {
@@ -623,4 +625,12 @@ device_bluetoothd_stop() {
 # the card by cwd/exe, so the fd-only sweep left every umount to the lazy path.
 device_needs_strict_unmount() {
     return 0
+}
+
+work_led_off() {
+    echo 0 >${LED_PATH}/brightness
+}
+
+work_led_on() {
+    echo 1 >${LED_PATH}/brightness
 }

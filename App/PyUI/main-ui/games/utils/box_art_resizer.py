@@ -10,6 +10,7 @@ from devices.device import Device
 from display.display import Display
 from menus.language.language import Language
 from utils.cached_exists import CachedExists
+from utils.idle_shutdown import pauses_idle_shutdown
 from utils.logger import PyUiLogger
 
 
@@ -174,6 +175,7 @@ class BoxArtResizer():
         Display.display_message(Language.label("allBoxartOptimized", "All boxart is optimized"), 2000)
 
     @classmethod
+    @pauses_idle_shutdown
     def process_rom_folders(cls):
         """Search through ROM directories and scale images inside Imgs folders."""
         Display.display_message(Language.label("startingBoxartPatching", "Starting boxart patching"), 500)

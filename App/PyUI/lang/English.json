@@ -771,7 +771,8 @@
         "OpenOrc": "OpenOrc",
         "Ask AI": "Ask AI",
         "What should I play?": "What should I play?",
-        "Cheevos": "Cheevos"
+        "Cheevos": "Cheevos",
+        "LittleGPTracker": "LittleGPTracker"
     },
     "appDescriptions": {
         "32-bit RetroArch frontend": "32-bit RetroArch frontend",
@@ -801,7 +802,8 @@
         "Chord synthesizer for the Akai MPK mini keyboard": "Chord synthesizer for the Akai MPK mini keyboard",
         "Chat with Claude and other AI models, also by voice (Wi-Fi and API key needed)": "Chat with Claude and other AI models, also by voice (Wi-Fi and API key needed)",
         "Three questions, and the AI picks games from your collection (Wi-Fi and API key needed)": "Three questions, and the AI picks games from your collection (Wi-Fi and API key needed)",
-        "RetroAchievements hub": "RetroAchievements hub"
+        "RetroAchievements hub": "RetroAchievements hub",
+        "Sample tracker for gamepads, LSDj style": "Sample tracker for gamepads, LSDj style"
     },
     "taskLabels": {
         "Bug report": "Bug report",

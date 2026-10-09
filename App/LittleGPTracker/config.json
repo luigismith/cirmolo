@@ -1,0 +1,7 @@
+{
+  "label": "LittleGPTracker",
+  "icon": "lgpt.png",
+  "launch": "launch.sh",
+  "description": "Sample tracker for gamepads, LSDj style",
+  "devices": ["MIYOO_FLIP"]
+}

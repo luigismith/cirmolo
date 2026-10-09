@@ -1,5 +1,6 @@
 {
     "language": "Italian",
+    "use24HourClock": true,
     "theme": "Cirmolo",
     "themeDir": "/mnt/SDCARD/Themes/",
     "turboDelayMs": 250,

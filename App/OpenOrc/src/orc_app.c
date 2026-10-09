@@ -18,10 +18,18 @@
  */
 #include "orc_app.h"
 
+#include <dirent.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
+#ifdef _WIN32
+#include <direct.h>
+#define make_dir(p) _mkdir(p)
+#else
+#define make_dir(p) mkdir(p, 0755)
+#endif
 
 #include "chords.h"
 #include "midi.h"
@@ -217,6 +225,8 @@ struct OrcApp {
     float last_tap;
     uint32_t drawn_key;
     float drawn_time;
+    float scope[1200];
+    int kbd_next;                                 /* prossimo preset della tastiera (Y nella pagina MIDI) */
 };
 
 static void toast(OrcApp *a, const char *msg)
@@ -802,6 +812,188 @@ void orcapp_midi_status(OrcApp *a, const char *device)
     }
 }
 
+/* ------------------------------------------------------------------ preset della tastiera */
+/* File di testo leggibili, una riga per controllo con i nomi della pagina MIDI:
+ *   nome = Akai MPK mini IV
+ *   manopole = Assolute
+ *   Maj = nota 42 canale 10 porta 1
+ *   K1 Voicing = cc 70 porta 1
+ *   Play/Stop = -
+ * Si cercano in Saves/openorc/tastiere (quelli dell'utente, che vincono a parita' di nome) e nella
+ * cartella tastiere dell'app; Y nella pagina MIDI li carica uno dopo l'altro. */
+#define KBD_MAX 32
+typedef struct { char name[64]; char path[600]; } KbdFile;
+
+static int lower(int ch) { return ch >= 'A' && ch <= 'Z' ? ch + 32 : ch; }
+
+static int ieq(const char *x, const char *y)
+{
+    while (*x && lower((unsigned char)*x) == lower((unsigned char)*y)) { x++; y++; }
+    return !*x && !*y;
+}
+
+static int icmp(const void *p, const void *q)
+{
+    const char *x = ((const KbdFile *)p)->name, *y = ((const KbdFile *)q)->name;
+    while (*x && lower((unsigned char)*x) == lower((unsigned char)*y)) { x++; y++; }
+    return lower((unsigned char)*x) - lower((unsigned char)*y);
+}
+
+static char *trim(char *s)
+{
+    while (*s == ' ' || *s == '\t') s++;
+    char *e = s + strlen(s);
+    while (e > s && (e[-1] == ' ' || e[-1] == '\t' || e[-1] == '\r' || e[-1] == '\n')) *--e = 0;
+    return s;
+}
+
+static int parse_map(const char *v, MidiMap *out)
+{
+    MidiMap m = { MAP_NONE, -1, -1, 0 };
+    char w[16];
+    int num, used = 0;
+    if (!*v || !strcmp(v, "-")) { *out = m; return 1; }
+    if (sscanf(v, "%15s %d%n", w, &num, &used) != 2 || num < 0 || num > 127) return 0;
+    if (ieq(w, "nota") || ieq(w, "note")) m.kind = MAP_NOTE;
+    else if (ieq(w, "cc")) m.kind = MAP_CC;
+    else return 0;
+    m.num = num;
+    v += used;
+    while (sscanf(v, "%15s %d%n", w, &num, &used) == 2) {
+        if ((ieq(w, "canale") || ieq(w, "channel")) && num >= 1 && num <= 16) m.ch = num - 1;
+        else if ((ieq(w, "porta") || ieq(w, "port")) && num >= 1 && num <= 8) m.port = num - 1;
+        else return 0;
+        v += used;
+    }
+    *out = m;
+    return 1;
+}
+
+static int user_kbd_dir(const OrcApp *a, char *out, size_t n)
+{
+    const char *slash = strrchr(a->path, '/');
+    if (!slash) return 0;
+    snprintf(out, n, "%.*s/tastiere", (int)(slash - a->path), a->path);
+    return 1;
+}
+
+static int kbd_list(const OrcApp *a, KbdFile *out)
+{
+    char dirs[2][512];
+    int nd = 0, n = 0;
+    if (user_kbd_dir(a, dirs[nd], sizeof(dirs[nd]))) nd++;
+    snprintf(dirs[nd++], sizeof(dirs[0]), "tastiere");
+    for (int d = 0; d < nd; d++) {
+        DIR *dp = opendir(dirs[d]);
+        if (!dp) continue;
+        struct dirent *e;
+        while ((e = readdir(dp)) && n < KBD_MAX) {
+            size_t l = strlen(e->d_name);
+            if (l < 5 || l >= sizeof(out[0].name) || !ieq(e->d_name + l - 4, ".txt")) continue;
+            int dup = 0;
+            for (int i = 0; i < n; i++) dup |= ieq(out[i].name, e->d_name);
+            if (dup) continue;
+            snprintf(out[n].name, sizeof(out[n].name), "%s", e->d_name);
+            snprintf(out[n].path, sizeof(out[n].path), "%s/%s", dirs[d], e->d_name);
+            n++;
+        }
+        closedir(dp);
+    }
+    qsort(out, (size_t)n, sizeof(KbdFile), icmp);
+    return n;
+}
+
+int orcapp_load_keyboard(OrcApp *a, const char *path, char *name, size_t name_n)
+{
+    FILE *f = fopen(path, "r");
+    if (!f) return -1;
+    MidiMap m[T_COUNT];
+    for (int t = 0; t < T_COUNT; t++) m[t] = (MidiMap){ MAP_NONE, -1, -1, 0 };
+    int mode = a->set.knob_mode, found = 0;
+    char line[256], nm[64] = "";
+    while (fgets(line, sizeof(line), f)) {
+        char *s = line;
+        if (!strncmp(s, "\xEF\xBB\xBF", 3)) s += 3;           /* file salvati con il Blocco note */
+        s = trim(s);
+        char *eq = strchr(s, '=');
+        if (!*s || *s == '#' || !eq) continue;
+        *eq = 0;
+        char *k = trim(s), *v = trim(eq + 1);
+        if (ieq(k, "nome")) snprintf(nm, sizeof(nm), "%s", v);
+        else if (ieq(k, "manopole")) { for (int i = 0; i < 3; i++) if (ieq(v, KNOB_MODE_NAMES[i])) mode = i; }
+        else {
+            int t = 0;                            /* prima il nome esatto: m7 e M7 sono diversi */
+            while (t < T_COUNT && strcmp(k, TARGET_NAMES[t])) t++;
+            if (t == T_COUNT) for (t = 0; t < T_COUNT && !ieq(k, TARGET_NAMES[t]); t++) {}
+            if (t < T_COUNT) found += parse_map(v, &m[t]);
+        }
+    }
+    fclose(f);
+    if (!found) return -1;
+    memcpy(a->set.map, m, sizeof(m));
+    a->set.knob_mode = mode;
+    a->learn = -1;
+    a->dirty = 1;
+    if (name) {
+        if (!nm[0]) {
+            const char *b = strrchr(path, '/');
+            snprintf(nm, sizeof(nm), "%s", b ? b + 1 : path);
+            char *dot = strrchr(nm, '.');
+            if (dot) *dot = 0;
+        }
+        snprintf(name, name_n, "%s", nm);
+    }
+    return 0;
+}
+
+int orcapp_save_keyboard(OrcApp *a, const char *path, const char *name)
+{
+    FILE *f = fopen(path, "w");
+    if (!f) return -1;
+    fprintf(f, "# OpenOrc - preset della tastiera MIDI (Y nella pagina MIDI lo carica)\n"
+               "# Ogni riga: controllo = nota N | cc N, poi canale 1-16 e porta 1-8 se servono; - = nessuno\n"
+               "nome = %s\nmanopole = %s\n", name, KNOB_MODE_NAMES[a->set.knob_mode]);
+    for (int t = 0; t < T_COUNT; t++) {
+        const MidiMap *m = &a->set.map[t];
+        fprintf(f, "%s = ", TARGET_NAMES[t]);
+        if (m->kind == MAP_NONE) { fprintf(f, "-\n"); continue; }
+        fprintf(f, "%s %d", m->kind == MAP_NOTE ? "nota" : "cc", m->num);
+        if (m->ch >= 0) fprintf(f, " canale %d", m->ch + 1);
+        if (m->port >= 0) fprintf(f, " porta %d", m->port + 1);
+        fprintf(f, "\n");
+    }
+    return fclose(f) ? -1 : 0;
+}
+
+static void kbd_next(OrcApp *a)
+{
+    static KbdFile files[KBD_MAX];
+    int n = kbd_list(a, files);
+    char name[64], t[112];
+    a->learn = -1;
+    for (int tries = 0; tries < n; tries++) {
+        const KbdFile *k = &files[a->kbd_next++ % n];
+        if (orcapp_load_keyboard(a, k->path, name, sizeof(name))) continue;
+        if (n > 1) snprintf(t, sizeof(t), "Tastiera: %s (Y: la prossima)", name);
+        else snprintf(t, sizeof(t), "Tastiera: %s", name);
+        toast(a, t);
+        return;
+    }
+    default_map(a->set.map);
+    a->dirty = 1;
+    toast(a, "Pad e manopole come nella MPK mini IV");
+}
+
+static void kbd_save(OrcApp *a)
+{
+    char dir[512], path[600];
+    if (!user_kbd_dir(a, dir, sizeof(dir))) return;
+    make_dir(dir);
+    snprintf(path, sizeof(path), "%s/mia-tastiera.txt", dir);
+    if (orcapp_save_keyboard(a, path, "La mia tastiera")) toast(a, "Non riesco a salvare il preset");
+    else toast(a, "Salvato in Saves/openorc/tastiere/mia-tastiera.txt");
+}
+
 /* ------------------------------------------------------------------ salvataggio */
 static void settings_default(Settings *s)
 {
@@ -1256,12 +1448,8 @@ static void press(OrcApp *a, int b)
         case PAD_X:
             if (r->kind == ROW_TARGET) { a->set.map[r->first].kind = MAP_NONE; a->dirty = 1; toast(a, "Assegnazione tolta"); }
             break;
-        case PAD_Y:
-            default_map(a->set.map);
-            a->learn = -1;
-            a->dirty = 1;
-            toast(a, "Pad e manopole come nella MPK mini IV");
-            break;
+        case PAD_Y: kbd_next(a); break;
+        case PAD_R2: kbd_save(a); break;
         }
         break;
     }
@@ -1336,6 +1524,8 @@ static uint32_t fnv(uint32_t h, const void *p, size_t n)
     return h;
 }
 
+static float scope_peak(OrcApp *a, int n);
+
 /* Si ridisegna quando qualcosa si muove (luce dell'accordo, messaggi, trasporto, apprendimento) o quando
    cambia lo stato mostrato; comunque una volta al secondo. */
 int orcapp_needs_draw(OrcApp *a)
@@ -1343,6 +1533,7 @@ int orcapp_needs_draw(OrcApp *a)
     if (a->glow > 0.0f || a->toast_t > 0.0f || a->flash_t > 0.0f || a->midi_flash > 0.0f || a->learn >= 0 ||
         a->quit_dialog || orc_transport_on(a->orc))
         return 1;
+    if (a->page == PAGE_PLAY && scope_peak(a, 256) > 0.002f) return 1;      /* l'oscilloscopio si muove */
     OrcLoopInfo li;
     orc_loop_info(a->orc, &li);
     int ln[ORC_MAX_CHORD], tag = 0, lnn = orc_layer_notes(a->orc, ORC_LOOP, ln, &tag);
@@ -1434,38 +1625,66 @@ static void loop_state_text(const OrcLoopInfo *li, char *out, size_t n)
     }
 }
 
-/* Tastiera da Do2 a Do6 con le note accese: accordo, basso, melodia e accordo del loop. */
-static void draw_keyboard(OrcApp *a, Canvas *c, int y, int h)
+static int melody_on(const OrcApp *a)
 {
-    enum { LO = 36, HI = 84 };
-    unsigned char lit[128] = { 0 };
-    int ln[ORC_MAX_CHORD], ltag = 0, lnn = orc_layer_notes(a->orc, ORC_LOOP, ln, &ltag);
-    for (int i = 0; i < lnn; i++) if (ln[i] >= 0 && ln[i] < 128) lit[ln[i]] = 4;
-    if (a->chord_live) {
-        for (int i = 0; i < a->notes_n; i++) lit[a->notes[i]] = 1;
-        if (a->set.snd.bass_level > 0.005f) lit[a->bass] = 2;
-    }
-    for (int n = 0; n < 128; n++) if (a->melody_down[n] || a->melody_pedal[n]) lit[n] = 3;
-    static const int white_of[12] = { 0, -1, 1, -1, 2, 3, -1, 4, -1, 5, -1, 6 };
-    const int kw = 20, whites = 29, x0 = (c->w - whites * kw) / 2;
-    uint32_t col_w[5] = { C_KEY_W, C_GOLD, C_TEAL, C_VIOLET, gfx_mix(C_KEY_W, C_GOLD, 0.45f) };
-    uint32_t col_b[5] = { C_KEY_B, gfx_mix(C_GOLD, C_KEY_B, 0.2f), gfx_mix(C_TEAL, C_KEY_B, 0.2f), gfx_mix(C_VIOLET, C_KEY_B, 0.2f), gfx_mix(C_GOLD, C_KEY_B, 0.6f) };
-    for (int n = LO; n <= HI; n++) {
-        int w = white_of[n % 12];
-        if (w < 0) continue;
-        int idx = (n / 12 - LO / 12) * 7 + w, x = x0 + idx * kw;
-        gfx_rect(c, x + 1, y, kw - 2, h, col_w[lit[n]]);
-        if (n % 12 == 0 && n > LO) {
-            char t[8];
-            note_label(t, sizeof(t), n);
-            gfx_text_center(c, FONT_SMALL, x + kw / 2, y + h - 7, t, lit[n] ? C_BAR : C_DIM);
+    for (int n = 0; n < 128; n++) if (a->melody_down[n] || a->melody_pedal[n]) return 1;
+    return 0;
+}
+
+/* Picco delle ultime n uscite del motore: dice se c'e' ancora suono da mostrare. */
+static float scope_peak(OrcApp *a, int n)
+{
+    orc_scope(a->orc, a->scope, n);
+    float peak = 0.0f;
+    for (int i = 0; i < n; i++) peak = fmaxf(peak, fabsf(a->scope[i]));
+    return peak;
+}
+
+/* Oscilloscopio dell'uscita, agganciato al passaggio per lo zero in salita. Il colore dice chi suona:
+   oro l'accordo dal vivo, viola la melodia, verde acqua il loop. In alto le note dell'accordo con
+   l'ottava, cioe' il voicing scelto da K1. */
+static void draw_scope(OrcApp *a, Canvas *c, int x, int y, int w, int h)
+{
+    gfx_round_rect(c, x, y, w, h, 14, RGB(10, 13, 18), 1.0f);
+    for (int i = 1; i < 4; i++) gfx_rect(c, x + w * i / 4, y + 10, 1, h - 20, RGB(22, 27, 37));
+    gfx_line(c, x + 10, y + h / 2.0f, x + w - 10, y + h / 2.0f, 1.0f, C_LINE, 0.8f);
+    OrcLoopInfo li;
+    orc_loop_info(a->orc, &li);
+    uint32_t color = a->chord_live ? C_GOLD : melody_on(a) ? C_VIOLET :
+                     (li.state == LOOP_PLAYING || li.state == LOOP_OVERDUB) ? C_TEAL : C_MUTED;
+    int n = w - 20;
+    if (n > 600) n = 600;
+    orc_scope(a->orc, a->scope, n * 2);
+    int start = 0;
+    for (int i = 1; i < n; i++)
+        if (a->scope[i - 1] <= 0.0f && a->scope[i] > 0.0f) { start = i; break; }
+    float peak = 0.0f;
+    for (int i = 0; i < n; i++) peak = fmaxf(peak, fabsf(a->scope[start + i]));
+    float gain = (h * 0.40f) / fmaxf(peak, 0.25f), px = 0, py = 0;
+    for (int i = 0; i < n; i++) {
+        float xx = x + 10 + i, yy = y + h / 2.0f - a->scope[start + i] * gain;
+        if (i) {
+            gfx_line(c, px, py, xx, yy, 4.0f, color, 0.18f);
+            gfx_line(c, px, py, xx, yy, 1.6f, color, 1.0f);
         }
+        px = xx;
+        py = yy;
     }
-    for (int n = LO; n <= HI; n++) {
-        if (white_of[n % 12] >= 0) continue;
-        int idx = (n / 12 - LO / 12) * 7 + white_of[(n - 1) % 12], x = x0 + (idx + 1) * kw - 6;
-        gfx_rect(c, x, y, 12, h * 62 / 100, col_b[lit[n]]);
+    if (a->chord_live && a->notes_n) {
+        char t[96] = "", nn[16];
+        for (int i = 0; i < a->notes_n && i < 7; i++) {
+            note_label(nn, sizeof(nn), a->notes[i]);
+            size_t l = strlen(t);
+            snprintf(t + l, sizeof(t) - l, "%s%s", l ? " " : "", nn);
+        }
+        if (a->set.snd.bass_level > 0.005f) {
+            note_label(nn, sizeof(nn), a->bass);
+            size_t l = strlen(t);
+            snprintf(t + l, sizeof(t) - l, "  ·  basso %s", nn);
+        }
+        gfx_text(c, FONT_SMALL, x + 14, y + 20, t, gfx_mix(C_MUTED, C_GOLD, 0.5f));
     }
+    if (peak < 0.002f) gfx_text_right(c, FONT_SMALL, x + w - 14, y + 20, "silenzio", C_DIM);
 }
 
 static void draw_play(OrcApp *a, Canvas *c)
@@ -1530,8 +1749,8 @@ static void draw_play(OrcApp *a, Canvas *c)
         gfx_text_right(c, font, 612, y, vals[i], col);
     }
 
-    /* tastiera */
-    draw_keyboard(a, c, 208, 84);
+    /* oscilloscopio */
+    draw_scope(a, c, 16, 206, 608, 88);
 
     /* pad della MPK */
     for (int i = 0; i < 8; i++) {
@@ -1757,7 +1976,7 @@ static void draw_midi(OrcApp *a, Canvas *c)
     char t[140];
     snprintf(t, sizeof(t), "Ultimo messaggio: %s", a->last_msg[0] ? a->last_msg : "nessuno");
     gfx_text(c, FONT_SMALL, 24, 434, t, a->midi_flash > 0.05f ? C_TEXT : C_MUTED);
-    draw_hints(c, "A impara · B annulla · X toglie · Y valori della MPK mini IV · L1/R1 gruppo");
+    draw_hints(c, "A impara · B annulla · X toglie · Y preset della tastiera · R2 salva · L1/R1 gruppo");
 }
 
 static void draw_quit(Canvas *c)

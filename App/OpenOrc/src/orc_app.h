@@ -2,6 +2,8 @@
 #ifndef OPENORC_APP_H
 #define OPENORC_APP_H
 
+#include <stddef.h>
+
 #include "gfx.h"
 #include "orc_dsp.h"
 
@@ -20,6 +22,10 @@ void orcapp_update(OrcApp *a, float dt);
 void orcapp_draw(OrcApp *a, Canvas *c);
 int  orcapp_needs_draw(OrcApp *a);                    /* 0 se lo schermo resterebbe uguale */
 int  orcapp_wants_quit(const OrcApp *a);
+
+/* Preset della tastiera MIDI (file di testo, vedi tastiere/ nell'app): 0 se riuscito. */
+int  orcapp_load_keyboard(OrcApp *a, const char *path, char *name, size_t name_n);
+int  orcapp_save_keyboard(OrcApp *a, const char *path, const char *name);
 
 /* Per le prove. */
 Orc *orcapp_engine(OrcApp *a);

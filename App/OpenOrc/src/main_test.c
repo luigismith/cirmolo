@@ -2,7 +2,7 @@
  * della Flip, motore (strum, arpeggio, pattern, intonazione, basso), looper, salvataggio, prestazioni,
  * audio dimostrativo (WAV) e schermate (BMP).
  *
- * Uso: orc-test <cartella dei font> <cartella di uscita>
+ * Uso: orc-test <cartella dei font> <cartella di uscita> [preset della MPK mini IV]
  */
 #include <math.h>
 #include <stdio.h>
@@ -648,6 +648,65 @@ static void test_performance(void)
     orc_destroy(o);
 }
 
+/* ------------------------------------------------------------------ preset della tastiera */
+static size_t slurp(const char *path, char *buf, size_t n)
+{
+    FILE *f = fopen(path, "r");
+    size_t got = f ? fread(buf, 1, n - 1, f) : 0;
+    if (f) fclose(f);
+    buf[got] = 0;
+    return got;
+}
+
+static void test_keyboard(const char *outdir, const char *repo)
+{
+    char state[512], mine[600], def[600], rep[600], bad[600], name[64] = "";
+    static char b1[4096], b2[4096];
+    snprintf(state, sizeof(state), "%s/stato-tastiera.txt", outdir);
+    snprintf(mine, sizeof(mine), "%s/tastiere/mia-tastiera.txt", outdir);
+    snprintf(def, sizeof(def), "%s/kbd-partenza.txt", outdir);
+    snprintf(rep, sizeof(rep), "%s/kbd-repo.txt", outdir);
+    snprintf(bad, sizeof(bad), "%s/kbd-rotto.txt", outdir);
+    remove(state);
+    remove(mine);
+    OrcApp *a = orcapp_create(SR, state);
+    Orc *o = orcapp_engine(a);
+
+    /* il file della repo dice esattamente i valori di partenza dell'app */
+    CHECK(!orcapp_save_keyboard(a, def, "x"), "mappa di partenza salvata");
+    CHECK(!orcapp_load_keyboard(a, repo, name, sizeof(name)), "preset della repo letto (%s)", repo);
+    CHECK(!strcmp(name, "Akai MPK mini IV"), "nome del preset: %s", name);
+    orcapp_save_keyboard(a, rep, "x");
+    slurp(def, b1, sizeof(b1));
+    slurp(rep, b2, sizeof(b2));
+    CHECK(b1[0] && !strcmp(b1, b2), "il preset della repo coincide con la mappa di partenza");
+
+    /* R2 salva la mappa imparata, Y la ricarica */
+    orcapp_set_page(a, PAGE_MIDI);
+    orcapp_select(a, 10);                         /* Batteria */
+    btn(a, PAD_A, 1); btn(a, PAD_A, 0);
+    midi3(a, 0, 0x91, 60, 90); midi3(a, 0, 0x81, 60, 0);
+    btn(a, PAD_R2, 1); btn(a, PAD_R2, 0);
+    slurp(mine, b1, sizeof(b1));
+    CHECK(strstr(b1, "Batteria = nota 60 canale 2 porta 1") != NULL, "R2 salva la batteria imparata");
+    btn(a, PAD_X, 1); btn(a, PAD_X, 0);           /* tolta */
+    btn(a, PAD_Y, 1); btn(a, PAD_Y, 0);           /* e ricaricata dal file */
+    CHECK(!orc_transport_on(o), "trasporto fermo prima della prova");
+    midi3(a, 0, 0x91, 60, 90); midi3(a, 0, 0x81, 60, 0); run(a, 0.05f);
+    CHECK(orc_transport_on(o), "dopo Y la nota 60 sul canale 2 accende la batteria");
+    midi3(a, 0, 0x91, 60, 90); midi3(a, 0, 0x81, 60, 0); run(a, 0.05f);
+
+    /* un file sbagliato non tocca la mappa */
+    FILE *f = fopen(bad, "w");
+    if (f) { fputs("\xEF\xBB\xBFnome = rotto\nMaj = tasto 42\nK9 = cc 1\n", f); fclose(f); }
+    CHECK(orcapp_load_keyboard(a, bad, name, sizeof(name)) != 0, "file senza controlli validi rifiutato");
+    midi3(a, 0, 0x91, 60, 90); midi3(a, 0, 0x81, 60, 0); run(a, 0.05f);
+    CHECK(orc_transport_on(o), "la mappa resta quella di prima");
+
+    orcapp_destroy(a);
+    remove(state); remove(mine); remove(def); remove(rep); remove(bad);
+}
+
 /* ------------------------------------------------------------------ ridisegno solo se serve */
 static void test_redraw(void)
 {
@@ -661,8 +720,10 @@ static void test_redraw(void)
     pad(a, 41, 0);
     key(a, 60, 1);
     CHECK(orcapp_needs_draw(a), "una nota di melodia si vede");
+    run(a, 0.5f);
+    CHECK(orcapp_needs_draw(a) && orcapp_needs_draw(a), "finche' suona l'oscilloscopio si muove");
     key(a, 60, 0);
-    run(a, 1.2f);
+    run(a, 12.0f);                                /* rilascio e riverbero si spengono */
     orcapp_needs_draw(a);
     CHECK(!orcapp_needs_draw(a), "tutto fermo di nuovo");
     run(a, 1.1f);
@@ -790,6 +851,8 @@ int main(int argc, char **argv)
     printf("looper: %d controlli, %d errori\n", checks, fails);
     test_redraw();
     printf("ridisegno: %d controlli, %d errori\n", checks, fails);
+    test_keyboard(outdir, argc > 3 ? argv[3] : "../tastiere/akai-mpk-mini-iv.txt");
+    printf("preset della tastiera: %d controlli, %d errori\n", checks, fails);
     test_performance();
 
     char state[512];

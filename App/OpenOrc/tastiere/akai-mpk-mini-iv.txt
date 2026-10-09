@@ -1,0 +1,50 @@
+# OpenOrc - preset della tastiera MIDI: Akai MPK mini IV
+#
+# In OpenOrc: pagina MIDI (SELECT fino a «MIDI»), poi Y. Y carica i preset uno dopo l'altro;
+# R2 salva la mappa attuale in Saves/openorc/tastiere/mia-tastiera.txt.
+# Perché la tastiera mandi proprio questi valori va preparato un suo preset utente: istruzioni passo
+# passo in akai-mpk-mini-iv.md, nella stessa cartella.
+#
+# Ogni riga: controllo = nota N | cc N, poi «canale 1-16» e «porta 1-8» se servono; «-» = nessuno.
+# Senza canale o porta va bene qualunque. La porta 1 è «MPK Mini IV MIDI Port».
+
+nome = Akai MPK mini IV
+manopole = Assolute
+
+# Pad, banco A (canale 10): fila in alto Dim Min Maj Sus, fila in basso 6 m7 M7 9
+Dim = nota 40 canale 10 porta 1
+Min = nota 41 canale 10 porta 1
+Maj = nota 42 canale 10 porta 1
+Sus = nota 43 canale 10 porta 1
+6 = nota 36 canale 10 porta 1
+m7 = nota 37 canale 10 porta 1
+M7 = nota 38 canale 10 porta 1
+9 = nota 39 canale 10 porta 1
+
+# Pad, banco B (canale 10): fila in basso batteria e loop, fila in alto tonalità, esecuzione e suoni
+Batteria = nota 44 canale 10 porta 1
+Loop: registra = nota 45 canale 10 porta 1
+Loop: suona o ferma = nota 46 canale 10 porta 1
+Loop: cancella = nota 47 canale 10 porta 1
+Modo tonalità = nota 48 canale 10 porta 1
+Esecuzione successiva = nota 49 canale 10 porta 1
+Suono precedente = nota 50 canale 10 porta 1
+Suono successivo = nota 51 canale 10 porta 1
+
+# Manopole K1-K8
+K1 Voicing = cc 70 porta 1
+K2 Basso = cc 71 porta 1
+K3 Esecuzione = cc 72 porta 1
+K4 Tono = cc 73 porta 1
+K5 Chorus = cc 74 porta 1
+K6 Delay = cc 75 porta 1
+K7 Riverbero = cc 76 porta 1
+K8 Volume = cc 77 porta 1
+
+# Tasti di trasporto: escono su un'altra porta con valori che il manuale Akai non elenca.
+# Si imparano dalla pagina MIDI (gruppo «Tasti di trasporto», A, poi premili in fila) e si salvano con R2.
+Play/Stop = -
+Record = -
+Overdub = -
+Loop = -
+Undo = -

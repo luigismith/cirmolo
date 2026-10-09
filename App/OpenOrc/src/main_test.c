@@ -845,6 +845,15 @@ static void screenshots(OrcApp *a, const char *outdir)
     SHOT("orc-7-flip");
     btn(a, PAD_L2, 0);
     btn(a, PAD_DOWN, 0);
+    /* senza la MPK: i tasti della Flip grandi */
+    orcapp_midi_status(a, NULL);
+    run(a, 2.5f);
+    btn(a, PAD_RIGHT, 1);
+    btn(a, PAD_R1, 1);
+    run(a, 0.1f);
+    SHOT("orc-8-solo-flip");
+    btn(a, PAD_R1, 0);
+    btn(a, PAD_RIGHT, 0);
     free(px);
 }
 

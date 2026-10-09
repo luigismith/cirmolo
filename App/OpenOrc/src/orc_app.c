@@ -1661,16 +1661,16 @@ static float scope_peak(OrcApp *a, int n)
 /* Oscilloscopio dell'uscita, agganciato al passaggio per lo zero in salita. Il colore dice chi suona:
    oro l'accordo dal vivo, viola la melodia, verde acqua il loop. In alto le note dell'accordo con
    l'ottava, cioe' il voicing scelto da K1. */
-static void draw_scope(OrcApp *a, Canvas *c, int x, int y, int w, int h)
+/* Oscilloscopio come fondale della fascia dell'accordo, agganciato al passaggio per lo zero in salita:
+   un tratto tenue dietro al nome, oro per l'accordo dal vivo, viola per la melodia, verde acqua per il
+   loop. Restituisce il picco, per scrivere «silenzio» quando non suona nulla. */
+static float draw_scope_band(OrcApp *a, Canvas *c, int x, int y, int w, int h)
 {
-    gfx_round_rect(c, x, y, w, h, 14, RGB(10, 13, 18), 1.0f);
-    for (int i = 1; i < 4; i++) gfx_rect(c, x + w * i / 4, y + 10, 1, h - 20, RGB(22, 27, 37));
-    gfx_line(c, x + 10, y + h / 2.0f, x + w - 10, y + h / 2.0f, 1.0f, C_LINE, 0.8f);
     OrcLoopInfo li;
     orc_loop_info(a->orc, &li);
     uint32_t color = a->chord_live ? C_GOLD : melody_on(a) ? C_VIOLET :
-                     (li.state == LOOP_PLAYING || li.state == LOOP_OVERDUB) ? C_TEAL : C_MUTED;
-    int n = w - 20;
+                     (li.state == LOOP_PLAYING || li.state == LOOP_OVERDUB) ? C_TEAL : C_DIM;
+    int n = w - 24;
     if (n > 600) n = 600;
     orc_scope(a->orc, a->scope, n * 2);
     int start = 0;
@@ -1678,18 +1678,131 @@ static void draw_scope(OrcApp *a, Canvas *c, int x, int y, int w, int h)
         if (a->scope[i - 1] <= 0.0f && a->scope[i] > 0.0f) { start = i; break; }
     float peak = 0.0f;
     for (int i = 0; i < n; i++) peak = fmaxf(peak, fabsf(a->scope[start + i]));
-    float gain = (h * 0.40f) / fmaxf(peak, 0.25f), px = 0, py = 0;
+    float mid = y + h * 0.5f, gain = (h * 0.36f) / fmaxf(peak, 0.25f), px = 0, py = 0;
+    gfx_line(c, x + 12, mid, x + w - 12, mid, 1.0f, C_LINE, 0.35f);
     for (int i = 0; i < n; i++) {
-        float xx = x + 10 + i, yy = y + h / 2.0f - a->scope[start + i] * gain;
+        float xx = x + 12 + i, yy = mid - a->scope[start + i] * gain;
         if (i) {
-            gfx_line(c, px, py, xx, yy, 4.0f, color, 0.18f);
-            gfx_line(c, px, py, xx, yy, 1.6f, color, 1.0f);
+            gfx_line(c, px, py, xx, yy, 5.0f, color, 0.06f);
+            gfx_line(c, px, py, xx, yy, 1.8f, color, 0.24f);
         }
         px = xx;
         py = yy;
     }
+    return peak;
+}
+
+/* La riga di stato sotto l'intestazione: suono, esecuzione, tonalita', tempo e loop in una sola riga. */
+static void draw_status_line(OrcApp *a, Canvas *c, int y)
+{
+    char vals[5][48];
+    uint32_t cols[5] = { C_TEXT, C_TEXT, C_TEXT, C_TEXT, C_TEXT };
+    snprintf(vals[0], sizeof(vals[0]), "%s", PRESETS[a->set.sound].name);
+    if (a->set.snd.perform == PERF_ARP) snprintf(vals[1], sizeof(vals[1]), "Arpeggio %s", ARP_SHORT[(int)(clamp01(a->set.snd.perform_amount) * 4.99f)]);
+    else snprintf(vals[1], sizeof(vals[1]), "%s", PERFORM_NAMES[a->set.snd.perform]);
+    key_name(vals[2], sizeof(vals[2]), a->set.key, a->set.minor);
+    cols[2] = a->set.keymode ? C_GOLD : C_MUTED;
+    if (a->set.beat_on) snprintf(vals[3], sizeof(vals[3]), "%d BPM · %s", (int)lrintf(a->set.bpm), BEAT_NAMES[a->set.beat_style]);
+    else snprintf(vals[3], sizeof(vals[3]), "%d BPM", (int)lrintf(a->set.bpm));
+    OrcLoopInfo li;
+    orc_loop_info(a->orc, &li);
+    char st[48];
+    loop_state_text(&li, st, sizeof(st));
+    snprintf(vals[4], sizeof(vals[4]), "loop %s", st);
+    cols[4] = li.state == LOOP_RECORDING ? C_RED : (li.state == LOOP_EMPTY ? C_DIM : C_TEXT);
+    int total = 0;
+    for (int i = 0; i < 5; i++) total += gfx_text_width(FONT_SMALL, vals[i]) + (i < 4 ? 26 : 0);
+    int x = 320 - total / 2;
+    for (int i = 0; i < 5; i++) {
+        x += gfx_text(c, FONT_SMALL, x, y, vals[i], cols[i]);
+        if (i < 4) { gfx_text(c, FONT_SMALL, x + 9, y, "·", C_DIM); x += 26; }
+    }
+}
+
+/* Un tasto della Flip con il nome dell'accordo che suonerebbe adesso (con i dorsali tenuti). */
+static void draw_flip_chip(OrcApp *a, Canvas *c, int slot, float cx, float cy, float w, float h, int font)
+{
+    int root, iv[CHORD_MAX_IV], deg, sp;
+    int n = build_chord(a, SRC_FLIP(slot), &root, iv, &deg, &sp);
+    char name[24];
+    chord_name(name, sizeof(name), root, chord_mask(iv, n), sp);
+    int held = stack_find(a, SRC_FLIP(slot)) >= 0;
+    gfx_round_rect(c, cx - w / 2, cy - h / 2, w, h, 9, held ? C_GOLD : C_PANEL_HI, 1.0f);
+    if (gfx_text_width(font, name) > w - 10) font = FONT_SMALL;
+    gfx_text_center(c, font, (int)cx, (int)(cy + (font == FONT_SMALL ? 5 : 6)), name, held ? C_BAR : C_TEXT);
+}
+
+/* Croce (d = 0) o A B X Y (d = 1), disposti come sulla console; al centro il simbolo del gruppo. */
+static void draw_flip_cluster(OrcApp *a, Canvas *c, int d, float cx, float cy, float w, float h, float dx, float dy, int font)
+{
+    static const int SLOT_AT[2][4] = { { 0, 1, 2, 3 }, { 4, 5, 7, 6 } };    /* sinistra, su, destra, giu' */
+    const float off[4][2] = { { -dx, 0 }, { 0, -dy }, { dx, 0 }, { 0, dy } };
+    if (d == 0) {
+        gfx_round_rect(c, cx - 4, cy - 12, 8, 24, 2, C_LINE, 1.0f);
+        gfx_round_rect(c, cx - 12, cy - 4, 24, 8, 2, C_LINE, 1.0f);
+    } else {
+        static const char *L[4] = { "Y", "X", "A", "B" };
+        static const float at[4][2] = { { -13, 5 }, { 0, -6 }, { 13, 5 }, { 0, 16 } };
+        for (int k = 0; k < 4; k++) gfx_text_center(c, FONT_SMALL, (int)(cx + at[k][0]), (int)(cy + at[k][1]), L[k], C_DIM);
+    }
+    for (int k = 0; k < 4; k++) draw_flip_chip(a, c, SLOT_AT[d][k], cx + off[k][0], cy + off[k][1], w, h, font);
+}
+
+static void draw_mod_chip(OrcApp *a, Canvas *c, int m, const char *label, float x, float y, float w)
+{
+    gfx_round_rect(c, x, y, w, 24, 12, a->mods[m] ? C_GOLD : C_PANEL, 1.0f);
+    gfx_text_center(c, FONT_SMALL, (int)(x + w / 2), (int)(y + 17), label, a->mods[m] ? C_BAR : C_MUTED);
+}
+
+/* Pagina Suona: una riga di stato, la fascia dell'accordo con l'oscilloscopio come fondale, e sotto i
+   comandi: i pad della MPK solo quando la tastiera c'e', i tasti della Flip disposti come sulla console. */
+static void draw_play(OrcApp *a, Canvas *c)
+{
+    char t[96];
+    draw_status_line(a, c, 68);
+
+    /* fascia dell'accordo */
+    const int bx = 16, by = 80, bw = 608, bh = 184;
+    gfx_round_rect(c, bx, by, bw, bh, 16, RGB(10, 13, 18), 1.0f);
+    float peak = draw_scope_band(a, c, bx, by, bw, bh);
+    if (a->name_root[0]) {
+        uint32_t col = a->chord_live ? gfx_mix(C_TEXT, C_GOLD, 0.35f + 0.65f * a->glow) : C_MUTED;
+        int wr = gfx_text_width(FONT_HUGE, a->name_root), ws = gfx_text_width(FONT_BIG, a->name_suffix);
+        int x = 320 - (wr + ws + 4) / 2;
+        gfx_text(c, FONT_HUGE, x, by + 86, a->name_root, col);
+        gfx_text(c, FONT_BIG, x + wr + 4, by + 86, a->name_suffix, col);
+        char notes[64] = "";
+        for (int i = 0; i < a->notes_n && i < 6; i++) {
+            int pc = a->notes[i] % 12, dup = 0;
+            for (int j = 0; j < i; j++) dup |= a->notes[j] % 12 == pc;
+            if (dup) continue;
+            size_t l = strlen(notes);
+            snprintf(notes + l, sizeof(notes) - l, "%s%s", l ? " " : "", note_it(pc, a->spelling));
+        }
+        snprintf(t, sizeof(t), "%s   ·   %s", a->symbol, notes);
+        gfx_text_center(c, FONT_BODY, 320, by + 118, t, a->chord_live ? C_TEXT : C_DIM);
+        if (a->numeral[0]) {
+            char k[32];
+            key_name(k, sizeof(k), a->set.key, a->set.minor);
+            snprintf(t, sizeof(t), "%s in %s", a->numeral, k);
+        } else {
+            char b[16];
+            note_label(b, sizeof(b), a->bass);
+            snprintf(t, sizeof(t), "basso %s", b);
+        }
+        gfx_text_center(c, FONT_SMALL, 320, by + 142, t, C_MUTED);
+    } else {
+        gfx_text_center(c, FONT_TITLE, 320, by + 86, "Suona un accordo", C_TEXT);
+        char k[32];
+        key_name(k, sizeof(k), a->set.key, a->set.minor);
+        if (a->midi_name[0]) snprintf(t, sizeof(t), "Tieni un pad (Maj, Min...) e premi un tasto, oppure croce e A B X Y: accordi di %s", k);
+        else snprintf(t, sizeof(t), "Croce e A B X Y suonano gli accordi di %s", k);
+        gfx_text_center(c, FONT_SMALL, 320, by + 118, t, C_MUTED);
+    }
+    /* le note con l'ottava: e' il voicing scelto da K1 */
     if (a->chord_live && a->notes_n) {
-        char t[96] = "", nn[16];
+        char nn[16];
+        t[0] = 0;
         for (int i = 0; i < a->notes_n && i < 7; i++) {
             note_label(nn, sizeof(nn), a->notes[i]);
             size_t l = strlen(t);
@@ -1700,120 +1813,36 @@ static void draw_scope(OrcApp *a, Canvas *c, int x, int y, int w, int h)
             size_t l = strlen(t);
             snprintf(t + l, sizeof(t) - l, "  ·  basso %s", nn);
         }
-        gfx_text(c, FONT_SMALL, x + 14, y + 20, t, gfx_mix(C_MUTED, C_GOLD, 0.5f));
+        gfx_text(c, FONT_SMALL, bx + 16, by + bh - 12, t, gfx_mix(C_MUTED, C_GOLD, 0.5f));
     }
-    if (peak < 0.002f) gfx_text_right(c, FONT_SMALL, x + w - 14, y + 20, "silenzio", C_DIM);
-}
+    if (peak < 0.002f) gfx_text_right(c, FONT_SMALL, bx + bw - 16, by + bh - 12, "silenzio", C_DIM);
 
-static void draw_play(OrcApp *a, Canvas *c)
-{
-    char t[96];
-    /* accordo */
-    gfx_round_rect(c, 16, 56, 384, 142, 14, C_PANEL, 1.0f);
-    if (a->name_root[0]) {
-        uint32_t col = a->chord_live ? gfx_mix(C_TEXT, C_GOLD, 0.35f + 0.65f * a->glow) : C_DIM;
-        int wr = gfx_text_width(FONT_HUGE, a->name_root), ws = gfx_text_width(FONT_BIG, a->name_suffix);
-        int x = 208 - (wr + ws + 4) / 2;
-        gfx_text(c, FONT_HUGE, x, 128, a->name_root, col);
-        gfx_text(c, FONT_BIG, x + wr + 4, 128, a->name_suffix, col);
-        char notes[64] = "";
-        for (int i = 0; i < a->notes_n && i < 6; i++) {
-            int pc = a->notes[i] % 12, dup = 0;
-            for (int j = 0; j < i; j++) dup |= a->notes[j] % 12 == pc;
-            if (dup) continue;
-            size_t l = strlen(notes);
-            snprintf(notes + l, sizeof(notes) - l, "%s%s", l ? " " : "", note_it(pc, a->spelling));
-        }
-        snprintf(t, sizeof(t), "%s   ·   %s", a->symbol, notes);
-        gfx_text_center(c, FONT_BODY, 208, 160, t, a->chord_live ? C_TEXT : C_DIM);
-        if (a->numeral[0]) {
-            char k[32];
-            key_name(k, sizeof(k), a->set.key, a->set.minor);
-            snprintf(t, sizeof(t), "%s in %s", a->numeral, k);
-        } else {
-            char b[16];
-            note_label(b, sizeof(b), a->bass);
-            snprintf(t, sizeof(t), "basso %s", b);
-        }
-        gfx_text_center(c, FONT_SMALL, 208, 184, t, C_MUTED);
-    } else {
-        gfx_text_center(c, FONT_TITLE, 208, 106, "Suona un accordo", C_TEXT);
-        gfx_text_center(c, FONT_SMALL, 208, 140, "MPK: tieni un pad (Maj, Min...) e premi un tasto", C_MUTED);
-        char k[32];
-        key_name(k, sizeof(k), a->set.key, a->set.minor);
-        snprintf(t, sizeof(t), "Flip: croce e A B X Y, accordi di %s", k);
-        gfx_text_center(c, FONT_SMALL, 208, 162, t, C_MUTED);
-    }
-
-    /* stato */
-    gfx_round_rect(c, 410, 56, 214, 142, 14, C_PANEL, 1.0f);
-    const char *labels[5] = { "Suono", "Esecuzione", "Tonalità", "Ritmo", "Loop" };
-    char vals[5][48];
-    snprintf(vals[0], sizeof(vals[0]), "%s", PRESETS[a->set.sound].name);
-    if (a->set.snd.perform == PERF_ARP) snprintf(vals[1], sizeof(vals[1]), "Arpeggio %s", ARP_SHORT[(int)(clamp01(a->set.snd.perform_amount) * 4.99f)]);
-    else snprintf(vals[1], sizeof(vals[1]), "%s", PERFORM_NAMES[a->set.snd.perform]);
-    key_name(vals[2], sizeof(vals[2]), a->set.key, a->set.minor);
-    snprintf(vals[3], sizeof(vals[3]), "%d · %s", (int)lrintf(a->set.bpm), a->set.beat_on ? BEAT_NAMES[a->set.beat_style] : "senza batteria");
-    OrcLoopInfo li;
-    orc_loop_info(a->orc, &li);
-    loop_state_text(&li, vals[4], sizeof(vals[4]));
-    for (int i = 0; i < 5; i++) {
-        int y = 80 + i * 26;
-        gfx_text(c, FONT_SMALL, 422, y, labels[i], C_MUTED);
-        uint32_t col = C_TEXT;
-        if (i == 2) col = a->set.keymode ? C_GOLD : C_MUTED;
-        if (i == 4) col = li.state == LOOP_RECORDING ? C_RED : (li.state == LOOP_EMPTY ? C_DIM : C_TEXT);
-        int font = gfx_text_width(FONT_BOLD, vals[i]) > 112 ? FONT_SMALL : FONT_BOLD;
-        gfx_text_right(c, font, 612, y, vals[i], col);
-    }
-
-    /* oscilloscopio */
-    draw_scope(a, c, 16, 206, 608, 88);
-
-    /* pad della MPK */
-    for (int i = 0; i < 8; i++) {
-        int col = i % 4, row = i / 4;
-        float x = 16 + col * 74, y = 304 + row * 60;
-        int held = a->pad_held[i];
-        uint32_t fill = held ? (row == 0 ? C_GOLD : C_VIOLET) : C_PANEL_HI;
-        gfx_round_rect(c, x, y, 66, 52, 10, fill, 1.0f);
-        gfx_text_center(c, FONT_BOLD, (int)(x + 33), (int)(y + 32), CHORD_PAD_NAMES[i], held ? C_BAR : (row == 0 ? C_TEXT : C_MUTED));
-    }
-    gfx_text_center(c, FONT_SMALL, 160, 438, a->midi_name[0] ? a->midi_name : "MPK non collegata", a->midi_name[0] ? C_MUTED : C_DIM);
-
-    /* croce e tasti della Flip */
-    static const float OFF[4][2] = { { -44, 0 }, { 0, -30 }, { 44, 0 }, { 0, 30 } };
-    static const int SLOT_AT[2][4] = { { 0, 1, 2, 3 }, { 4, 5, 7, 6 } };    /* sinistra, su, destra, giu' */
-    static const char *LETTERS[4] = { "Y", "X", "A", "B" };
-    static const float LETTER_AT[4][2] = { { -12, 5 }, { 0, -5 }, { 12, 5 }, { 0, 15 } };
-    for (int d = 0; d < 2; d++) {
-        float px = d ? 476 : 320, cx = px + 74, cy = 354;
-        gfx_round_rect(c, px, 300, 148, 108, 14, C_PANEL, 1.0f);
-        if (d == 0) {
-            gfx_round_rect(c, cx - 4, cy - 11, 8, 22, 2, C_LINE, 1.0f);
-            gfx_round_rect(c, cx - 11, cy - 4, 22, 8, 2, C_LINE, 1.0f);
-        } else {
-            for (int k = 0; k < 4; k++)
-                gfx_text_center(c, FONT_SMALL, (int)(cx + LETTER_AT[k][0]), (int)(cy + LETTER_AT[k][1]), LETTERS[k], C_DIM);
-        }
-        for (int k = 0; k < 4; k++) {
-            int slot = SLOT_AT[d][k];
-            int root, iv[CHORD_MAX_IV], deg, sp;
-            int n = build_chord(a, SRC_FLIP(slot), &root, iv, &deg, &sp);
-            char name[24];
-            chord_name(name, sizeof(name), root, chord_mask(iv, n), sp);
-            int held = stack_find(a, SRC_FLIP(slot)) >= 0;
-            float x = cx + OFF[k][0] - 27, y = cy + OFF[k][1] - 13;
-            gfx_round_rect(c, x, y, 54, 26, 8, held ? C_GOLD : C_PANEL_HI, 1.0f);
-            int font = gfx_text_width(FONT_BOLD, name) > 48 ? FONT_SMALL : FONT_BOLD;
-            gfx_text_center(c, font, (int)(cx + OFF[k][0]), (int)(cy + OFF[k][1] + 6), name, held ? C_BAR : C_TEXT);
-        }
-    }
+    /* comandi */
     static const char *MODS[MOD_COUNT] = { "L1 m/M", "R1 sus4", "L2 7", "R2 9" };
-    for (int i = 0; i < MOD_COUNT; i++) {
-        float x = 320 + i * 77;
-        gfx_round_rect(c, x, 415, 73, 23, 11.5f, a->mods[i] ? C_GOLD : C_PANEL, 1.0f);
-        gfx_text_center(c, FONT_SMALL, (int)(x + 36), 432, MODS[i], a->mods[i] ? C_BAR : C_MUTED);
+    if (a->midi_name[0]) {
+        /* pad della MPK a sinistra, tasti della Flip piu' piccoli a destra */
+        for (int i = 0; i < 8; i++) {
+            int col = i % 4, row = i / 4;
+            float x = 16 + col * 72, y = 290 + row * 58;
+            int held = a->pad_held[i];
+            gfx_round_rect(c, x, y, 64, 50, 10, held ? C_GOLD : C_PANEL_HI, 1.0f);
+            gfx_text_center(c, FONT_BOLD, (int)(x + 32), (int)(y + 31), CHORD_PAD_NAMES[i], held ? C_BAR : (row == 0 ? C_TEXT : C_MUTED));
+        }
+        gfx_text_center(c, FONT_SMALL, 158, 428, a->midi_name, C_MUTED);
+        draw_mod_chip(a, c, MOD_SEVENTH, MODS[2], 318, 276, 70);
+        draw_mod_chip(a, c, MOD_SWAP, MODS[0], 392, 276, 70);
+        draw_mod_chip(a, c, MOD_SUS, MODS[1], 480, 276, 70);
+        draw_mod_chip(a, c, MOD_NINTH, MODS[3], 554, 276, 70);
+        draw_flip_cluster(a, c, 0, 394, 372, 62, 26, 46, 33, FONT_SMALL);
+        draw_flip_cluster(a, c, 1, 548, 372, 62, 26, 46, 33, FONT_SMALL);
+    } else {
+        /* solo la Flip: i tasti grandi, nella posizione reale della console, i dorsali agli angoli */
+        draw_mod_chip(a, c, MOD_SEVENTH, MODS[2], 16, 276, 80);
+        draw_mod_chip(a, c, MOD_SWAP, MODS[0], 102, 276, 80);
+        draw_mod_chip(a, c, MOD_SUS, MODS[1], 458, 276, 80);
+        draw_mod_chip(a, c, MOD_NINTH, MODS[3], 544, 276, 80);
+        draw_flip_cluster(a, c, 0, 164, 368, 88, 32, 66, 44, FONT_BOLD);
+        draw_flip_cluster(a, c, 1, 476, 368, 88, 32, 66, 44, FONT_BOLD);
     }
 
     if (a->flash_t > 0.0f) {

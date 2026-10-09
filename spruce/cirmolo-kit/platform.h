@@ -35,7 +35,9 @@ typedef struct {
     void (*capture_status)(void *app, const char *device, float sample_rate);
 
     /* MIDI da una tastiera USB: un messaggio completo (1-3 byte, vedi midi.h) sul thread dell'interfaccia.
-       Facoltativa. Il kit cerca da solo i dispositivi /dev/snd/midiC*D*, anche collegati dopo l'avvio. */
+       Facoltativa. Il kit cerca da solo i dispositivi /dev/snd/midiC*D*, anche collegati dopo l'avvio.
+       Le porte sono aperte anche in scrittura: l'app manda messaggi al dispositivo (LED di un controller)
+       con cirmolo_midi_send() di midi.h, dal thread dell'interfaccia. */
     void (*midi)(void *app, const unsigned char *msg, int len);
     /* Tastiera MIDI collegata (nome) o scollegata (NULL). Facoltativa. */
     void (*midi_status)(void *app, const char *device);

@@ -1,7 +1,8 @@
 /* Cirmolo Sampler - collegamento con il kit delle app native (spruce/cirmolo-kit/platform.c).
  *
  * Chiede al kit anche l'ingresso audio (microfono USB) e tutte le porte MIDI del dispositivo collegato
- * (la MPK mini IV manda i tasti di trasporto su una porta diversa da pad e tasti).
+ * (la MPK mini IV manda i tasti di trasporto su una porta diversa da pad e tasti; il Launchpad Mini MK3
+ * parla sulla seconda porta, «LPMiniMK3 MIDI», e riceve i LED da li').
  */
 #include <stdlib.h>
 
@@ -34,7 +35,7 @@ static void audio(void *p, float *out, int frames) { sampler_render(((SamplerApp
 static void capture(void *p, const float *in, int frames) { app_capture(((SamplerApp *)p)->app, in, frames); }
 static void capture_status(void *p, const char *dev, float rate) { app_capture_status(((SamplerApp *)p)->app, dev, rate); }
 static void button(void *p, int pad, int pressed) { app_button(((SamplerApp *)p)->app, pad, pressed); }
-static void midi_port(void *p, int port, const unsigned char *m, int len) { (void)port; app_midi(((SamplerApp *)p)->app, m, len); }
+static void midi_port(void *p, int port, const unsigned char *m, int len) { app_midi_port(((SamplerApp *)p)->app, port, m, len); }
 static void midi_status(void *p, const char *dev) { app_midi_status(((SamplerApp *)p)->app, dev); }
 static void axes(void *p, float lx, float ly, float rx, float ry, float l2, float r2) { app_axes(((SamplerApp *)p)->app, lx, ly, rx, ry, l2, r2); }
 static void update(void *p, float dt) { app_update(((SamplerApp *)p)->app, dt); }

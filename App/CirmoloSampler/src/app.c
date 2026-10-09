@@ -4,7 +4,8 @@
  * d'onda e parametri del pad scelto), Sequenza (16 passi x 16 pad, 4 pattern concatenabili),
  * Libreria (WAV delle registrazioni e della libreria di serie, con anteprima), Registra (microfono USB)
  * e Opzioni (tempo, swing, metronomo, volume, clock MIDI, esportazione). I pad della MPK mini IV
- * (canale 10) suonano i 16 pad, i tasti suonano cromaticamente il pad scelto.
+ * (canale 10) suonano i 16 pad, i tasti suonano cromaticamente il pad scelto. Un Launchpad Mini MK3,
+ * riconosciuto dal nome, diventa una superficie con i LED che seguono pad e sequencer (launchpad.h).
  */
 #include "app.h"
 
@@ -17,6 +18,7 @@
 #include <sys/stat.h>
 #include <time.h>
 
+#include "launchpad.h"
 #include "midi.h"
 
 #ifdef _WIN32
@@ -95,6 +97,11 @@ struct App {
     int chrom_slot[128];                  /* slot su cui suona ogni nota cromatica, -1 */
     int clock_ticks;
     float clock_start, clock_seen, clock_bpm;
+    /* Launchpad Mini MK3 */
+    Launchpad lp;
+    int lp_down[SP_PADS];                 /* pad tenuti premuti sul Launchpad */
+    float tap_time[4];                    /* tap tempo: istanti degli ultimi tocchi */
+    int taps;
     /* levette */
     float lx, ry;
     int nudge;
@@ -228,6 +235,7 @@ static void release_all(App *a)
 {
     for (int i = 0; i < 8; i++) a->btn_pad[i] = -1;
     for (int n = 0; n < 128; n++) a->chrom_slot[n] = -1;
+    for (int p = 0; p < SP_PADS; p++) a->lp_down[p] = 0;
     sampler_release_all(a->s);
 }
 
@@ -350,6 +358,7 @@ void app_destroy(App *a)
 {
     if (!a) return;
     release_all(a);
+    lp_disconnect(&a->lp);                /* il Launchpad torna in Live mode (R. p. 8) */
     app_save(a);
     free(a->entries);
     free(a);
@@ -357,6 +366,7 @@ void app_destroy(App *a)
 
 int app_wants_quit(const App *a) { return a->quit; }
 int app_page(const App *a) { return a->page; }
+int app_launchpad(const App *a) { return a->lp.connected; }
 int app_metronome(const App *a) { return sampler_metronome(a->s); }
 int app_clock_follow(const App *a) { return a->clock_follow; }
 const char *app_last_recording(const App *a) { return a->last_rec; }
@@ -864,16 +874,121 @@ void app_axes(App *a, float lx, float ly, float rx, float ry, float l2, float r2
 }
 
 /* ------------------------------------------------------------------ MIDI */
+static void lp_refresh(App *a)
+{
+    lp_render(&a->lp, a->s, a->sel, a->bank, a->glow);
+    lp_flush(&a->lp);
+}
+
 void app_midi_status(App *a, const char *device)
 {
     int was = a->midi_name[0] != 0;
     snprintf(a->midi_name, sizeof(a->midi_name), "%s", device ? device : "");
     if (!device) {
+        if (a->lp.connected) lp_disconnect(&a->lp);
         if (was) { release_all(a); toast(a, "MIDI scollegato"); }
+    } else if (lp_match(device)) {
+        lp_connect(&a->lp);                /* Programmer mode e griglia iniziale (R. p. 7, 14) */
+        lp_refresh(a);
+        toast(a, "Launchpad Mini MK3 collegato: griglia e tasti attivi");
     } else {
         char t[96];
         snprintf(t, sizeof(t), "MIDI collegato: %s", device);
         toast(a, t);
+    }
+}
+
+/* Tap tempo: la media degli intervalli fra gli ultimi tocchi (al massimo 4), azzerata dopo 2 secondi. */
+static void tap_tempo(App *a)
+{
+    if (a->taps && a->time - a->tap_time[a->taps - 1] > 2.0f) a->taps = 0;
+    if (a->taps == 4) { memmove(a->tap_time, a->tap_time + 1, sizeof(float) * 3); a->taps = 3; }
+    a->tap_time[a->taps++] = a->time;
+    if (a->taps < 2) { toast(a, "Tap tempo: continua a battere"); return; }
+    float span = a->tap_time[a->taps - 1] - a->tap_time[0];
+    float bpm = 60.0f * (a->taps - 1) / span;
+    sampler_set_tempo(a->s, roundf(bpm));
+    char t[48];
+    snprintf(t, sizeof(t), "Tap tempo: %d BPM", (int)lrintf(sampler_tempo(a->s)));
+    toast(a, t);
+}
+
+/* Azioni dei pad e dei tasti del Launchpad (la disposizione e' descritta in launchpad.h). */
+static void lp_event(App *a, const LpEvent *ev)
+{
+    SeqPattern *pat = sampler_pattern(a->s);
+    int shift = a->lp.shift, sel = sampler_selected_pattern(a->s);
+    char t[64];
+    switch (ev->kind) {
+    case LP_EV_PAD:
+        if (ev->on) {
+            if (shift) { a->sel = ev->index; return; }        /* User tenuto: sceglie senza suonare */
+            a->lp_down[ev->index] = 1;
+            play_pad(a, ev->index, ev->vel);
+        } else if (a->lp_down[ev->index]) {
+            a->lp_down[ev->index] = 0;
+            sampler_release(a->s, ev->index, -1);
+        }
+        return;
+    case LP_EV_STEP:
+        if (!ev->on) return;
+        if (shift) { pat->vel[a->sel][ev->index] = 0; return; }
+        pat->vel[a->sel][ev->index] = pat->vel[a->sel][ev->index] ? 0 : 100;
+        if (pat->vel[a->sel][ev->index] && !sampler_playing(a->s)) sampler_trigger(a->s, a->sel, 100 / 127.0f, 0.0f, -1);
+        return;
+    case LP_EV_OVERVIEW: {
+        if (!ev->on) return;
+        int pad = lp_overview_first(a->sel) + ev->index, i0 = 2 * ev->col;
+        if (shift) { a->sel = pad; return; }
+        if (pat->vel[pad][i0] || pat->vel[pad][i0 + 1]) pat->vel[pad][i0] = pat->vel[pad][i0 + 1] = 0;
+        else pat->vel[pad][i0] = 100;
+        return;
+    }
+    case LP_EV_TOP:
+        if (!ev->on) return;
+        switch (ev->index) {
+        case LP_TOP_UP: a->bank = 0; break;
+        case LP_TOP_DOWN: a->bank = 1; break;
+        case LP_TOP_LEFT:
+            if (shift) { if (pat->length > 1) pat->length--; }
+            else sampler_select_pattern(a->s, sel - 1);
+            break;
+        case LP_TOP_RIGHT:
+            if (shift) { if (pat->length < SP_STEPS) pat->length++; }
+            else sampler_select_pattern(a->s, sel + 1);
+            break;
+        case LP_TOP_SESSION: transport_toggle(a); break;
+        case LP_TOP_DRUMS: live_rec_toggle(a); break;
+        case LP_TOP_KEYS:
+            sampler_set_metronome(a->s, !sampler_metronome(a->s));
+            toast(a, sampler_metronome(a->s) ? "Metronomo acceso" : "Metronomo spento");
+            break;
+        default: break;                                   /* User: lo shift lo tiene lp_decode */
+        }
+        return;
+    case LP_EV_SCENE:
+        if (!ev->on) return;
+        if (ev->index < SP_PATTERNS) {
+            if (shift) {
+                sampler_set_chain(a->s, sampler_chain(a->s) ^ (1u << ev->index));
+                snprintf(t, sizeof(t), "Pattern %c %s la catena", 'A' + ev->index, (sampler_chain(a->s) >> ev->index) & 1 ? "entra nella" : "esce dalla");
+                toast(a, t);
+            } else sampler_select_pattern(a->s, ev->index);
+            return;
+        }
+        switch (ev->index) {
+        case LP_SCENE_MUTE: sampler_pad(a->s, a->sel)->mute = !sampler_pad(a->s, a->sel)->mute; break;
+        case LP_SCENE_SOLO: sampler_pad(a->s, a->sel)->solo = !sampler_pad(a->s, a->sel)->solo; break;
+        case LP_SCENE_CLEAR:
+            if (!shift) { toast(a, "Tieni User e premi di nuovo per svuotare il pattern"); break; }
+            sampler_pattern_clear(pat);
+            snprintf(t, sizeof(t), "Pattern %c svuotato", 'A' + sel);
+            toast(a, t);
+            break;
+        case LP_SCENE_TAP: tap_tempo(a); break;
+        }
+        return;
+    default: return;
     }
 }
 
@@ -919,15 +1034,22 @@ static void midi_cc(App *a, int cc, int v)
     }
 }
 
-void app_midi(App *a, const unsigned char *m, int len)
+void app_midi(App *a, const unsigned char *m, int len) { app_midi_port(a, 0, m, len); }
+
+void app_midi_port(App *a, int port, const unsigned char *m, int len)
 {
     if (len < 1) return;
     int st = m[0];
     if (st >= 0xF8) { realtime(a, st); return; }
     if (st >= 0xF0) return;
+    a->midi_flash = 1.0f;
+    if (a->lp.connected) {                 /* il kit segue un dispositivo alla volta: tutto viene dal Launchpad */
+        LpEvent ev;
+        if (lp_decode(&a->lp, port, m, len, &ev)) lp_event(a, &ev);
+        return;
+    }
     int type = MIDI_TYPE(m), ch = MIDI_CHANNEL(m);
     int d1 = len > 1 ? m[1] : 0, d2 = len > 2 ? m[2] : 0;
-    a->midi_flash = 1.0f;
     switch (type) {
     case MIDI_NOTE_ON:
     case MIDI_NOTE_OFF: {
@@ -974,6 +1096,7 @@ void app_update(App *a, float dt)
     }
     sampler_collect(a->s);
     if (sampler_rec_state(a->s) == REC_DONE) rec_finish(a);
+    if (a->lp.connected) lp_refresh(a);    /* LED: playhead, luci dei pad, stato; un SysEx al massimo per fotogramma */
     if (a->quit_dialog) return;
     for (int b = 0; b < PAD_COUNT; b++) {
         if (!a->down[b] || !repeats(a->page, b)) continue;
@@ -1161,7 +1284,8 @@ static void draw_pads(App *a, Canvas *c)
     gfx_text(c, FONT_SMALL, 414, 252, t, C_MUTED);
     if (sampler_record(a->s)) gfx_text(c, FONT_BOLD, 414, 278, "REC dal vivo (R2)", C_RED);
     else gfx_text(c, FONT_SMALL, 414, 278, "R2: registra dal vivo", C_DIM);
-    gfx_text(c, FONT_SMALL, 414, 304, a->midi_name[0] ? a->midi_name : "nessun MIDI", a->midi_name[0] ? C_GREEN : C_DIM);
+    if (a->lp.connected) gfx_text(c, FONT_SMALL, 414, 304, "Launchpad Mini MK3 collegato", C_GREEN);
+    else gfx_text(c, FONT_SMALL, 414, 304, a->midi_name[0] ? a->midi_name : "nessun MIDI", a->midi_name[0] ? C_GREEN : C_DIM);
     gfx_text(c, FONT_SMALL, 414, 326, a->mic_name[0] ? "microfono pronto" : "nessun microfono", a->mic_name[0] ? C_GREEN : C_DIM);
     /* banchi */
     for (int b = 0; b < 2; b++) {
@@ -1408,8 +1532,31 @@ static void draw_options(App *a, Canvas *c)
         fit_text(FONT_SMALL, t, 330, t, sizeof(t));
         gfx_text(c, FONT_SMALL, 16, 342, t, C_MUTED);
     }
-    /* mappa MIDI */
+    /* mappa MIDI: la legenda del Launchpad quando e' collegato, altrimenti quella della MPK mini */
     gfx_round_rect(c, 360, 58, 264, 380, 14, C_PANEL, 1.0f);
+    if (a->lp.connected) {
+        gfx_text(c, FONT_BOLD, 376, 82, "Launchpad Mini MK3", C_TEXT);
+        static const char *lp_rows[] = {           /* il font non ha le frecce: su/giù/sinistra/destra a parole */
+            "Riga 1 in basso. Righe 1-2: i 16 pad",
+            "   colore = gruppo o cartella, bianco",
+            "   = suona, pulsante = scelto",
+            "Righe 3-4: i 16 passi del pad scelto",
+            "   bianco = passo in moto",
+            "Righe 5-8: i 4 pad del quartetto del",
+            "   pad scelto, 2 passi per colonna",
+            "   (premere = i due passi on/off)",
+            "Su/giù banco · sinistra/destra pattern",
+            "   (con User: lunghezza del pattern)",
+            "Session play · Drums rec · Keys metro",
+            "User tenuto: pad = scegli, passo =",
+            "   cancella, scena 1-4 = catena",
+            "Scene 1-4 pattern A-D · 5 muto",
+            "6 solo · 7 svuota (con User) · 8 tap",
+        };
+        for (size_t i = 0; i < sizeof(lp_rows) / sizeof(lp_rows[0]); i++) gfx_text(c, FONT_SMALL, 376, 106 + (int)i * 20, lp_rows[i], C_MUTED);
+        draw_hints(c, "su/giù scegli · sinistra/destra cambia · L1/R1 tempo a passi di 10 · A esporta o attiva · B torna");
+        return;
+    }
     gfx_text(c, FONT_BOLD, 376, 82, "MIDI USB (MPK mini e simili)", C_TEXT);
     static const char *rows[] = {
         "Pad canale 10, note 36-51: pad 1-16",
@@ -1428,6 +1575,7 @@ static void draw_options(App *a, Canvas *c)
         "   altri canali pattern A-D",
         "Clock, start, stop: sincronizzano il",
         "   sequencer (se «Segui il clock»)",
+        "Launchpad Mini MK3: legenda se collegato",
     };
     for (size_t i = 0; i < sizeof(rows) / sizeof(rows[0]); i++) gfx_text(c, FONT_SMALL, 376, 106 + (int)i * 20, rows[i], C_MUTED);
     draw_hints(c, "su/giù scegli · sinistra/destra cambia · L1/R1 tempo a passi di 10 · A esporta o attiva · B torna");

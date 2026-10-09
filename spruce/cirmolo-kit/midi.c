@@ -49,3 +49,30 @@ int midi_parse_byte(MidiParser *p, unsigned char b, unsigned char out[3])
     if (p->status >= 0xF0) p->status = 0;    /* i messaggi di sistema comune non hanno running status */
     return len;
 }
+
+/* ------------------------------------------------------------------ uscita MIDI (vedi midi.h) */
+int (*cirmolo_midi_send_hook)(int port, const unsigned char *msg, int len);
+
+static int (*g_send)(int port, const unsigned char *msg, int len);
+static char g_name[96];
+static int g_ports;
+
+void cirmolo_midi_set_device(const char *name, int ports, int (*send)(int port, const unsigned char *msg, int len))
+{
+    size_t n = 0;
+    if (name) { n = strlen(name); if (n >= sizeof(g_name)) n = sizeof(g_name) - 1; memcpy(g_name, name, n); }
+    g_name[n] = 0;
+    g_ports = ports > 0 ? ports : 0;
+    g_send = send;
+}
+
+const char *cirmolo_midi_name(void) { return g_name; }
+int cirmolo_midi_ports(void) { return g_ports; }
+
+int cirmolo_midi_send(int port, const unsigned char *msg, int len)
+{
+    if (!msg || len < 1 || port < 0) return -1;
+    if (cirmolo_midi_send_hook) return cirmolo_midi_send_hook(port, msg, len);
+    if (!g_send || port >= g_ports) return -1;
+    return g_send(port, msg, len);
+}

@@ -20,9 +20,14 @@ void app_button(App *a, int button, int pressed);
 /* Levette -1..1 (su = negativo), grilletti 0..1: sinistra orizzontale = pitch bend, destra verticale
    = filtro passa-basso; nella pagina Modifica la destra verticale ritocca l'intonazione di un decimo. */
 void app_axes(App *a, float lx, float ly, float rx, float ry, float l2, float r2);
-/* Tastiera o pad MIDI USB (spruce/cirmolo-kit/midi.h): un messaggio completo; nome del dispositivo o NULL. */
+/* Tastiera o pad MIDI USB (spruce/cirmolo-kit/midi.h): un messaggio completo dalla porta data (0 = la
+   prima; app_midi vale per la porta 0); nome del dispositivo o NULL. Se il nome e' quello di un Launchpad
+   Mini MK3 (launchpad.h) i messaggi vengono letti come pad e tasti del Launchpad e i suoi LED seguono il
+   sampler; altrimenti vale la mappa della MPK mini (pad sul canale 10, tasti cromatici, CC70-77). */
 void app_midi(App *a, const unsigned char *msg, int len);
+void app_midi_port(App *a, int port, const unsigned char *msg, int len);
 void app_midi_status(App *a, const char *device);
+int  app_launchpad(const App *a);                /* 1 se c'e' un Launchpad in modalita' Programmer */
 /* Microfono USB: campioni mono dal thread dell'ingresso; nome e frequenza, o NULL se scollegato. */
 void app_capture(App *a, const float *in, int frames);
 void app_capture_status(App *a, const char *device, float sample_rate);

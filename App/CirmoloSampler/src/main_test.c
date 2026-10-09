@@ -13,6 +13,8 @@
 
 #include "app.h"
 #include "gfx.h"
+#include "launchpad.h"
+#include "midi.h"
 #include "sampler.h"
 
 #ifdef _WIN32
@@ -175,6 +177,72 @@ static int sound_length(int pad, float pitch, float semis, int key, float *tmp, 
 static void midi3(int a, int b, int c) { unsigned char m[3] = { (unsigned char)a, (unsigned char)b, (unsigned char)c }; app_midi(g_a, m, 3); }
 static void midi2(int a, int b) { unsigned char m[2] = { (unsigned char)a, (unsigned char)b }; app_midi(g_a, m, 2); }
 static void midi1(int a) { unsigned char m[1] = { (unsigned char)a }; app_midi(g_a, m, 1); }
+/* Dalla porta data (il Launchpad parla sulla seconda, la 1). */
+static void midi3p(int port, int a, int b, int c) { unsigned char m[3] = { (unsigned char)a, (unsigned char)b, (unsigned char)c }; app_midi_port(g_a, port, m, 3); }
+
+/* ------------------------------------------------------------------ Launchpad simulato
+ * Il gancio del kit cattura tutto quel che l'app manda al dispositivo; da li' si ricavano i SysEx di
+ * Programmer/Live mode e lo stato dei LED (ultimo colore di ogni indice nei SysEx «LED lighting»). */
+#define CAP_MAX 4096
+#define CAP_LEN 340
+static unsigned char cap_msg[CAP_MAX][CAP_LEN];
+static int cap_len[CAP_MAX], cap_port[CAP_MAX], cap_n, cap_total;
+
+static int cap_hook(int port, const unsigned char *msg, int len)
+{
+    cap_total++;
+    if (cap_n < CAP_MAX && len <= CAP_LEN) { memcpy(cap_msg[cap_n], msg, (size_t)len); cap_len[cap_n] = len; cap_port[cap_n] = port; cap_n++; }
+    return 0;
+}
+
+static void cap_reset(void) { cap_n = 0; }
+
+static const unsigned char LP_HEAD[6] = { 0xF0, 0x00, 0x20, 0x29, 0x02, 0x0D };
+
+static int cap_is_mode(int i, int mode)
+{
+    return cap_len[i] == 9 && !memcmp(cap_msg[i], LP_HEAD, 6) && cap_msg[i][6] == 0x0E && cap_msg[i][7] == mode && cap_msg[i][8] == 0xF7;
+}
+
+static int cap_count_mode(int mode) { int n = 0; for (int i = 0; i < cap_n; i++) n += cap_is_mode(i, mode); return n; }
+static int cap_is_led(int i) { return cap_len[i] >= 8 && !memcmp(cap_msg[i], LP_HEAD, 6) && cap_msg[i][6] == 0x03 && cap_msg[i][cap_len[i] - 1] == 0xF7; }
+static int cap_count_led(void) { int n = 0; for (int i = 0; i < cap_n; i++) n += cap_is_led(i); return n; }
+
+/* Numero di <colourspec> in un SysEx LED; -1 se malformato. */
+static int cap_led_specs(int i)
+{
+    if (!cap_is_led(i)) return -1;
+    int k = 7, n = 0;
+    while (k < cap_len[i] - 1) {
+        int t = cap_msg[i][k];
+        int sz = t == 0 || t == 2 ? 3 : (t == 1 ? 4 : (t == 3 ? 5 : -1));
+        if (sz < 0 || k + sz > cap_len[i] - 1) return -1;
+        k += sz;
+        n++;
+    }
+    return n;
+}
+
+/* Stato di un LED dopo tutti i messaggi catturati: tipo * 256 + colore (tipo 0 fisso, 1 lampeggio con il
+   colore B, 2 pulsazione), -1 se non e' mai stato impostato. */
+static int cap_led(int idx)
+{
+    int st = -1;
+    for (int i = 0; i < cap_n; i++) {
+        if (!cap_is_led(i)) continue;
+        int k = 7;
+        while (k < cap_len[i] - 1) {
+            int t = cap_msg[i][k], id = cap_msg[i][k + 1], c = cap_msg[i][k + 2];
+            int sz = t == 0 || t == 2 ? 3 : (t == 1 ? 4 : 5);
+            if (id == idx) st = t * 256 + c;
+            k += sz;
+        }
+    }
+    return st;
+}
+
+/* 1 se tutti i messaggi catturati sono andati alla porta data. */
+static int cap_only_port(int port) { for (int i = 0; i < cap_n; i++) if (cap_port[i] != port) return 0; return cap_n > 0; }
 
 int main(int argc, char **argv)
 {
@@ -249,6 +317,7 @@ int main(int argc, char **argv)
     Sampler *s = g_s = sampler_create(SR);
     App *a = g_a = app_create(s, state);
     app_set_library(a, recdir, wavdir);
+    cirmolo_midi_send_hook = cap_hook;              /* da qui in poi ogni messaggio verso il MIDI viene catturato */
     uint32_t *px = malloc(sizeof(uint32_t) * W * H);
     Canvas c = { px, W, H };
     g_cap = SR * 60;
@@ -549,6 +618,223 @@ int main(int argc, char **argv)
         shot(out, "2-modifica.bmp", &c);
     }
 
+    /* 9b. Launchpad Mini MK3 simulato: Programmer mode, griglia iniziale, pad, LED, passi, tasti in alto,
+       scene, scollegamento; la MPK dopo non manda LED */
+    {
+        check(cap_total == 0, "senza Launchpad l'app manda messaggi al dispositivo MIDI");
+        app_set_page(a, PAGE_PADS);
+        app_select_pad(a, 0);
+        sampler_select_pattern(s, 0);
+        sampler_set_chain(s, 0);
+        sampler_play(s, 0);
+        sampler_set_tempo(s, 120.0f);
+        sampler_set_metronome(s, 0);
+        for (int p = 4; p < 8; p++) sampler_pad(s, p)->mode = MODE_HOLD;   /* i campioni lunghi si fermano al rilascio */
+        run(0.3f);
+        SeqPattern *pa = sampler_pattern_at(s, 0);
+        /* collegamento: nome come lo da' ALSA (senza spazi, tagliato a 15 caratteri) */
+        check(lp_match("LaunchpadMiniMK") && lp_match("Launchpad Mini MK3") && !lp_match("MPKminiIV") && !lp_match("LaunchpadMini") && !lp_match(NULL),
+              "il riconoscimento del nome del Launchpad");
+        cap_reset();
+        app_midi_status(a, "LaunchpadMiniMK");
+        int prog = cap_count_mode(1), leds0 = cap_count_led(), specs0 = -1, ports_ok = 0;
+        for (int i = 0; i < cap_n; i++) if (cap_is_led(i)) { specs0 = cap_led_specs(i); ports_ok = cap_port[i] == 0 || cap_port[i] == 1; break; }
+        int led_a1 = cap_led(lp_led_pad(0)), led_b1 = cap_led(lp_led_pad(8)), led_up = cap_led(lp_led_top(LP_TOP_UP)), led_logo = cap_led(99);
+        int led_step0 = cap_led(lp_led_step(0)), led_step1 = cap_led(lp_led_step(1));
+        int col_a1 = lp_pad_colour(sampler_sample(s, 0), sampler_pad(s, 0));
+        printf("launchpad: Programmer mode %d volte, %d SysEx LED (%d spec, porte 0 e 1 %d); A1 %04x (colore %d), B1 vuoto %04x, ▲ %04x, logo %04x, passo 1 %04x, passo 2 %04x\n",
+               prog, leds0, specs0, ports_ok, led_a1, col_a1, led_b1, led_up, led_logo, led_step0, led_step1);
+        check(app_launchpad(a) && prog == 2 && leds0 == 2 && specs0 == 81 && ports_ok, "il collegamento non entra in Programmer mode con la griglia completa su entrambe le porte");
+        check(col_a1 > 0 && led_a1 == LP_PULSE * 256 + col_a1 && led_b1 == 0 && led_up == LPC_WHITE && led_logo == LPC_VIOLET, "i LED iniziali dei pad non sono quelli attesi");
+        check(pa->vel[0][0] == 100 && led_step0 == col_a1 && led_step1 == LPC_GREY_DARK, "i LED dei passi non riflettono il pattern");
+        /* pad A1 dalla porta 1: suona, LED bianco, poi torna; i LED vanno solo alla porta 1 */
+        cap_reset();
+        uint32_t f0 = sampler_slot_flash(s, 0);
+        midi3p(1, 0x90, 11, 127);
+        run(0.05f);
+        int white = cap_led(lp_led_pad(0)), only1 = cap_only_port(1);
+        midi3p(1, 0x90, 11, 0);
+        run(1.0f);
+        int back = cap_led(lp_led_pad(0));
+        uint32_t hits = 0;
+        for (int n = 12; n <= 18; n++) {
+            uint32_t f = sampler_slot_flash(s, n - 11);
+            midi3p(1, 0x90, n, 127);
+            run(0.02f);
+            midi3p(1, 0x80, n, 0);
+            hits += sampler_slot_flash(s, n - 11) - f;
+        }
+        run(0.6f);                                         /* il pad A3 (rampa) dura 0,5 s */
+        printf("launchpad: nota 11 suona A1 (%u colpo), LED %04x poi %04x, solo porta 1 %d; note 12-18 %u colpi; voci attive %d\n",
+               sampler_slot_flash(s, 0) - f0, white, back, only1, hits, sampler_active_voices(s));
+        check(sampler_slot_flash(s, 0) - f0 == 1 && white == LPC_WHITE && back == LP_PULSE * 256 + col_a1 && only1, "il pad A1 dal Launchpad non suona o il LED non va in bianco e torna");
+        check(hits == 7 && sampler_active_voices(s) == 0, "le note 12-18 non suonano i pad A2-A8 o non si fermano");
+        /* velocity fissa: 127 vale 100 */
+        midi3p(1, 0x90, 11, 127);
+        run_into(0.3f, tmp, tmp_cap);
+        float rms_lp = rms_range(tmp, 0, SR / 10);
+        run(0.4f);
+        sampler_trigger(s, 0, 100 / 127.0f, 0.0f, -1);
+        run_into(0.3f, tmp, tmp_cap);
+        float rms_100 = rms_range(tmp, 0, SR / 10);
+        run(0.4f);
+        check(fabsf(rms_lp - rms_100) < 0.01f, "la velocity fissa del Launchpad non vale 100");
+        /* passi: nota 31 = passo 1 del pad scelto (A1), nota 41 = passo 9 */
+        midi3p(1, 0x90, 31, 127); midi3p(1, 0x90, 31, 0);
+        int v_off = pa->vel[0][0];
+        midi3p(1, 0x90, 31, 127); midi3p(1, 0x90, 31, 0);
+        int v_on = pa->vel[0][0];
+        midi3p(1, 0x90, 41, 127); midi3p(1, 0x90, 41, 0);
+        int v9 = pa->vel[0][8];
+        midi3p(1, 0x90, 41, 127); midi3p(1, 0x90, 41, 0);
+        run(0.05f);
+        printf("launchpad: passo 1 %d -> %d, passo 9 %d -> %d, LED passo 9 %04x\n", v_off, v_on, v9, pa->vel[0][8], cap_led(lp_led_step(8)));
+        check(v_off == 0 && v_on == 100 && v9 == 0 && pa->vel[0][8] == 100 && cap_led(lp_led_step(8)) == col_a1, "le note 31-46 non commutano i passi");
+        /* User (CC98) tenuto: nota 12 sceglie A2 senza suonare; nota 31 cancella il passo */
+        uint32_t f1 = sampler_slot_flash(s, 1);
+        midi3p(1, 0xB0, 98, 127);
+        midi3p(1, 0x90, 12, 127); midi3p(1, 0x90, 12, 0);
+        int sel_shift = app_selected_pad(a);
+        pa->vel[1][0] = 100;
+        midi3p(1, 0x90, 31, 127); midi3p(1, 0x90, 31, 0);
+        int v_cleared = pa->vel[1][0];
+        midi3p(1, 0x90, 31, 127); midi3p(1, 0x90, 31, 0);
+        int v_still = pa->vel[1][0];
+        midi3p(1, 0xB0, 98, 0);
+        check(sel_shift == 1 && sampler_slot_flash(s, 1) == f1 && v_cleared == 0 && v_still == 0, "User + pad non sceglie senza suonare o User + passo non cancella");
+        /* vista d'insieme (righe 5-8): con A2 scelto mostra A1-A4; nota 51 = A1 passi 1-2 */
+        pa->vel[0][0] = 100; pa->vel[0][1] = 0;
+        midi3p(1, 0x90, 51, 127); midi3p(1, 0x90, 51, 0);
+        int ov_off = pa->vel[0][0] + pa->vel[0][1];
+        midi3p(1, 0x90, 51, 127); midi3p(1, 0x90, 51, 0);
+        int ov_on = pa->vel[0][0];
+        midi3p(1, 0xB0, 98, 127);
+        midi3p(1, 0x90, 81, 127); midi3p(1, 0x90, 81, 0);     /* riga 8 = quarto pad del quartetto: A4 */
+        midi3p(1, 0xB0, 98, 0);
+        int sel_ov = app_selected_pad(a);
+        app_select_pad(a, 0);
+        run(0.05f);
+        printf("launchpad: vista d'insieme: i due passi %d -> %d, User + riga 8 sceglie A%d, LED colonna 1 %04x\n", ov_off, ov_on, sel_ov + 1, cap_led(lp_led_overview(0, 0)));
+        check(ov_off == 0 && ov_on == 100 && sel_ov == 3 && cap_led(lp_led_overview(0, 0)) == col_a1 + 1, "la vista d'insieme non commuta i passi o non sceglie il pad");
+        /* tasti in alto: banco, pattern, play, rec, metronomo, lunghezza con User */
+        midi3p(1, 0xB0, 92, 127); midi3p(1, 0xB0, 92, 0);
+        int bank_dn = app_bank(a);
+        midi3p(1, 0xB0, 91, 127); midi3p(1, 0xB0, 91, 0);
+        int bank_up = app_bank(a);
+        midi3p(1, 0xB0, 93, 127); midi3p(1, 0xB0, 93, 0);
+        int pat_prev = sampler_selected_pattern(s);
+        midi3p(1, 0xB0, 94, 127); midi3p(1, 0xB0, 94, 0);
+        int pat_next = sampler_selected_pattern(s);
+        midi3p(1, 0xB0, 95, 127); midi3p(1, 0xB0, 95, 0);
+        int playing = sampler_playing(s);
+        run(0.3f);                                         /* a 120 BPM dopo 0,3 s e' il passo 3 */
+        int step_now = sampler_current_step(s), led_play = cap_led(lp_led_step(step_now)), led_session = cap_led(lp_led_top(LP_TOP_SESSION));
+        int led_ov_play = cap_led(lp_led_overview(0, step_now / 2));
+        cap_reset();
+        run(1.0f);
+        int leds_sec = cap_count_led();
+        midi3p(1, 0xB0, 95, 127); midi3p(1, 0xB0, 95, 0);
+        int stopped = !sampler_playing(s);
+        midi3p(1, 0xB0, 96, 127); midi3p(1, 0xB0, 96, 0);
+        int rec = sampler_record(s) && sampler_playing(s);
+        midi3p(1, 0xB0, 96, 127); midi3p(1, 0xB0, 96, 0);
+        midi3p(1, 0xB0, 95, 127); midi3p(1, 0xB0, 95, 0);
+        midi3p(1, 0xB0, 97, 127); midi3p(1, 0xB0, 97, 0);
+        int metro = sampler_metronome(s);
+        midi3p(1, 0xB0, 97, 127); midi3p(1, 0xB0, 97, 0);
+        midi3p(1, 0xB0, 98, 127);
+        midi3p(1, 0xB0, 93, 127); midi3p(1, 0xB0, 93, 0);
+        int len_short = pa->length;
+        midi3p(1, 0xB0, 94, 127); midi3p(1, 0xB0, 94, 0);
+        midi3p(1, 0xB0, 98, 0);
+        run(0.2f);
+        printf("launchpad: ▼ banco %c ▲ %c; ◀ pattern %c ▶ %c; Session play %d (passo %d: LED %04x, vista %04x, Session %04x), %d SysEx LED in 1 s, stop %d; Drums rec %d; Keys metronomo %d; User+◀ passi %d -> %d\n",
+               'A' + bank_dn, 'A' + bank_up, 'A' + pat_prev, 'A' + pat_next, playing, step_now, led_play, led_ov_play, led_session, leds_sec, stopped, rec, metro, len_short, pa->length);
+        check(bank_dn == 1 && bank_up == 0 && pat_prev == 3 && pat_next == 0, "▲▼◀▶ non cambiano banco e pattern");
+        check(playing && step_now >= 1 && led_play == LPC_WHITE && led_ov_play == LPC_WHITE && led_session == LPC_GREEN && stopped, "Session non avvia/ferma o il playhead non e' bianco");
+        check(leds_sec >= 8 && leds_sec <= 61, "i LED non si aggiornano a ogni passo o piu' di una volta per fotogramma");
+        check(rec && !sampler_record(s) && !sampler_playing(s) && metro && !sampler_metronome(s), "Drums o Keys non commutano registrazione e metronomo");
+        check(len_short == 15 && pa->length == 16, "User + ◀▶ non cambia la lunghezza del pattern");
+        /* scene: pattern A-D, catena con User, muto, solo, svuota (solo con User), tap tempo */
+        midi3p(1, 0xB0, 79, 127); midi3p(1, 0xB0, 79, 0);
+        int pat_b = sampler_selected_pattern(s);
+        midi3p(1, 0xB0, 98, 127);
+        midi3p(1, 0xB0, 79, 127); midi3p(1, 0xB0, 79, 0);
+        midi3p(1, 0xB0, 98, 0);
+        unsigned chain_b = sampler_chain(s);
+        run(0.05f);
+        int led_b = cap_led(lp_led_scene(1));
+        midi3p(1, 0xB0, 98, 127);
+        midi3p(1, 0xB0, 79, 127); midi3p(1, 0xB0, 79, 0);
+        midi3p(1, 0xB0, 98, 0);
+        midi3p(1, 0xB0, 89, 127); midi3p(1, 0xB0, 89, 0);
+        int pat_a = sampler_selected_pattern(s);
+        midi3p(1, 0xB0, 49, 127); midi3p(1, 0xB0, 49, 0);
+        int muted = sampler_pad(s, 0)->mute;
+        run(0.05f);
+        int led_mute = cap_led(lp_led_scene(LP_SCENE_MUTE));
+        midi3p(1, 0xB0, 49, 127); midi3p(1, 0xB0, 49, 0);
+        midi3p(1, 0xB0, 39, 127); midi3p(1, 0xB0, 39, 0);
+        int solo = sampler_pad(s, 0)->solo;
+        midi3p(1, 0xB0, 39, 127); midi3p(1, 0xB0, 39, 0);
+        sampler_pattern_at(s, 2)->vel[0][0] = 100;
+        midi3p(1, 0xB0, 69, 127); midi3p(1, 0xB0, 69, 0);       /* pattern C */
+        midi3p(1, 0xB0, 29, 127); midi3p(1, 0xB0, 29, 0);
+        int kept = sampler_pattern_at(s, 2)->vel[0][0];
+        midi3p(1, 0xB0, 98, 127);
+        midi3p(1, 0xB0, 29, 127); midi3p(1, 0xB0, 29, 0);
+        midi3p(1, 0xB0, 98, 0);
+        int cleared = sampler_pattern_at(s, 2)->vel[0][0];
+        midi3p(1, 0xB0, 89, 127); midi3p(1, 0xB0, 89, 0);
+        sampler_set_tempo(s, 100.0f);
+        for (int k = 0; k < 4; k++) { midi3p(1, 0xB0, 19, 127); midi3p(1, 0xB0, 19, 0); run(0.5f); }
+        float bpm_tap = sampler_tempo(s);
+        printf("launchpad: scena 2 pattern %c (User: catena %u, LED %04x), scena 1 %c; muto %d (LED %04x) solo %d; svuota senza User %d con User %d; tap 4 x 0,5 s -> %.0f BPM\n",
+               'A' + pat_b, chain_b, led_b, 'A' + pat_a, muted, led_mute, solo, kept, cleared, (double)bpm_tap);
+        check(pat_b == 1 && chain_b == 2 && led_b == LP_FLASH * 256 + LPC_VIOLET - 1 && pat_a == 0 && sampler_chain(s) == 0, "le scene non scelgono il pattern o la catena");
+        check(muted == 1 && led_mute == LPC_RED && !sampler_pad(s, 0)->mute && solo == 1 && !sampler_pad(s, 0)->solo, "muto e solo dalle scene non funzionano");
+        check(kept == 100 && cleared == 0, "svuota il pattern senza User, o non lo svuota con User");
+        check(fabsf(bpm_tap - 120.0f) <= 1.0f, "il tap tempo non misura 120 BPM");
+        sampler_set_tempo(s, 120.0f);
+        /* messaggi non del Launchpad (canale 10, note fuori griglia) ignorati; senza gancio ne' dispositivo nessun danno */
+        uint32_t f9 = sampler_slot_flash(s, 0);
+        midi3p(1, 0x99, 36, 100); midi3p(1, 0x89, 36, 0);
+        midi3p(1, 0x90, 60, 100); midi3p(1, 0x90, 60, 0);
+        midi3p(1, 0x90, 19, 100); midi3p(1, 0x90, 19, 0);
+        check(sampler_slot_flash(s, 0) == f9 && sampler_active_voices(s) == 0, "con il Launchpad collegato i messaggi fuori griglia suonano");
+        cirmolo_midi_send_hook = NULL;
+        app_select_pad(a, 1);
+        run(0.2f);
+        app_select_pad(a, 0);
+        cirmolo_midi_send_hook = cap_hook;
+        shot(out, "8-launchpad-pad.bmp", &c);
+        app_set_page(a, PAGE_OPTIONS);
+        shot(out, "9-launchpad-opzioni.bmp", &c);
+        app_set_page(a, PAGE_PADS);
+        /* scollegamento: Live mode, poi silenzio; la MPK torna a funzionare senza LED */
+        cap_reset();
+        app_midi_status(a, NULL);
+        int live = cap_n > 0 && cap_is_mode(cap_n - 1, 0), lp_off = !app_launchpad(a);
+        cap_reset();
+        run(0.3f);
+        int quiet = cap_n;
+        app_midi_status(a, "MPKminiIV");
+        uint32_t fm = sampler_slot_flash(s, 2);
+        midi3(0x99, 38, 100);
+        midi3(0x89, 38, 0);
+        run(0.6f);
+        int mpk_hit = (int)(sampler_slot_flash(s, 2) - fm), mpk_msgs = cap_n;
+        app_midi_status(a, NULL);
+        printf("launchpad: scollegato -> Live mode %d, spento %d, messaggi dopo %d; MPK: pad %d colpo, messaggi inviati %d\n", live, lp_off, quiet, mpk_hit, mpk_msgs);
+        check(live && lp_off && quiet == 0, "lo scollegamento non manda la Live mode o continua a mandare LED");
+        check(mpk_hit == 1 && mpk_msgs == 0, "la MPK non funziona piu' o riceve LED");
+        for (int p = 4; p < 8; p++) sampler_pad(s, p)->mode = MODE_ONESHOT;
+        pa->vel[0][1] = 0;
+        for (int i = 0; i < SP_STEPS; i++) pa->vel[1][i] = 0;
+        pa->vel[1][2] = 127;
+        run(0.2f);
+    }
+
     /* 10. Pagine Modifica e Sequenza con i tasti; schermate */
     {
         app_set_page(a, PAGE_EDIT);
@@ -831,7 +1117,12 @@ int main(int argc, char **argv)
     tap(PAD_A, 0.03f);
     check(app_wants_quit(a), "A nella finestra di uscita non esce");
 
+    /* 19. Uscita con il Launchpad collegato: l'ultimo messaggio e' la Live mode */
+    app_midi_status(a, "Launchpad Mini MK3");
+    cap_reset();
     app_destroy(a);
+    check(cap_n > 0 && cap_is_mode(cap_n - 1, 0) && cap_count_mode(0) == 2, "all'uscita il Launchpad non torna in Live mode");
+    cirmolo_midi_send_hook = NULL;
     sampler_destroy(s);
     gfx_free_fonts();
     free(px);

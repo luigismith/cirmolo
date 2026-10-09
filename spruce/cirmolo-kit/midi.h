@@ -23,4 +23,22 @@ int midi_parse_byte(MidiParser *p, unsigned char b, unsigned char out[3]);
 enum { MIDI_NOTE_OFF = 0x80, MIDI_NOTE_ON = 0x90, MIDI_POLY_AT = 0xA0, MIDI_CC = 0xB0,
        MIDI_PROGRAM = 0xC0, MIDI_CHANNEL_AT = 0xD0, MIDI_PITCH_BEND = 0xE0 };
 
+/* ------------------------------------------------------------------ uscita MIDI
+ * Verso il dispositivo USB collegato (controller con LED, come il Launchpad). Le porte sono le stesse
+ * numerate da midi_port in platform.h (0 = la prima). msg e' un messaggio completo, anche un SysEx.
+ * Restituisce 0 se e' stato scritto tutto, -1 se non c'e' un dispositivo, la porta non e' aperta in
+ * scrittura o la scrittura non riesce entro pochi millisecondi: senza dispositivo e' innocua. */
+int cirmolo_midi_send(int port, const unsigned char *msg, int len);
+/* Nome del dispositivo MIDI collegato ("" se nessuno) e numero delle sue porte aperte (0 se nessuno). */
+const char *cirmolo_midi_name(void);
+int cirmolo_midi_ports(void);
+
+/* Per le prove sul PC: se impostato, cirmolo_midi_send passa i messaggi a questa funzione invece che al
+   dispositivo (e restituisce quel che restituisce lei). */
+extern int (*cirmolo_midi_send_hook)(int port, const unsigned char *msg, int len);
+
+/* Per platform.c (o le prove): registra il dispositivo collegato e la funzione che scrive davvero;
+   NULL / "" / 0 quando si scollega. */
+void cirmolo_midi_set_device(const char *name, int ports, int (*send)(int port, const unsigned char *msg, int len));
+
 #endif

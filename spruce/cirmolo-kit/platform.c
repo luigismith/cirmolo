@@ -29,6 +29,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <linux/input.h>
+#include <poll.h>
 #include <sys/ioctl.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -331,19 +332,45 @@ static void evdev_poll(Evdev *e, Axes *ax, float *l2p, float *r2p, int *hx, int 
 
 /* ------------------------------------------------------------------ MIDI (tastiere USB) */
 #define MIDI_PORTS 8
-typedef struct { int fd[MIDI_PORTS], ports; MidiParser parser[MIDI_PORTS]; char name[96]; uint32_t retry; } MidiIn;
+typedef struct { int fd[MIDI_PORTS], writable[MIDI_PORTS], ports; MidiParser parser[MIDI_PORTS]; char name[96]; uint32_t retry; } MidiIn;
+
+static MidiIn g_midi = { { -1 }, { 0 }, 0 };
+
+/* Uscita (cirmolo_midi_send di midi.h): scrittura non bloccante sulla porta, con le scritture parziali
+   completate e, se il buffer del driver e' pieno (EAGAIN), al massimo 50 ms di attesa in tutto. */
+static int midi_write(int port, const unsigned char *msg, int len)
+{
+    if (port < 0 || port >= g_midi.ports || !g_midi.writable[port]) return -1;
+    int fd = g_midi.fd[port], done = 0, waited = 0;
+    while (done < len) {
+        ssize_t n = write(fd, msg + done, (size_t)(len - done));
+        if (n > 0) { done += (int)n; continue; }
+        if (n < 0 && (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)) {
+            if (waited >= 50) return -1;
+            struct pollfd pf = { fd, POLLOUT, 0 };
+            poll(&pf, 1, 5);
+            waited += 5;
+            continue;
+        }
+        return -1;
+    }
+    return 0;
+}
 
 static void midi_close(MidiIn *m, void *app)
 {
     for (int p = 0; p < m->ports; p++) close(m->fd[p]);
     m->ports = 0;
+    cirmolo_midi_set_device("", 0, NULL);
     fprintf(stderr, "MIDI scollegato: %s\n", m->name);
     if (g_desc->midi_status) g_desc->midi_status(app, NULL);
 }
 
 /* Cerca /dev/snd/midiC<card>D<dev> e lo apre; il nome viene da /proc/asound/card<card>/id.
    Ogni open() senza preferenze prende la prima sottoperiferica libera (una per porta del dispositivo
-   USB) e, con O_NONBLOCK, fallisce con EBUSY quando sono finite: cosi' si aprono tutte le porte. */
+   USB) e, con O_NONBLOCK, fallisce con EBUSY quando sono finite: cosi' si aprono tutte le porte.
+   Si apre in lettura e scrittura (il driver abbina la sottoperiferica d'ingresso e d'uscita con lo
+   stesso numero, se entrambe sono libere); se non si puo', in sola lettura come prima. */
 static void midi_scan(MidiIn *m, void *app)
 {
     DIR *d = opendir("/dev/snd");
@@ -360,13 +387,18 @@ static void midi_scan(MidiIn *m, void *app)
     snprintf(path, sizeof(path), "/dev/snd/midiC%dD%d", card, dev);
     int want = g_desc->midi_port ? MIDI_PORTS : 1;
     m->ports = 0;
+    int writable = 0;
     while (m->ports < want) {
-        int fd = open(path, O_RDONLY | O_NONBLOCK);
+        int rw = 1;
+        int fd = open(path, O_RDWR | O_NONBLOCK);
+        if (fd < 0) { rw = 0; fd = open(path, O_RDONLY | O_NONBLOCK); }
         if (fd < 0) {
             if (!m->ports) fprintf(stderr, "MIDI: %s non aperto (%s)\n", path, strerror(errno));
             break;
         }
         m->fd[m->ports] = fd;
+        m->writable[m->ports] = rw;
+        writable += rw;
         midi_parser_reset(&m->parser[m->ports]);
         m->ports++;
     }
@@ -379,7 +411,8 @@ static void midi_scan(MidiIn *m, void *app)
         if (fgets(m->name, sizeof(m->name), f)) m->name[strcspn(m->name, "\r\n")] = 0;
         fclose(f);
     }
-    fprintf(stderr, "MIDI collegato: %s (%s, %d port%s)\n", m->name, path, m->ports, m->ports == 1 ? "a" : "e");
+    fprintf(stderr, "MIDI collegato: %s (%s, %d port%s, %d in scrittura)\n", m->name, path, m->ports, m->ports == 1 ? "a" : "e", writable);
+    cirmolo_midi_set_device(m->name, m->ports, midi_write);
     if (g_desc->midi_status) g_desc->midi_status(app, m->name);
 }
 
@@ -558,7 +591,7 @@ int main(int argc, char **argv)
     /* Con evdev aperto, gamepad e tastiera di SDL vengono ignorati: leggono lo stesso dispositivo
        e ogni tasto arriverebbe due volte (con mappature diverse). */
     int sdl_input = !have_evdev || getenv("CIRMOLO_SDL_INPUT") != NULL;
-    MidiIn midi = { { -1 }, 0 };
+    MidiIn *midi = &g_midi;
     if (g_desc->midi_status) g_desc->midi_status(app, NULL);
 #else
     int sdl_input = 1;
@@ -628,8 +661,8 @@ int main(int argc, char **argv)
 #ifndef _WIN32
         if (have_evdev) evdev_poll(&ev, &ax, &l2p, &r2p, &hx, &hy);
         if (g_desc->midi || g_desc->midi_port) {
-            if (midi.ports) midi_poll(&midi, app);
-            else if (p_SDL_GetTicks() >= midi.retry) { midi_scan(&midi, app); midi.retry = p_SDL_GetTicks() + 1500; }
+            if (midi->ports) midi_poll(midi, app);
+            else if (p_SDL_GetTicks() >= midi->retry) { midi_scan(midi, app); midi->retry = p_SDL_GetTicks() + 1500; }
         }
 #endif
         /* vince la sorgente che si sta muovendo di piu' */
@@ -673,7 +706,8 @@ int main(int argc, char **argv)
     g_desc->destroy(app);
 #ifndef _WIN32
     if (have_evdev) close(ev.fd);
-    for (int p = 0; p < midi.ports; p++) close(midi.fd[p]);
+    cirmolo_midi_set_device("", 0, NULL);     /* l'app ha gia' mandato i suoi ultimi messaggi in destroy */
+    for (int p = 0; p < midi->ports; p++) close(midi->fd[p]);
 #endif
     p_SDL_DestroyTexture(tex);
     p_SDL_DestroyRenderer(ren);

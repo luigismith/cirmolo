@@ -11,7 +11,7 @@ SDL_INCLUDE="${SDL_INCLUDE:?serve SDL_INCLUDE con gli header di SDL 2.32}"
 OUT="${OUT:-build}"
 KIT=../../../spruce/cirmolo-kit
 CFLAGS="-O2 -std=gnu11 -Wall -Wextra -Wno-unused-parameter -Wno-missing-field-initializers -Wno-unused-function -I. -I$KIT"
-SRC="app.c sampler.c $KIT/gfx.c $KIT/midi.c"
+SRC="app.c sampler.c launchpad.c $KIT/gfx.c $KIT/midi.c"
 
 "$ZIG" cc $CFLAGS -s -target aarch64-linux-gnu.2.27 -mcpu=cortex_a55 -I"$SDL_INCLUDE" \
     -o ../cirmolo-sampler sampler_main.c $KIT/platform.c $SRC -lm -ldl

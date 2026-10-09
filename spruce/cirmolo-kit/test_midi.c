@@ -6,6 +6,10 @@
 
 static int fail;
 
+static int hook_port, hook_len, hook_last, fake_port;
+static int hook(int port, const unsigned char *msg, int len) { hook_port = port; hook_len = len; hook_last = msg[len - 1]; return 0; }
+static int fake_send(int port, const unsigned char *msg, int len) { (void)msg; (void)len; fake_port = port; return 0; }
+
 static void expect(const char *what, const unsigned char *in, int n, const char *want)
 {
     MidiParser p;
@@ -51,6 +55,20 @@ int main(void)
     expect("dati senza stato all'inizio ignorati", k, sizeof(k), "90 3C 64 | ");
     const unsigned char l[] = { 0xFA, 0xFC, 0xFE };
     expect("start, stop, active sensing", l, sizeof(l), "FA | FC | FE | ");
+
+    /* uscita: senza dispositivo e' innocua, con il gancio delle prove cattura, con un dispositivo scrive */
+    const unsigned char sx[] = { 0xF0, 0x00, 0x20, 0x29, 0x02, 0x0D, 0x0E, 0x01, 0xF7 };
+    int ok = cirmolo_midi_send(0, sx, sizeof(sx)) == -1 && cirmolo_midi_ports() == 0 && cirmolo_midi_name()[0] == 0;
+    cirmolo_midi_send_hook = hook;
+    ok = ok && cirmolo_midi_send(1, sx, sizeof(sx)) == 0 && hook_port == 1 && hook_len == 9 && hook_last == 0xF7;
+    cirmolo_midi_send_hook = NULL;
+    cirmolo_midi_set_device("Finto", 2, fake_send);
+    ok = ok && cirmolo_midi_send(1, sx, sizeof(sx)) == 0 && fake_port == 1 && cirmolo_midi_send(2, sx, sizeof(sx)) == -1 &&
+         cirmolo_midi_ports() == 2 && !strcmp(cirmolo_midi_name(), "Finto");
+    cirmolo_midi_set_device("", 0, NULL);
+    ok = ok && cirmolo_midi_send(0, sx, sizeof(sx)) == -1 && cirmolo_midi_send(0, NULL, 0) == -1;
+    printf("  %s uscita MIDI: senza dispositivo, con gancio, con dispositivo finto\n", ok ? "OK  " : "FAIL");
+    if (!ok) fail = 1;
     printf(fail ? "ESITO: errori\n" : "ESITO: tutto bene\n");
     return fail;
 }

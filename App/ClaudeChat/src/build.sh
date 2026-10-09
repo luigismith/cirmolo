@@ -21,6 +21,7 @@ SRC="chat_app.c $IA/mdtext.c $AI $KIT/gfx.c"
 TRAD="traduttore.c $IA/iaconf.c $IA/ask.c $IA/png.c $AI $KIT/gfx.c"
 SCHEDA="scheda_app.c $IA/iaconf.c $IA/ask.c $IA/mdtext.c $IA/diario.c $AI $KIT/gfx.c"
 DIARIO="diario_main.c $IA/diario.c $IA/iaconf.c $IA/ask.c $AI"
+CONSIGLI="consigli_app.c $IA/collezione.c $IA/diario.c $IA/iaconf.c $IA/ask.c $IA/mdtext.c $AI $KIT/gfx.c"
 
 "$ZIG" cc $CFLAGS $ARM -I"$SDL_INCLUDE" -o ../claude-chat chat_main.c $KIT/platform.c $KIT/midi.c $SRC -lm -ldl
 echo "console: ../claude-chat"
@@ -30,6 +31,8 @@ echo "console: ../ia-traduttore (traduttore dei giochi per RetroArch)"
 echo "console: ../ia-scheda (scheda del gioco e promemoria)"
 "$ZIG" cc $CFLAGS $ARM -o ../ia-diario $DIARIO -lm
 echo "console: ../ia-diario (diario delle partite)"
+"$ZIG" cc $CFLAGS $ARM -I"$SDL_INCLUDE" -o ../ia-consigli consigli_main.c $KIT/platform.c $KIT/midi.c $CONSIGLI -lm -ldl
+echo "console: ../ia-consigli (Cosa gioco?, si apre da App/CosaGioco)"
 
 if [ "$1" = "prova" ]; then
     mkdir -p "$OUT"
@@ -39,5 +42,6 @@ if [ "$1" = "prova" ]; then
     "$ZIG" cc $CFLAGS $W -o "$OUT/ia-traduttore.exe" $TRAD
     "$ZIG" cc $CFLAGS $W -o "$OUT/scheda-test.exe" scheda_test.c $SCHEDA
     "$ZIG" cc $CFLAGS $W -o "$OUT/ia-diario.exe" $DIARIO
+    "$ZIG" cc $CFLAGS $W -o "$OUT/consigli-test.exe" consigli_test.c $CONSIGLI
     echo "PC: chat-test.exe e scheda-test.exe (prove), claude-chat.exe (serve SDL2.dll), ia-traduttore.exe, ia-diario.exe in $OUT"
 fi

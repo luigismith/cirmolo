@@ -89,6 +89,67 @@ int diary_last(const char *saves_dir, const char *rom, DiaryEntry *out, long *to
     return found ? 0 : -1;
 }
 
+typedef struct { DiaryEntry last; long total; int sessions; } DiaryGame;
+
+static int by_last_desc(const void *a, const void *b)
+{
+    long x = ((const DiaryGame *)a)->last.start, y = ((const DiaryGame *)b)->last.start;
+    return x < y ? 1 : (x > y ? -1 : 0);
+}
+
+char *diary_digest(const char *saves_dir, int max)
+{
+    char path[520];
+    snprintf(path, sizeof(path), "%s/diario/diario.jsonl", saves_dir);
+    FILE *f = fopen(path, "rb");
+    if (!f) return NULL;
+    DiaryGame *g = NULL;
+    int n = 0, cap = 0;
+    char line[4096];
+    while (fgets(line, sizeof(line), f)) {
+        JNode *j = json_parse(line, strcspn(line, "\r\n"));
+        const char *r = json_str(j, "rom");
+        if (r) {
+            int k;
+            for (k = 0; k < n && !same_path(g[k].last.rom, r); k++) {}
+            if (k == n) {
+                if (n == cap) { cap = cap ? cap * 2 : 32; g = realloc(g, sizeof(DiaryGame) * (size_t)cap); if (!g) abort(); }
+                memset(&g[n], 0, sizeof(g[n]));
+                n++;
+            }
+            DiaryEntry *e = &g[k].last;
+            long start = (long)json_num(j, "start", 0), secs = (long)json_num(j, "secs", 0);
+            g[k].total += secs;
+            g[k].sessions++;
+            if (start >= e->start) {
+                const char *v;
+                snprintf(e->rom, sizeof(e->rom), "%s", r);
+                if ((v = json_str(j, "system"))) snprintf(e->system, sizeof(e->system), "%s", v);
+                if ((v = json_str(j, "name"))) snprintf(e->name, sizeof(e->name), "%s", v);
+                v = json_str(j, "summary");
+                snprintf(e->summary, sizeof(e->summary), "%s", v ? v : "");
+                e->start = start;
+                e->secs = secs;
+            }
+        }
+        json_free(j);
+    }
+    fclose(f);
+    if (!n) { free(g); return NULL; }
+    qsort(g, (size_t)n, sizeof(DiaryGame), by_last_desc);
+    Buf b = { 0 };
+    for (int i = 0; i < n && i < max; i++) {
+        char tot[40], date[40];
+        diary_duration(g[i].total, tot, sizeof(tot));
+        diary_date(g[i].last.start, date, sizeof(date));
+        buf_printf(&b, "%s | %s | %d sessions, %s in all, last on %s", g[i].last.system, g[i].last.name, g[i].sessions, tot, date);
+        if (g[i].last.summary[0]) buf_printf(&b, " | %s", g[i].last.summary);
+        buf_adds(&b, "\n");
+    }
+    free(g);
+    return buf_steal(&b);
+}
+
 void diary_name_from_rom(const char *rom, char *out, size_t n)
 {
     const char *base = strrchr(rom, '/');

@@ -1,0 +1,28 @@
+{
+  "_leggimi": "Copia questo file in Saves/claude/fornitori.json e cambialo: aggiunge fornitori o cambia quelli che ci sono (stesso id). Servono solo id e url; il resto e' facoltativo. La chiave va in Saves/claude/chiavi/<id>.txt.",
+  "fornitori": [
+    {
+      "id": "ollama",
+      "nome": "Ollama sul PC di casa",
+      "url": "http://192.168.1.10:11434/v1",
+      "chiave": false,
+      "nota": "Modelli sul PC di casa: gratis e privati, servono il PC acceso e la stessa rete Wi-Fi.",
+      "modelli": ["qwen3:8b", { "id": "gemma4:12b", "nome": "Gemma 4 12B", "gratis": true }]
+    },
+    {
+      "id": "qwen",
+      "url": "https://IL-TUO-WORKSPACE.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1"
+    },
+    {
+      "id": "voce-locale",
+      "nome": "Voce sul PC (server compatibile OpenAI)",
+      "url": "http://192.168.1.10:8880/v1",
+      "chiave": false,
+      "trascrizione": "openai",
+      "modello_trascrizione": "whisper-1",
+      "sintesi": "openai",
+      "modello_sintesi": "tts-1",
+      "voci": "if_sara,im_nicola"
+    }
+  ]
+}

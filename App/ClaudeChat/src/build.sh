@@ -1,5 +1,5 @@
 #!/bin/sh
-# Compila Chiedi a Claude con Zig (cc di clang + glibc 2.27 per la Flip).
+# Compila Chiedi all'IA con Zig (cc di clang + glibc 2.27 per la Flip).
 #   ZIG=/percorso/zig SDL_INCLUDE=/percorso/SDL2/include sh build.sh [prova]
 # Senza argomenti produce ../claude-chat (aarch64, per la console); con "prova" anche chat-test.exe
 # (prove senza finestra e senza rete) e claude-chat.exe per Windows in $OUT. Grafica e piattaforma
@@ -11,7 +11,7 @@ SDL_INCLUDE="${SDL_INCLUDE:?serve SDL_INCLUDE con gli header di SDL 2.32}"
 OUT="${OUT:-build}"
 KIT=../../../spruce/cirmolo-kit
 CFLAGS="-O2 -std=gnu11 -Wall -Wextra -Wno-unused-parameter -Wno-missing-field-initializers -Wno-unused-function -I. -I$KIT"
-SRC="chat_app.c claude.c json.c $KIT/gfx.c"
+SRC="chat_app.c conv.c claude.c openai.c providers.c voice.c net.c json.c $KIT/gfx.c $KIT/i18n.c"
 
 "$ZIG" cc $CFLAGS -s -target aarch64-linux-gnu.2.27 -mcpu=cortex_a55 -I"$SDL_INCLUDE" \
     -o ../claude-chat chat_main.c $KIT/platform.c $KIT/midi.c $SRC -lm -ldl

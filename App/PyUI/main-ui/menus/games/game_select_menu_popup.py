@@ -1,5 +1,6 @@
 
 
+import json
 import os
 import random
 import subprocess
@@ -28,6 +29,10 @@ from views.view_type import ViewType
 
 
 from menus.language.language import Language
+
+# Cirmolo: AI game card viewer (part of the Ask AI app)
+AI_CARD_DIR = "/mnt/SDCARD/App/ClaudeChat"
+AI_CARD_REQUEST = "/tmp/ia-scheda.json"
 
 class GameSelectMenuPopup:
     def __init__(self):
@@ -104,6 +109,35 @@ class GameSelectMenuPopup:
             rom_image_list.append((name_without_ext, img_path))
             
             BoxArtScraper().download_boxart_batch(rom_info.game_system.system_name, rom_image_list)
+
+    def show_ai_game_card(self, input_value, rom_info : RomInfo):
+        # The card viewer is a native app: PyUI hands it the game in a small JSON file (no quoting issues
+        # with odd ROM names), exits like for a game, and comes back to the same game list afterwards.
+        if ControllerInput.A != input_value:
+            return
+        image = ""
+        try:
+            img_path = get_rom_select_options_builder().get_default_image_path(rom_info.game_system, rom_info.rom_file_path)
+            if img_path and os.path.isfile(img_path):
+                image = img_path
+        except Exception as e:
+            PyUiLogger.get_logger().error(f"ai game card: no boxart path: {e}")
+        data = {
+            "rom": rom_info.rom_file_path,
+            "system": rom_info.game_system.system_name,
+            "system_name": rom_info.game_system.display_name,
+            "name": rom_info.display_name,
+            "image": image,
+        }
+        try:
+            with open(AI_CARD_REQUEST, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False)
+        except Exception as e:
+            PyUiLogger.get_logger().error(f"ai game card: cannot write {AI_CARD_REQUEST}: {e}")
+            return
+        Display.deinit_display()
+        Device.get_device().run_app(AI_CARD_DIR, "./ia-scheda")
+        Display.reinitialize()
 
     def find_index_for_boxart(self, boxart_name, boxart_list):
         name_lower = boxart_name.lower()
@@ -245,6 +279,17 @@ class GameSelectMenuPopup:
                 description=None,
                 icon=None,
                 value=lambda input_value, rom_info=rom_info: self.select_specific_boxart(input_value, rom_info)
+            ))
+
+        # Cirmolo: scheda del gioco scritta dall'IA (Chiedi all'IA, App/ClaudeChat/ia-scheda)
+        if os.path.isfile(os.path.join(AI_CARD_DIR, "ia-scheda")):
+            popup_options.append(GridOrListEntry(
+                primary_text=Language.label("aiGameCard", "Game card (AI)"),
+                image_path=Theme.settings(),
+                image_path_selected=Theme.settings_selected(),
+                description=None,
+                icon=None,
+                value=lambda input_value, rom_info=rom_info: self.show_ai_game_card(input_value, rom_info)
             ))
 
         if(PyUiConfig.get_cache_cheevos_cmd()

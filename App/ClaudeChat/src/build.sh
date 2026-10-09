@@ -12,19 +12,23 @@ OUT="${OUT:-build}"
 KIT=../../../spruce/cirmolo-kit
 IA=../../../spruce/cirmolo-ia
 CFLAGS="-O2 -std=gnu11 -Wall -Wextra -Wno-unused-parameter -Wno-missing-field-initializers -Wno-unused-function -I. -I$KIT -I$IA"
-SRC="chat_app.c $IA/conv.c $IA/claude.c $IA/openai.c $IA/providers.c $IA/voice.c $IA/net.c $IA/json.c $KIT/gfx.c $KIT/i18n.c"
+SRC="chat_app.c $IA/mdtext.c $IA/conv.c $IA/claude.c $IA/openai.c $IA/providers.c $IA/voice.c $IA/net.c $IA/json.c $KIT/gfx.c $KIT/i18n.c"
 
 "$ZIG" cc $CFLAGS -s -target aarch64-linux-gnu.2.27 -mcpu=cortex_a55 -I"$SDL_INCLUDE" \
     -o ../claude-chat chat_main.c $KIT/platform.c $KIT/midi.c $SRC -lm -ldl
 echo "console: ../claude-chat"
-TRAD="traduttore.c $IA/ask.c $IA/png.c $IA/conv.c $IA/claude.c $IA/openai.c $IA/providers.c $IA/voice.c $IA/net.c $IA/json.c $KIT/gfx.c $KIT/i18n.c"
+TRAD="traduttore.c $IA/iaconf.c $IA/ask.c $IA/png.c $IA/conv.c $IA/claude.c $IA/openai.c $IA/providers.c $IA/voice.c $IA/net.c $IA/json.c $KIT/gfx.c $KIT/i18n.c"
 "$ZIG" cc $CFLAGS -s -target aarch64-linux-gnu.2.27 -mcpu=cortex_a55 -o ../ia-traduttore $TRAD -lm
 echo "console: ../ia-traduttore (traduttore dei giochi per RetroArch)"
+SCHEDA="scheda_app.c $IA/iaconf.c $IA/ask.c $IA/mdtext.c $IA/conv.c $IA/claude.c $IA/openai.c $IA/providers.c $IA/voice.c $IA/net.c $IA/json.c $KIT/gfx.c $KIT/i18n.c"
+"$ZIG" cc $CFLAGS -s -target aarch64-linux-gnu.2.27 -mcpu=cortex_a55 -I"$SDL_INCLUDE" -o ../ia-scheda scheda_main.c $KIT/platform.c $KIT/midi.c $SCHEDA -lm -ldl
+echo "console: ../ia-scheda (scheda del gioco)"
 
 if [ "$1" = "prova" ]; then
     mkdir -p "$OUT"
     "$ZIG" cc $CFLAGS -target x86_64-windows-gnu -o "$OUT/chat-test.exe" main_test.c $SRC $IA/ask.c $IA/png.c
     "$ZIG" cc $CFLAGS -target x86_64-windows-gnu -I"$SDL_INCLUDE" -o "$OUT/claude-chat.exe" chat_main.c $KIT/platform.c $KIT/midi.c $SRC
     "$ZIG" cc $CFLAGS -target x86_64-windows-gnu -o "$OUT/ia-traduttore.exe" $TRAD
+    "$ZIG" cc $CFLAGS -target x86_64-windows-gnu -o "$OUT/scheda-test.exe" scheda_test.c $SCHEDA
     echo "PC: $OUT/chat-test.exe (prove), $OUT/claude-chat.exe (serve SDL2.dll; sul PC non si collega)"
 fi

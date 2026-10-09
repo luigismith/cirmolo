@@ -16,6 +16,7 @@
         "SHADOWED_SMALL": "Testo ombreggiato piccolo",
         "SHADOWED_BACKDROP_SMALL": "Sfondo ombreggiato piccolo"
     },
+    "aiGameCard": "Scheda del gioco (IA)",
     "abortingBoxartPatching": "Interruzione ottimizzazione copertine",
     "allBoxartOptimized": "Tutte le copertine sono ottimizzate",
     "boxartScannedPatched": "Controllate: {scanned}, ottimizzate: {patched}",

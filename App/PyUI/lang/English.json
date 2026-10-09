@@ -774,7 +774,6 @@
         "Cheevos": "Cheevos",
         "LittleGPTracker": "LittleGPTracker",
         "Cirmolo Piano": "Cirmolo Piano",
-        "Picoloop": "Picoloop"
     },
     "appDescriptions": {
         "32-bit RetroArch frontend": "32-bit RetroArch frontend",
@@ -807,7 +806,6 @@
         "RetroAchievements hub": "RetroAchievements hub",
         "Sample tracker for gamepads, LSDj style": "Sample tracker for gamepads, LSDj style",
         "General MIDI instrument for a USB MIDI keyboard": "General MIDI instrument for a USB MIDI keyboard",
-        "Synth and step sequencer, 10 sound engines": "Synth and step sequencer, 10 sound engines"
     },
     "taskLabels": {
         "Bug report": "Bug report",

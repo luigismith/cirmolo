@@ -135,6 +135,17 @@ static SDL_AudioDeviceID open_capture(float *rate, char *name, size_t name_len)
     return id;
 }
 
+/* Uscita su cuffie o scheda audio USB, se all'avvio ce n'e' una (NULL = quella predefinita). */
+static const char *usb_output_name(void)
+{
+    int n = p_SDL_GetNumAudioDevices(0);
+    for (int i = 0; i < n; i++) {
+        const char *dn = p_SDL_GetAudioDeviceName(i, 0);
+        if (dn && (strstr(dn, "USB") || strstr(dn, "usb"))) return dn;
+    }
+    return NULL;
+}
+
 /* ------------------------------------------------------------------ ingressi */
 typedef struct { float lx, ly, rx, ry, l2, r2; } Axes;
 
@@ -409,7 +420,10 @@ int main(int argc, char **argv)
     want.channels = 2;
     want.samples = 1024;              /* con 512 ALSA segnalava qualche underrun sulla Flip */
     want.callback = audio_cb;
-    SDL_AudioDeviceID dev = p_SDL_OpenAudioDevice(NULL, 0, &want, &have, SDL_AUDIO_ALLOW_FREQUENCY_CHANGE);
+    const char *out_name = g_desc->usb_output ? usb_output_name() : NULL;
+    SDL_AudioDeviceID dev = p_SDL_OpenAudioDevice(out_name, 0, &want, &have, SDL_AUDIO_ALLOW_FREQUENCY_CHANGE);
+    if (!dev && out_name) dev = p_SDL_OpenAudioDevice(NULL, 0, &want, &have, SDL_AUDIO_ALLOW_FREQUENCY_CHANGE);
+    if (dev && out_name) fprintf(stderr, "uscita audio: %s\n", out_name);
     float rate = dev ? (float)have.freq : 48000.0f;
     if (!dev) fprintf(stderr, "audio non disponibile: %s\n", p_SDL_GetError());
     else fprintf(stderr, "audio: %d Hz, %d campioni per blocco\n", have.freq, have.samples);

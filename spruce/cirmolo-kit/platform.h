@@ -23,6 +23,7 @@ typedef struct {
     const char *title;                    /* titolo della finestra e del log */
     const char *state_path;               /* file di stato sulla console (la cartella viene creata) */
     int wants_capture;                    /* 1 = apre anche un ingresso audio, se c'e' */
+    int usb_output;                       /* 1 = suona su una scheda audio USB (cuffie), se c'e' all'avvio */
 
     void *(*create)(float sample_rate, const char *state_path);
     void (*destroy)(void *app);

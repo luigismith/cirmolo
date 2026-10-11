@@ -11,7 +11,9 @@
  *   pad banco A, canale 10: 40-43 Dim Min Maj Sus (fila in alto), 36-39 6 m7 M7 9 (fila in basso);
  *   pad banco B: 44-47 batteria, loop registra, loop suona/ferma, loop cancella (fila in basso),
  *                48-51 modo tonalita', esecuzione successiva, suono precedente, suono successivo;
- *   manopole CC 24-31: voicing, basso, quantita' dell'esecuzione, tono, chorus, delay, riverbero, volume;
+ *   manopole CC 24-31: voicing, basso, quantita' dell'esecuzione, tono, chorus, delay, riverbero, volume
+ *   (da qualunque porta e in modo relativo: la MPK mini IV le manda solo sulla porta 2, 1-63 a destra e
+ *   65-127 a sinistra, misurato l'11/10/2026; pad e tasti arrivano sia sulla porta 1 sia sulla 2);
  *   rotelle: pitch bend (+-2 semitoni) e modulazione (vibrato); pedale sustain (CC 64);
  *   program change: suono. Trasporto sulla porta 2 (DAW): Play CC 76, Rec 77, Loop 74, Undo 73.
  * Sulla Flip, nella pagina Suona, croce e A B X Y suonano gli accordi della tonalita' (I IV V vi sulla
@@ -650,7 +652,7 @@ static void default_map(MidiMap *m)
     for (int i = 0; i < 8; i++) {
         m[T_CHORD + i] = (MidiMap){ MAP_NOTE, 0, 9, chord_notes[i] };
         m[T_FUNC + i] = (MidiMap){ MAP_NOTE, 0, 9, 44 + i };
-        m[T_KNOB + i] = (MidiMap){ MAP_CC, 0, -1, 24 + i };
+        m[T_KNOB + i] = (MidiMap){ MAP_CC, -1, -1, 24 + i };   /* da qualunque porta: la MPK le manda sulla 2 */
     }
     /* trasporto: CC sulla porta DAW, come li leggono gli script della community (Overdub non noto) */
     m[T_TRANS + X_PLAY] = (MidiMap){ MAP_CC, 1, -1, 76 };
@@ -821,9 +823,9 @@ void orcapp_midi_status(OrcApp *a, const char *device)
 /* ------------------------------------------------------------------ preset della tastiera */
 /* File di testo leggibili, una riga per controllo con i nomi della pagina MIDI:
  *   nome = Akai MPK mini IV
- *   manopole = Assolute
+ *   manopole = Relative
  *   Maj = nota 42 canale 10 porta 1
- *   K1 Voicing = cc 70 porta 1
+ *   K1 Voicing = cc 24
  *   Play/Stop = -
  * Si cercano in Saves/openorc/tastiere (quelli dell'utente, che vincono a parita' di nome) e nella
  * cartella tastiere dell'app; Y nella pagina MIDI li carica uno dopo l'altro. */
@@ -907,6 +909,12 @@ static int kbd_list(const OrcApp *a, KbdFile *out)
     }
     qsort(out, (size_t)n, sizeof(KbdFile), icmp);
     return n;
+}
+
+void orcapp_set_knob_mode(OrcApp *a, int mode)
+{
+    a->set.knob_mode = mode < 0 ? 0 : mode > 2 ? 2 : mode;
+    a->dirty = 1;
 }
 
 int orcapp_load_keyboard(OrcApp *a, const char *path, char *name, size_t name_n)
@@ -1015,6 +1023,7 @@ static void settings_default(Settings *s)
     s->clock_follow = 1;
     s->loop_bars = 2;
     s->loop_quant = 2;
+    s->knob_mode = 1;                             /* le manopole della MPK mini IV sono relative di fabbrica */
     default_map(s->map);
 }
 
@@ -1120,6 +1129,18 @@ OrcApp *orcapp_create(float sample_rate, const char *state_path)
         MidiMap d[T_COUNT];
         default_map(d);
         memcpy(&a->set.map[T_KNOB], &d[T_KNOB], sizeof(MidiMap) * (T_COUNT - T_KNOB));
+    }
+    /* stato salvato dalle versioni che aspettavano le manopole sulla porta 1 in modo assoluto: la MPK
+       mini IV le manda solo sulla porta 2, in modo relativo (misurato l'11/10/2026) */
+    int p1 = 1;
+    for (int i = 0; i < 8; i++) {
+        const MidiMap *k = &a->set.map[T_KNOB + i];
+        p1 &= k->kind == MAP_CC && k->port == 0 && k->ch < 0 && k->num == 24 + i;
+    }
+    if (p1) {
+        for (int i = 0; i < 8; i++) a->set.map[T_KNOB + i].port = -1;
+        if (a->set.knob_mode == 0) a->set.knob_mode = 1;
+        a->dirty = 1;
     }
     a->set.beat_on = 0;                           /* si parte sempre in silenzio */
     a->learn = -1;

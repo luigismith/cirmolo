@@ -4,7 +4,7 @@
 
 OpenOrc usa i **valori di fabbrica dei preset utente** della MPK mini IV:
 - pad sulle note 36–51, canale 10;
-- manopole sui CC 24–31, modo Abs.
+- manopole sui CC 24–31, modo Rel (relativo), sulla porta 2.
 
 Il file `akai-mpk-mini-iv.txt` li contiene, quindi di solito **non serve configurare la tastiera**.
 Questi valori non vengono da Akai, che non pubblica la sua MIDI implementation: vengono da due progetti
@@ -18,7 +18,7 @@ file: si imposta solo dal pannello (manuale v1.0, pagine 20-22; FAQ Akai).
 2. Collega la MPK alla porta USB-C della Flip e apri OpenOrc.
 3. Premi **SELECT** fino alla pagina **MIDI**, poi **Y**: compare «Tastiera: Akai MPK mini IV».
 4. Tocca un pad e gira una manopola. In basso, alla riga «Ultimo messaggio», devono comparire
-   «Nota 36…51 · canale 10» e «CC 24…31».
+   «Nota 36…51 · canale 10» e «CC 24…31 · porta 2».
 
 Se torna tutto, hai finito. Altrimenti passa al punto 2, oppure fai imparare i controlli a OpenOrc dalla
 pagina MIDI (A su una riga, poi muovi il controllo) e salva con **R2**.
@@ -30,7 +30,7 @@ pagina MIDI (A su una riga, poi muovi il controllo) e salva con **R2**.
 |---|---|
 | MidiCh | 1 (tasti e manopole) |
 | PadCh | **10** |
-| KnobM | **Abs** |
+| KnobM | **Rel** |
 | Toggle | Off |
 
 Esci con **PLUGIN/DAW**.
@@ -48,7 +48,7 @@ Per i pad: MidiCh **10**. Il banco si cambia con **BANK A/B**.
 
 È lo schema MPC: la nota è 35 + il numero del pad, contando da quello in basso a sinistra.
 
-Per le manopole: CC#, LoVal 0, HiVal 127, Mode **Abs**.
+Per le manopole: CC#, LoVal 0, HiVal 127, Mode **Rel**.
 
 | K1 | K2 | K3 | K4 | K5 | K6 | K7 | K8 |
 |---|---|---|---|---|---|---|---|
@@ -64,9 +64,10 @@ con **SHIFT + PLUGIN/DAW**.
 ## 3. Da sapere
 - **Chords, Scales, ARP e Note Repeat della MPK vanno spenti.** Gli accordi li costruisce OpenOrc: la
   tastiera deve mandare note singole.
-- **Manopole in Rel:** OpenOrc le capisce. Nella pagina MIDI imposta «Tipo di manopole» su **Relative**:
-  con ogni probabilità la MPK manda 1–63 per salire e 65–127 per scendere (da verificare: se una
-  manopola va al contrario o a scatti, prova «Relative (64)»). Così non saltano di valore.
+- **Manopole:** di fabbrica la MPK le manda in modo relativo (1–63 per salire, 65–127 per scendere; verificato
+  l'11/10/2026 su una MPK mini IV) e solo sulla porta 2. OpenOrc parte in modo «Relative» e le accetta da
+  qualunque porta, così i valori non saltano. Se hai messo KnobM su Abs, nella pagina MIDI imposta «Tipo di
+  manopole» su **Assolute**.
 - **Tasti di trasporto:** il preset li legge come CC sulla porta 2 (Play 76, Record 77, Loop 74,
   Undo 73), come gli script della community. Il manuale invece dice che nei preset utente mandano note
   (voce Trnspt del menu globale). Se non rispondono, impara il gruppo «Tasti di trasporto» e salva con R2.

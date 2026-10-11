@@ -4,7 +4,7 @@
 
 OpenOrc uses the **factory values of the MPK mini IV user presets**:
 - pads on notes 36–51, channel 10;
-- knobs on CC 24–31, Abs mode.
+- knobs on CC 24–31, Rel (relative) mode, on port 2.
 
 The file `akai-mpk-mini-iv.txt` contains these values, so usually **the keyboard needs no setup**.
 Akai does not publish the MIDI implementation, so the values come from two community projects (a
@@ -20,7 +20,7 @@ OpenOrc's screens are in Italian: the labels you will see are quoted below, with
 2. Connect the MPK to the Flip's USB-C port and open OpenOrc.
 3. Press **SELECT** until the **MIDI** page, then **Y**: "Tastiera: Akai MPK mini IV" appears.
 4. Hit a pad and turn a knob. At the bottom, the "Ultimo messaggio" line (last message) must show
-   "Nota 36…51 · canale 10" and "CC 24…31".
+   "Nota 36…51 · canale 10" and "CC 24…31 · porta 2" (port 2).
 
 If it all matches, you are done. Otherwise go to step 2, or let OpenOrc learn the controls on the MIDI
 page (A on a row, then move the control) and save with **R2**.
@@ -32,7 +32,7 @@ page (A on a row, then move the control) and save with **R2**.
 |---|---|
 | MidiCh | 1 (keys and knobs) |
 | PadCh | **10** |
-| KnobM | **Abs** |
+| KnobM | **Rel** |
 | Toggle | Off |
 
 Leave with **PLUGIN/DAW**.
@@ -51,7 +51,7 @@ For the pads: MidiCh **10**. **BANK A/B** switches the bank.
 
 This is the MPC layout: the note is 35 + the pad number, counting from the bottom-left pad.
 
-For the knobs: CC#, LoVal 0, HiVal 127, Mode **Abs**.
+For the knobs: CC#, LoVal 0, HiVal 127, Mode **Rel**.
 
 | K1 | K2 | K3 | K4 | K5 | K6 | K7 | K8 |
 |---|---|---|---|---|---|---|---|
@@ -66,9 +66,10 @@ it with **SHIFT + PLUGIN/DAW**.
 ## 3. Good to know
 - **Turn off the MPK's own Chords, Scales, ARP and Note Repeat.** OpenOrc builds the chords: the keyboard
   must send single notes.
-- **Knobs in Rel mode:** OpenOrc understands them. On the MIDI page set "Tipo di manopole" (knob type) to
-  **Relative**. Most likely the MPK sends 1–63 to go up and 65–127 to go down (not verified: if a knob
-  runs backwards or jumps, try "Relative (64)"). This way values never jump.
+- **Knobs:** out of the box the MPK sends them in relative mode (1–63 to go up, 65–127 to go down; measured on
+  an MPK mini IV on 2026-10-11) and only on port 2. OpenOrc starts in "Relative" mode and accepts them from any
+  port, so values never jump. If you set KnobM to Abs, set "Tipo di manopole" (knob type) to **Assolute** on
+  the MIDI page.
 - **Transport buttons:** the preset reads them as CC on port 2 (Play 76, Record 77, Loop 74, Undo 73),
   like the community scripts. The user guide says instead that in user presets they send notes (Trnspt
   in the global menu). If they do not respond, learn the "Tasti di trasporto" group (transport buttons)

@@ -326,6 +326,7 @@ static void test_session(const char *outdir)
 
     /* K1 (CC 24): registro del voicing */
     pad(a, 42, 1); key(a, 60, 1);
+    orcapp_set_knob_mode(a, 0);                   /* la prova usa valori assoluti */
     cc(a, 24, 0); run(a, 0.03f);
     n = orcapp_chord_notes(a, notes, NULL);
     float low = mean_note(notes, n);
@@ -380,6 +381,7 @@ static void test_session(const char *outdir)
     orcapp_set_page(a, PAGE_MIDI);
     orcapp_select(a, 22);
     btn(a, PAD_A, 1); btn(a, PAD_A, 0);
+    orcapp_set_knob_mode(a, 0);                   /* la prova usa valori assoluti */
     cc(a, 21, 0); run(a, 0.02f);
     cc(a, 21, 10); run(a, 0.02f);
     CHECK(fabsf(orcapp_sound(a)->tone - 10.0f / 127.0f) < 0.01f, "CC 21 imparato come K4 (tono %.3f)", orcapp_sound(a)->tone);
@@ -416,6 +418,7 @@ static void test_session(const char *outdir)
     /* salvataggio e ripresa */
     orcapp_select(a, 22);                         /* di nuovo CC 21 come K4, da salvare */
     btn(a, PAD_A, 1); btn(a, PAD_A, 0);
+    orcapp_set_knob_mode(a, 0);                   /* la prova usa valori assoluti */
     cc(a, 21, 64);
     orcapp_set_page(a, PAGE_SOUND);
     orcapp_select(a, 5);                          /* Voicing */
@@ -714,10 +717,49 @@ static void test_keyboard(const char *outdir, const char *repo)
         fclose(f);
     }
     a = orcapp_create(SR, state);
+    orcapp_set_knob_mode(a, 0);                   /* la prova usa valori assoluti */
     cc(a, 27, 0); run(a, 0.02f);
     CHECK(orcapp_sound(a)->tone < 0.01f, "stato vecchio: K4 passa al CC 27");
     cc(a, 73, 127); run(a, 0.02f);
     CHECK(orcapp_sound(a)->tone < 0.01f, "stato vecchio: il CC 73 non comanda piu' il tono");
+    orcapp_destroy(a);
+    remove(state);
+
+    /* la MPK mini IV manda le manopole sulla porta 2, in modo relativo: di fabbrica funzionano cosi' */
+    a = orcapp_create(SR, NULL);
+    float t0 = orcapp_sound(a)->tone;
+    midi3(a, 1, 0xB0, 27, 5); run(a, 0.02f);
+    CHECK(fabsf(orcapp_sound(a)->tone - (t0 + 0.05f)) < 0.002f, "K4 dalla porta 2, +5 relativo (tono %.3f da %.3f)", orcapp_sound(a)->tone, t0);
+    midi3(a, 1, 0xB0, 27, 123); run(a, 0.02f);
+    CHECK(fabsf(orcapp_sound(a)->tone - t0) < 0.002f, "K4 dalla porta 2, -5 relativo torna al valore di prima");
+    orcapp_destroy(a);
+
+    /* stato delle versioni con le manopole fisse sulla porta 1 in modo assoluto: porta qualunque, relative */
+    f = fopen(state, "w");
+    if (f) {
+        for (int i = 0; i < 8; i++) fprintf(f, "map%d=2,0,-1,%d\n", 16 + i, 24 + i);
+        fputs("knob_mode=0\n", f);
+        fclose(f);
+    }
+    a = orcapp_create(SR, state);
+    t0 = orcapp_sound(a)->tone;
+    midi3(a, 1, 0xB0, 27, 5); run(a, 0.02f);
+    CHECK(fabsf(orcapp_sound(a)->tone - (t0 + 0.05f)) < 0.002f, "stato con porta 1: K4 arriva anche dalla porta 2, relativo");
+    orcapp_destroy(a);
+    remove(state);
+
+    /* una mappa imparata a mano resta com'e': porta e modo scelti dall'utente */
+    f = fopen(state, "w");
+    if (f) {
+        for (int i = 0; i < 8; i++) fprintf(f, "map%d=2,0,-1,%d\n", 16 + i, 21 + i);
+        fputs("knob_mode=0\n", f);
+        fclose(f);
+    }
+    a = orcapp_create(SR, state);
+    midi3(a, 1, 0xB0, 24, 127); run(a, 0.02f);
+    CHECK(orcapp_sound(a)->tone < 0.99f, "mappa dell'utente: la porta 2 non comanda il tono");
+    midi3(a, 0, 0xB0, 24, 127); run(a, 0.02f);
+    CHECK(orcapp_sound(a)->tone > 0.99f, "mappa dell'utente: CC 24 sulla porta 1, assoluto");
     orcapp_destroy(a);
     remove(state);
 }
@@ -758,6 +800,7 @@ static void demo(OrcApp *a, const char *outdir)
     g_rec = calloc((size_t)g_rec_cap * 2, sizeof(float));
     g_rec_pos = 0;
     pad(a, 48, 1); pad(a, 48, 0);                 /* modo tonalita' */
+    orcapp_set_knob_mode(a, 0);                   /* la prova usa valori assoluti */
     cc(a, 31, 100);
     pad(a, 44, 1); pad(a, 44, 0);                 /* batteria */
     const int prog[8] = { 60, 67, 69, 65, 60, 67, 69, 65 };   /* I V vi IV */
@@ -806,6 +849,7 @@ static void screenshots(OrcApp *a, const char *outdir)
     run(a, 0.3f);
     pad(a, 37, 1);
     key(a, 69, 1);
+    orcapp_set_knob_mode(a, 0);                   /* la prova usa valori assoluti */
     cc(a, 27, 90);
     run(a, 0.15f);
     SHOT("orc-2-suona");

@@ -36,6 +36,7 @@ int  orcapp_chord_notes(const OrcApp *a, int *notes, int *bass);
 int  orcapp_chord_live(const OrcApp *a);
 const OrcSound *orcapp_sound(const OrcApp *a);
 int  orcapp_keymode(const OrcApp *a);
+void orcapp_set_knob_mode(OrcApp *a, int mode);        /* 0 assolute, 1 relative, 2 relative (64) */
 void orcapp_save(OrcApp *a);
 
 #endif

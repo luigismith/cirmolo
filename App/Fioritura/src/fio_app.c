@@ -40,10 +40,10 @@
 #define MAX_VIS 768
 #define N_POLLEN 46
 #define GRID 8
-#define CELL 46.0f
+#define CELL 44.0f
 #define GAP 4.0f
-#define GRID_X 122.0f
-#define GRID_Y 60.0f
+#define GRID_X 130.0f                /* griglia di 380 px al centro, bordi lontani da scritte e note */
+#define GRID_Y 56.0f
 #define PI_F 3.14159265f
 #define BG_EVERY 4
 
@@ -1403,8 +1403,8 @@ static void draw_bloom(Canvas *c, const Bloom *b)
     float t = b->age / b->life, u = 1.0f - t;
     float e = 1.0f - u * u * u;                         /* si apre in fretta e rallenta */
     if (b->small) {
-        fx_ring(c, b->x, b->y, 4.0f + 26.0f * e, 1.6f, b->col, u * u * (0.4f + 0.4f * b->s));
-        fx_glow(c, b->x, b->y, 10.0f + 10.0f * b->s, b->col, u * u * 0.7f);
+        fx_ring(c, b->x, b->y, 4.0f + 20.0f * e, 1.6f, b->col, u * u * (0.4f + 0.4f * b->s));
+        fx_glow(c, b->x, b->y, 8.0f + 8.0f * b->s, b->col, u * u * 0.7f);
         return;
     }
     float r = 6.0f + (24.0f + 58.0f * b->s) * e;
@@ -1524,7 +1524,7 @@ static void draw_fireflies(FioApp *a, Canvas *c)
             uint32_t wc = palette(a, (float)i / (GRID - 1));
             if (side == 0 || side == 2) gfx_round_rect(c, x - CELL * 0.42f, y - 1.5f, CELL * 0.84f, 3.0f, 1.5f, wc, 0.18f + 0.7f * g);
             else gfx_round_rect(c, x - 1.5f, y - CELL * 0.42f, 3.0f, CELL * 0.84f, 1.5f, wc, 0.18f + 0.7f * g);
-            if (g > 0.03f) fx_glow(c, x, y, 18.0f + 10.0f * g, wc, 0.5f * g);
+            if (g > 0.03f) fx_glow(c, x, y, 11.0f + 8.0f * g, wc, 0.55f * g);
         }
     draw_pollen(a, c);
     /* note delle righe (e delle colonne, uguali da sinistra a destra) */
@@ -1534,7 +1534,7 @@ static void draw_fireflies(FioApp *a, Canvas *c)
             char nn[16];
             note_label(nn, sizeof(nn), (int)ff_note(a, i));
             cell_xy(i, 0, &x, &y);
-            gfx_text_right(c, FONT_SMALL, (int)(GRID_X - 16.0f), (int)(y + 5.0f), nn, fade(a, C_MUTED, 0.75f * a->chrome));
+            gfx_text_right(c, FONT_SMALL, (int)(GRID_X - 30.0f), (int)(y + 5.0f), nn, fade(a, C_MUTED, 0.75f * a->chrome));
         }
     }
     /* cursore */

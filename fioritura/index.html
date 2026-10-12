@@ -173,6 +173,7 @@ td:last-child { color: #cfcbe2; }
       <a href="#atmosfere">Atmosfere</a>
       <a href="#comandi">Comandi</a>
       <a href="#launchpad">Launchpad</a>
+      <a href="#microfono">Microfono</a>
       <a href="#registrare">Registrare</a>
     </nav>
   </div>
@@ -185,7 +186,7 @@ td:last-child { color: #cfcbe2; }
       <p class="motto">un giardino di suoni e luci · Miyoo Flip</p>
       <h1>Fioritura</h1>
       <p class="intro">Pianti una nota: fiorisce sullo schermo e torna a ogni respiro, sempre più piano, finché il giardino non la dimentica. Se lo lasci stare, il giardino sogna e continua da solo. Accanto, in una griglia, le lucciole volano dritte, suonano quando toccano un bordo e girano quando si incontrano.</p>
-      <p class="intro">Non serve saper suonare. È fatta per le cuffie, la sera, o per tenere un sottofondo mentre fai altro.</p>
+      <p class="intro">Non serve saper suonare. È fatta per le cuffie, la sera, o per tenere un sottofondo mentre fai altro. Con un microfono USB <a href="#microfono">ti ascolta</a>: canti e fiorisce, soffi e c'è vento, batti le mani e nasce una lucciola.</p>
       <div class="bottoni">
         <a class="bottone primo" href="#giardino">Come funziona</a>
         <a class="bottone" href="https://github.com/luigismith/cirmolo/blob/cirmolo/App/Fioritura/MANUAL.it.md">Manuale completo</a>
@@ -353,6 +354,40 @@ td:last-child { color: #cfcbe2; }
   </div>
 </section>
 
+<section class="sezione" id="microfono">
+  <div class="contenitore">
+    <div class="testata">
+      <p class="etichetta">Microfono</p>
+      <h2>Il giardino ti ascolta</h2>
+      <p>La Flip non ha un microfono interno, ma se ne colleghi uno USB-C (anche una cuffia con microfono, o uno speaker da videochiamate) il giardino comincia ad ascoltare. Le corde vibrano da sole con i suoni della stanza, ognuna con la sua nota, come le corde di un'arpa quando qualcuno canta vicino. E capisce tre gesti.</p>
+    </div>
+    <div class="galleria">
+      <figure>
+        <img src="img/canto.png" width="640" height="480" loading="lazy" alt="Il giardino nella Notte mentre qualcuno canta: una scia di luce sale a scalini con il vibrato della voce, e su ogni scalino è sbocciato un fiore con i suoi anelli">
+        <figcaption><b>Canta</b>Una scia di luce scrive la tua voce da sinistra a destra, all'altezza esatta, vibrato compreso. Ogni nota che tieni per un attimo diventa un fiore sulla corda più vicina, e il giardino te la ripete a ogni respiro.</figcaption>
+      </figure>
+      <figure>
+        <img src="img/soffio.png" width="640" height="480" loading="lazy" alt="Il giardino nella Notte mentre qualcuno soffia: le corde ondeggiano, petali di luce volano verso destra, al centro passa un fronte di luce chiara">
+        <figcaption><b>Soffia</b>Si alza il vento: le corde ondeggiano, i petali volano via e un fronte di luce attraversa il giardino, pizzicando piano i fiori che incontra come un'arpa eolica. Su un giardino quasi vuoto, semina.</figcaption>
+      </figure>
+      <figure>
+        <img src="img/battito.png" width="640" height="480" loading="lazy" alt="Il giardino nella Notte dopo un battito di mani: una lucciola luminosa entra in volo da destra e in basso compare la scritta Una lucciola dalle tue mani">
+        <figcaption><b>Batti le mani</b>Nasce una lucciola, che attraversa il giardino in volo, e le lucciole partono. Se batti a tempo, dal quarto battito volano al tuo tempo, con un passo su ogni battito.</figcaption>
+      </figure>
+    </div>
+    <div class="due" style="margin-top: clamp(26px, 4vw, 44px)">
+      <figure class="foto">
+        <img src="img/pannello-ascolto.png" width="640" height="480" loading="lazy" alt="Il pannello con la riga Ascolto scelta al 50 per cento; in basso il promemoria: canta, fiorisce; soffia, c'è vento; batti le mani, nasce una lucciola">
+        <figcaption>Nel pannello, la riga Ascolto: in basso, il promemoria dei tre gesti.</figcaption>
+      </figure>
+      <div class="schede" style="grid-template-columns: minmax(0, 1fr)">
+        <div class="scheda" style="--c: var(--oro)"><h3>Non ascolta se stesso</h3><p>Se il microfono sente l'altoparlante della Flip, dopo poche note il giardino se ne accorge: impara quanto forte gli arriva e ascolta solo quello che lo supera. Una nota che comincia subito dopo la stessa nota del giardino non conta. In cuffia ascolta tutto.</p></div>
+        <div class="scheda" style="--c: var(--viola)"><h3>Ascolto</h3><p>Nel pannello regola la sensibilità o spegne l'orecchio. In alto a destra un puntino si accende con quello che sente. Chi canta tiene sveglio il giardino: il sogno aspetta il silenzio.</p><span class="valore">10–100% · o spento</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <section class="sezione" id="registrare">
   <div class="contenitore">
     <div class="testata">
@@ -363,7 +398,7 @@ td:last-child { color: #cfcbe2; }
     <div class="file">
       <p><code>Saves/fioritura/registrazioni/fioritura-2026-10-12-213000.wav</code> WAV stereo, 48 kHz, 16 bit</p>
       <p><code>Saves/fioritura/stato.txt</code> atmosfere, impostazioni, fiori e lucciole</p>
-      <p><code>App/Fioritura/src</code> i sorgenti in C, con 103 prove automatiche</p>
+      <p><code>App/Fioritura/src</code> i sorgenti in C, con 133 prove automatiche</p>
     </div>
   </div>
 </section>

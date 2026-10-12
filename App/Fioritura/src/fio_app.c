@@ -48,7 +48,7 @@
 #define PI_F 3.14159265f
 #define BG_EVERY 4
 #define RIBBON 80                   /* punti della scia del canto */
-#define MAX_PETALS 120
+#define MAX_PETALS 96
 #define MAX_SPARKS 8
 #define N_RECENT 32                 /* note suonate di recente: il giardino non deve sentire se stesso */
 
@@ -201,6 +201,7 @@ struct FioApp {
     float ff_flash;
     float recent_note[N_RECENT], recent_t[N_RECENT]; int recent_w;
     float sres[64];                  /* corde che vibrano per simpatia */
+    float ear_log;                   /* secondi al prossimo riepilogo dell'orecchio nel registro */
 
     /* registrazione */
     FILE *rec; char rec_path[600]; long long rec_frames;
@@ -1079,7 +1080,13 @@ static void ear_sing(FioApp *a, float m, float strength, double t)
     a->ear_quiet = 0.0f;
     a->ear_busy = 1.0f;
     float onset = a->t - (float)(fear_time(a->ear) - t) - 0.025f;     /* il microfono arriva con un blocco di ritardo */
-    if (heard_self(a, (float)deg_note(a, d), onset)) return;
+    char nn[16];
+    note_label(nn, sizeof(nn), deg_note(a, d));
+    if (heard_self(a, (float)deg_note(a, d), onset)) {
+        fprintf(stderr, "orecchio %.1f s: nota %.2f -> %s, scartata (e' il giardino che rientra)\n", fear_time(a->ear), m, nn);
+        return;
+    }
+    fprintf(stderr, "orecchio %.1f s: nota %.2f -> fiore su %s, forza %.2f\n", fear_time(a->ear), m, nn, strength);
     plant(a, d, 0.0f, a->pen_x, 0.3f + 0.6f * strength, 0);
     if (a->mode == MODE_GARDEN) bloom_add(a, x_pix(a->pen_x), deg_y(a, d), 0.8f, RGB(255, 255, 255), 0, 1);
 }
@@ -1207,6 +1214,9 @@ static void ear_tick(FioApp *a, float dt)
         EarEvent ev[16];
         int ne = fear_poll(a->ear, fio_level(a->dsp), ev, 16);
         for (int i = 0; on && !a->quit_dialog && i < ne; i++) {
+            if (ev[i].kind != EAR_NOTE)
+                fprintf(stderr, "orecchio %.1f s: %s, forza %.2f\n", fear_time(a->ear),
+                        ev[i].kind == EAR_CLAP ? "battito" : ev[i].kind == EAR_BLOW_START ? "soffio" : "fine del soffio", ev[i].strength);
             if (ev[i].kind == EAR_NOTE) ear_sing(a, ev[i].note, ev[i].strength, ev[i].t);
             else if (ev[i].kind == EAR_CLAP) ear_clap(a, ev[i].t);
             else if (ev[i].kind == EAR_BLOW_START) {
@@ -1215,6 +1225,14 @@ static void ear_tick(FioApp *a, float dt)
             }
         }
         for (int d = 0; d < 64; d++) a->sres[d] = on && d < n ? fear_string(a->ear, d) : 0.0f;
+        a->ear_log -= dt;
+        if (on && a->ear_log <= 0.0f) {                  /* nel registro, per capire una stanza da lontano */
+            static const char *HEARS[3] = { "no", "non si sa", "si'" };
+            fprintf(stderr, "orecchio %.0f s: fondo %.0f dB, soglia %.0f dB, uscita %.0f dB, altoparlante %s (rientro %.0f dB), livello %.2f\n",
+                    fear_time(a->ear), fear_floor_db(a->ear), fear_threshold_db(a->ear), 20.0f * log10f(fio_level(a->dsp) + 1e-6f),
+                    HEARS[fear_hears_output(a->ear) + 1], fear_leak_db(a->ear), fear_level(a->ear));
+            a->ear_log = 15.0f;
+        }
     }
 
     /* canto: la penna avanza mentre si sente una nota, tutto il giardino in poco piu' di mezzo respiro */
@@ -1783,7 +1801,7 @@ static void draw_ear(FioApp *a, Canvas *c)
     for (int i = 0; i < a->npetals; i++) {
         const Petal *p = &a->petals[i];
         float u = 1.0f - p->age / p->life, fin = fminf(1.0f, p->age * 6.0f) * u;
-        fx_glow_soft(c, p->x, p->y, p->r * 2.6f, p->col, 0.3f * fin);
+        fx_glow_soft(c, p->x, p->y, p->r * 2.2f, p->col, 0.34f * fin);
         fx_glow(c, p->x, p->y, p->r, gfx_mix(p->col, RGB(255, 255, 255), 0.45f), 0.75f * fin);
     }
     uint32_t vc = gfx_mix(MOODS[a->mood].col[2], RGB(255, 255, 255), 0.3f);
@@ -1836,9 +1854,9 @@ static void draw_garden(FioApp *a, Canvas *c)
     /* il fronte del vento */
     if (a->front_on) {
         uint32_t wc = MOODS[a->mood].col[2];
-        for (int k = 0; k < 6; k++) {
-            float y = G_TOP + (G_BOT - G_TOP) * ((float)k + 0.5f) / 6.0f;
-            fx_glow_soft(c, a->front_x + sinf(a->t * 3.0f + (float)k * 1.3f) * 8.0f, y, 50.0f, wc, 0.05f + 0.1f * a->gust);
+        for (int k = 0; k < 4; k++) {
+            float y = G_TOP + (G_BOT - G_TOP) * ((float)k + 0.5f) / 4.0f;
+            fx_glow_soft(c, a->front_x + sinf(a->t * 3.0f + (float)k * 1.3f) * 8.0f, y, 56.0f, wc, 0.05f + 0.1f * a->gust);
         }
     }
     /* il giro: una linea in alto con il punto che scorre e i fiori come tacche */

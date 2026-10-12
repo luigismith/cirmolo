@@ -52,5 +52,7 @@ float fear_string(const FioEar *e, int i);                   /* 0..1: vibrazione
    altoparlante lontano), 0 non si sa ancora. */
 int   fear_hears_output(const FioEar *e);
 float fear_threshold_db(const FioEar *e);                    /* soglia attuale (prove e registro) */
+float fear_floor_db(const FioEar *e);                        /* rumore di fondo (registro) */
+float fear_leak_db(const FioEar *e);                         /* quanto dell'uscita rientra, -80 se non si sa (registro) */
 
 #endif

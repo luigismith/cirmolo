@@ -41,7 +41,8 @@ struct FioEar {
     /* livelli in dB */
     float floor_db, leak_db, out_hold, hold_k, odb, thr_db, lvl_db, recent_db, rec_db[YIN_EVERY], level;
     float ohist[6], mhist[8];       /* uscita e microfono degli ultimi passi */
-    float hear, att_out, att_pre, att_mic;   /* il microfono sente l'altoparlante? (-1..1) e l'attacco in esame */
+    float hear, att_out, att_pre, att_mic, att_late;   /* il microfono sente l'altoparlante? (-1..1) e l'attacco in esame */
+    int att_blow;
     int att_k, leak_n;
     float leak_s[5];                /* ultime prove di quanto rientra */
     float hi_hist[8];
@@ -313,12 +314,16 @@ static void hop_end(FioEar *e, float out_level)
         e->att_k++;
         if (e->att_k <= 4 && oinst > e->att_out) e->att_out = oinst;
         if (e->att_k >= 8 && db > e->att_mic) e->att_mic = db;
+        if (e->att_k >= 30 && db > e->att_late) e->att_late = db;
+        if (e->blowing) e->att_blow = 1;
         if (e->att_k >= 47) {
             /* «non sentito» e' una prova solo se prima il microfono era quasi in silenzio: se era gia'
                pieno di suono (il giardino stesso, o qualcuno che canta) la salita non si vedrebbe */
-            int heard = e->att_mic - e->att_pre > 4.0f;
-            if (heard || e->att_pre < e->floor_db + 6.0f) e->hear += ((heard ? 1.0f : -1.0f) - e->hear) * 0.25f;
-            if (heard) {
+            /* una nota del giardino che rientra dura: tra 160 e 250 ms il microfono e' ancora sopra. Un
+               battito di mani caduto per caso nella finestra e' gia' spento; chi soffia non conta. */
+            int heard = e->att_mic - e->att_pre > 4.0f && e->att_late - e->att_pre > 2.0f;
+            if (!e->att_blow && (heard || e->att_pre < e->floor_db + 6.0f)) e->hear += ((heard ? 1.0f : -1.0f) - e->hear) * 0.25f;
+            if (heard && !e->att_blow) {
                 e->leak_s[e->leak_n++ % 5] = e->att_mic - e->att_out;
                 int n = e->leak_n < 5 ? e->leak_n : 5;
                 float v[5];
@@ -333,6 +338,8 @@ static void hop_end(FioEar *e, float out_level)
         e->att_out = oinst;
         e->att_pre = mpre;
         e->att_mic = -120.0f;
+        e->att_late = -120.0f;
+        e->att_blow = 0;
     }
     memmove(e->mhist + 1, e->mhist, sizeof(float) * 7);
     e->mhist[0] = db;
@@ -433,3 +440,5 @@ float fear_blow(const FioEar *e) { return e->rate > 0.0f && e->blowing ? e->blow
 float fear_string(const FioEar *e, int i) { return i >= 0 && i < e->ns ? e->sres[i] : 0.0f; }
 int   fear_hears_output(const FioEar *e) { return e->rate <= 0.0f ? -1 : (e->hear > 0.2f ? 1 : (e->hear < -0.3f ? -1 : 0)); }
 float fear_threshold_db(const FioEar *e) { return e->thr_db; }
+float fear_floor_db(const FioEar *e) { return e->floor_db; }
+float fear_leak_db(const FioEar *e) { return e->leak_db; }

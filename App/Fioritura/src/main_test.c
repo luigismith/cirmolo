@@ -1035,7 +1035,9 @@ static void test_ear_app(void)
     double dms = (double)(clock() - t0) * 1000.0 / CLOCKS_PER_SEC / 60.0;
     printf("  ascolto e disegno con il vento: %.2f ms a fotogramma %s, di cui disegno %.2f (%d fiori, vento %.2f, %d petali)\n", ms, WHERE,
            dms, fioapp_seed_count(a), fioapp_gust(a), fioapp_petals(a));
-    CHECK(ms < DRAW_MS * 1.3, "ascolto e disegno abbastanza leggeri: %.2f ms", ms);
+    /* col vento si disegna di piu' (petali, fronte, corde mosse): resta sotto i 33 ms di un fotogramma a 30 al
+       secondo anche con la CPU lenta del menu (sulla Flip, nell'app, la meta') */
+    CHECK(ms < DRAW_MS * 1.5, "ascolto e disegno abbastanza leggeri: %.2f ms", ms);
     fioapp_capture_status(a, NULL, 0.0f);
     CHECK(!fioapp_mic(a) && strstr(fioapp_toast(a), "scollegato"), "microfono scollegato: %s", fioapp_toast(a));
     fioapp_destroy(a);

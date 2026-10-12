@@ -1,5 +1,6 @@
 /* Fioritura per Miyoo Flip - collegamento con il kit delle app Cirmolo (spruce/cirmolo-kit).
- * Tutte le porte MIDI: il Launchpad Mini MK3 parla sulla seconda («LPMiniMK3 MIDI»). */
+ * Tutte le porte MIDI: il Launchpad Mini MK3 parla sulla seconda («LPMiniMK3 MIDI»). Il microfono USB, se
+ * c'e', e' l'orecchio del giardino (fio_ear.h). */
 #include "fio_app.h"
 #include "platform.h"
 
@@ -14,13 +15,17 @@ static void k_update(void *p, float dt) { fioapp_update(p, dt); }
 static void k_draw(void *p, Canvas *c) { fioapp_draw(p, c); }
 static int k_quit(void *p) { return fioapp_wants_quit(p); }
 static int k_needs_draw(void *p) { return fioapp_needs_draw(p); }
+static void k_capture(void *p, const float *in, int n) { fioapp_capture(p, in, n); }
+static void k_capture_status(void *p, const char *dev, float sr) { fioapp_capture_status(p, dev, sr); }
 
 const CirmoloApp *cirmolo_app(void)
 {
     static const CirmoloApp desc = {
         .title = "Fioritura",
         .state_path = "/mnt/SDCARD/Saves/fioritura/stato.txt",
+        .wants_capture = 1,
         .create = k_create, .destroy = k_destroy, .audio = k_audio,
+        .capture = k_capture, .capture_status = k_capture_status,
         .midi_status = k_midi_status, .midi_port = k_midi_port,
         .button = k_button, .axes = k_axes, .update = k_update, .draw = k_draw, .wants_quit = k_quit,
         .needs_draw = k_needs_draw,

@@ -9,6 +9,8 @@ Ha due modi, che suonano insieme:
 - **il Giardino**, alla maniera di *Bloom* di Brian Eno e Peter Chilvers: ogni nota che pianti fiorisce sullo schermo e torna a ogni giro, sempre più piano, finché il giardino non la dimentica;
 - **le Lucciole**, alla maniera di *Otomata* di Batuhan Bozkurt: in una griglia 8×8 le lucciole volano dritte, suonano quando toccano un bordo e girano quando si incontrano.
 
+Se colleghi un microfono USB, il giardino ti ascolta: canti e fiorisce, soffi e c'è vento, batti le mani e nasce una lucciola (vedi [Microfono](#microfono)).
+
 Si esce con **MENU** (poi A). Il giardino, le lucciole e le impostazioni restano salvati: alla prossima apertura il giardino riprende a suonare da dove era.
 
 ## Il Giardino
@@ -83,11 +85,12 @@ Su e giù scelgono la riga, sinistra e destra cambiano il valore, A esegue le az
 | Eco | l'eco che rimbalza da sinistra a destra |
 | Bordone | una nota lunga e bassa (tonica e quinta) che respira sotto a tutto; 0 = spento |
 | Sogno | acceso o spento |
+| Ascolto | quanto è sensibile il microfono (10–100%), oppure spento |
 | Volume | il volume generale |
 | Registra in WAV | registra quello che senti (vedi sotto) |
 | Ripristina l'atmosfera | rimette strumento, scala e spazio dell'atmosfera come all'inizio |
 
-Strumento, scala, tonica, luce, coda, spazio, shimmer, eco e bordone appartengono all'atmosfera: ogni atmosfera ricorda i suoi. Respiro, memoria, vento, tempo, sogno e volume valgono per tutte. Cambiando strumento, scala, tonica, luce o coda senti subito una nota di prova. Se cambi scala, i fiori restano sulla loro corda e cambiano nota con lei.
+Strumento, scala, tonica, luce, coda, spazio, shimmer, eco e bordone appartengono all'atmosfera: ogni atmosfera ricorda i suoi. Respiro, memoria, vento, tempo, sogno, ascolto e volume valgono per tutte. Cambiando strumento, scala, tonica, luce o coda senti subito una nota di prova. Se cambi scala, i fiori restano sulla loro corda e cambiano nota con lei.
 
 ## Le sei atmosfere
 
@@ -117,6 +120,24 @@ Collegato alla porta USB-C, il Launchpad diventa una seconda superficie con i LE
 
 All'uscita il Launchpad si spegne e torna al suo modo normale.
 
+## Microfono
+
+Collega un microfono USB-C alla porta di sopra (va bene anche una cuffia USB con microfono, o uno speaker da videochiamate come il Jabra Speak): il giardino ti ascolta. In alto a destra compare **ascolta**, con un puntino che si accende con i suoni che sente, e le corde cominciano a vibrare da sole con i suoni della stanza. Ognuna risponde alla sua nota, come le corde di un'arpa quando qualcuno canta vicino. La Flip non ha un microfono interno: senza microfono USB tutto resta come prima.
+
+Tre gesti:
+
+| Gesto | Cosa succede |
+|---|---|
+| **Canta** una nota (anche a bocca chiusa, o fischiando) | una scia di luce scrive la tua voce da sinistra a destra, all'altezza esatta, con il vibrato e le note calanti; ogni nota che tieni per un attimo diventa un fiore sulla corda più vicina, e il giardino la ripete come le altre. Le note troppo basse o troppo alte vengono portate nelle tre ottave del giardino. |
+| **Soffia** sul microfono (o fai «ssss») | si alza il vento: le corde ondeggiano, i petali volano via e un'onda di luce attraversa il giardino da sinistra a destra, facendo suonare piano i fiori che incontra, come un'arpa eolica. Il vento può spostare qualche fiore di una corda. Se il giardino è quasi vuoto, il vento semina fiori nuovi. |
+| **Batti le mani** (o schiocca le dita, o dai un colpo sul tavolo) | nasce una lucciola, che attraversa il giardino in volo, e le lucciole partono. Se continui a battere, le lucciole lampeggiano con te (nasce una lucciola nuova solo dopo due secondi di silenzio); se batti a tempo, dal quarto battito prendono il tuo tempo, un battito ogni quarto, con un passo sul battito. |
+
+Chi canta, soffia o batte le mani tiene sveglio il giardino: il sogno aspetta che anche il microfono sia in silenzio.
+
+Nel pannello, **Ascolto** regola la sensibilità (10–100%) o spegne l'ascolto. Con la sensibilità alta il giardino sente anche i suoni lontani e piano; con quella bassa solo quelli vicini e forti.
+
+Il giardino non ascolta se stesso. Se il microfono sente l'altoparlante della Flip, dopo poche note l'orecchio se ne accorge, impara quanto forte arriva il giardino e ascolta solo quello che lo supera; ignora anche una nota che comincia subito dopo la stessa nota del giardino. In cuffia il problema non c'è e l'ascolto è più sensibile. Con l'altoparlante canta un po' più forte del giardino, o avvicinati al microfono.
+
 ## Registrare
 
 Nel pannello, «Registra in WAV» comincia a registrare quello che senti: in alto a destra compare **REC** con il tempo. Premi di nuovo A sulla stessa riga per fermare. Dal Launchpad si usa l'ultimo tasto a destra. I file sono WAV stereo a 48 kHz e 16 bit, in `Saves/fioritura/registrazioni/`, con nomi come `fioritura-2026-10-12-213000.wav`. All'uscita una registrazione in corso si chiude da sola.
@@ -127,6 +148,7 @@ Nel pannello, «Registra in WAV» comincia a registrare quello che senti: in alt
 - Il vento a 20–30% con memoria alta dà melodie che cambiano piano, senza mai ripetersi del tutto.
 - Due lucciole su righe diverse, una verso destra e una verso l'alto, fanno già un giro lungo.
 - Lo shimmer al massimo con la campana o il vetro fa una coda che sale come un coro.
+- Con il microfono: Lago, memoria «per sempre», canta una melodia lenta e poi taci. Il giardino te la ripete a ogni respiro; quando vuoi cambiarla, soffia.
 
 ## File
 

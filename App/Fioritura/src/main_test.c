@@ -1,6 +1,6 @@
 /* Fioritura - prove senza console: strumenti, intonazione, tempi, effetti, bordone, registrazione,
  * giardino (ritorni, memoria, respiro, annulla, sogno), lucciole (regole e tempo), MIDI, Launchpad,
- * stato, pannello, schermate (BMP) e prestazioni.
+ * stato, pannello, microfono (canto, battito, soffio, eco dell'altoparlante), schermate (BMP) e prestazioni.
  *
  * Uso: fio-test <cartella dei font> <cartella di uscita>
  */
@@ -13,6 +13,7 @@
 #include "fio_app.h"
 #include "fio_draw.h"
 #include "fio_dsp.h"
+#include "fio_ear.h"
 #include "fio_lp.h"
 #include "gfx.h"
 #include "midi.h"
@@ -646,7 +647,7 @@ static void test_state_panel(void)
     snprintf(recdir, sizeof(recdir), "%s/prova-stato/registrazioni", OUT);
     fioapp_set_record_dir(a, recdir);
     press(a, PAD_UP); press(a, PAD_UP); press(a, PAD_UP);
-    CHECK(fioapp_panel(a) == 16, "riga Registra (%d)", fioapp_panel(a));
+    CHECK(fioapp_panel(a) == 17, "riga Registra (%d)", fioapp_panel(a));
     press(a, PAD_A);
     CHECK(fioapp_recording(a), "registrazione partita");
     run(a, 1.0f, NULL);
@@ -685,6 +686,358 @@ static void test_state_panel(void)
     int before = fio_voice_starts(fioapp_engine(a));
     run(a, 15.0f, NULL);
     CHECK(fio_voice_starts(fioapp_engine(a)) > before, "il giardino ripreso suona da solo");
+    fioapp_destroy(a);
+}
+
+/* ------------------------------------------------------------------ microfono */
+static unsigned nz = 99;
+static float noise1(void) { nz = nz * 1664525u + 1013904223u; return ((float)(nz >> 8) / 16777216.0f) * 2.0f - 1.0f; }
+
+enum { S_SINE, S_VOICE, S_CLAP, S_BLOW };
+typedef struct { int kind; double t0, dur; float f, amp; } MicEv;
+
+/* Un campione del microfono: fruscio di fondo (-59 dBFS) piu' i suoni della scena. La voce ha sei
+   armoniche (e il vibrato, se vib > 0); il battito e' rumore che si spegne in 6 ms; il soffio e' rumore
+   grave e forte. */
+static float scene_vib;
+static float scene(const MicEv *ev, int n, double t)
+{
+    static float lp;
+    float x = noise1() * 0.002f;
+    for (int i = 0; i < n; i++) {
+        double u = t - ev[i].t0;
+        if (u < 0.0 || u > ev[i].dur) continue;
+        float env = fminf(1.0f, (float)u / 0.03f) * fminf(1.0f, (float)(ev[i].dur - u) / 0.03f);
+        double ph = ev[i].f * u;
+        if (scene_vib > 0.0f) ph += ev[i].f * 0.0145 * (1.0 - cos(2.0 * 3.14159265358979 * 5.5 * u)) / (2.0 * 3.14159265358979 * 5.5) * scene_vib;
+        switch (ev[i].kind) {
+        case S_SINE: x += ev[i].amp * env * (float)sin(2.0 * 3.14159265358979 * ph); break;
+        case S_VOICE: {
+            float s = 0.0f;
+            for (int h = 1; h <= 6; h++) s += (float)sin(2.0 * 3.14159265358979 * ph * h) / (float)h;
+            x += ev[i].amp * env * s;
+            break;
+        }
+        case S_CLAP: x += ev[i].amp * expf(-(float)u / 0.006f) * noise1(); break;
+        case S_BLOW: lp += (noise1() - lp) * 0.04f; x += ev[i].amp * env * lp * 4.0f; break;
+        }
+    }
+    return x;
+}
+
+typedef struct { int n[5]; float note[8]; int nn; } EarCount;
+static void ear_scene(FioEar *e, const MicEv *ev, int n, float sec, EarCount *cnt)
+{
+    static float buf[512];
+    memset(cnt, 0, sizeof(*cnt));
+    double t = 0.0;
+    for (int done = 0; done < (int)(sec * SR); done += 512) {
+        for (int i = 0; i < 512; i++) buf[i] = scene(ev, n, t + (double)i / SR);
+        t += 512.0 / SR;
+        fear_feed(e, buf, 512);
+        EarEvent q[16];
+        int k = fear_poll(e, 0.0f, q, 16);
+        for (int i = 0; i < k; i++) {
+            if (q[i].kind > 0 && q[i].kind < 5) cnt->n[q[i].kind]++;
+            if (q[i].kind == EAR_NOTE && cnt->nn < 8) cnt->note[cnt->nn++] = q[i].note;
+        }
+    }
+}
+
+static void test_ear(void)
+{
+    FioEar *e = fear_create();
+    fear_set_rate(e, SR);
+    fear_set_sensitivity(e, 0.5f);
+    float strings[22];
+    for (int i = 0; i < 22; i++) strings[i] = 50.0f + (float)i;       /* corde cromatiche da Re3 */
+    fear_set_strings(e, strings, 22);
+    EarCount c;
+
+    ear_scene(e, NULL, 0, 2.0f, &c);
+    CHECK(c.n[EAR_NOTE] + c.n[EAR_CLAP] + c.n[EAR_BLOW_START] == 0, "silenzio: nessun evento");
+
+    MicEv sine[] = { { S_SINE, 0.1, 0.6, 440.0f, 0.1f } };
+    ear_scene(e, sine, 1, 1.0f, &c);
+    CHECK(c.n[EAR_NOTE] == 1 && fabsf(c.note[0] - 69.0f) < 0.15f, "La 440 Hz: una nota, %d (%.2f)", c.n[EAR_NOTE], c.nn ? c.note[0] : 0.0f);
+
+    scene_vib = 1.0f;                                   /* vibrato di un quarto di semitono */
+    MicEv voice[] = { { S_VOICE, 0.1, 0.6, 220.0f, 0.06f }, { S_VOICE, 0.7, 0.6, 246.94f, 0.06f } };
+    ear_scene(e, voice, 2, 1.6f, &c);
+    scene_vib = 0.0f;
+    CHECK(c.n[EAR_NOTE] == 2 && fabsf(c.note[0] - 57.0f) < 0.4f && fabsf(c.note[1] - 59.0f) < 0.4f,
+          "voce con vibrato, legato La-Si: %d note (%.2f %.2f)", c.n[EAR_NOTE], c.note[0], c.note[1]);
+
+    MicEv whistle[] = { { S_SINE, 0.1, 0.5, 1500.0f, 0.05f } };
+    ear_scene(e, whistle, 1, 0.9f, &c);
+    CHECK(c.n[EAR_NOTE] == 1 && fabsf(c.note[0] - 90.24f) < 0.3f, "fischio a 1500 Hz: %d (%.2f)", c.n[EAR_NOTE], c.nn ? c.note[0] : 0.0f);
+
+    MicEv claps[] = { { S_CLAP, 0.1, 0.05, 0, 0.5f }, { S_CLAP, 0.6, 0.05, 0, 0.5f }, { S_CLAP, 1.1, 0.05, 0, 0.5f }, { S_CLAP, 1.6, 0.05, 0, 0.5f } };
+    ear_scene(e, claps, 4, 2.0f, &c);
+    CHECK(c.n[EAR_CLAP] == 4 && c.n[EAR_NOTE] == 0 && c.n[EAR_BLOW_START] == 0, "quattro battiti: %d battiti, %d note, %d soffi",
+          c.n[EAR_CLAP], c.n[EAR_NOTE], c.n[EAR_BLOW_START]);
+
+    MicEv blow[] = { { S_BLOW, 0.1, 1.2, 0, 0.3f } };
+    ear_scene(e, blow, 1, 1.8f, &c);
+    CHECK(c.n[EAR_BLOW_START] == 1 && c.n[EAR_BLOW_END] == 1 && c.n[EAR_CLAP] == 0 && c.n[EAR_NOTE] == 0,
+          "soffio: inizio %d, fine %d, battiti %d, note %d", c.n[EAR_BLOW_START], c.n[EAR_BLOW_END], c.n[EAR_CLAP], c.n[EAR_NOTE]);
+
+    /* sensibilita': un La a -43 dBFS si sente al massimo, non al minimo */
+    MicEv soft[] = { { S_SINE, 0.1, 0.6, 440.0f, 0.01f } };
+    fear_set_sensitivity(e, 0.0f);
+    ear_scene(e, soft, 1, 1.0f, &c);
+    CHECK(c.n[EAR_NOTE] == 0, "sensibilita' 0: il La piano non si sente (%d)", c.n[EAR_NOTE]);
+    fear_set_sensitivity(e, 1.0f);
+    ear_scene(e, soft, 1, 1.0f, &c);
+    CHECK(c.n[EAR_NOTE] == 1, "sensibilita' 100%%: il La piano si sente (%d)", c.n[EAR_NOTE]);
+    fear_set_sensitivity(e, 0.5f);
+
+    /* corde per simpatia: un Fa#3 (54) accende la sua corda, non quella una quinta sopra */
+    static float buf[512];
+    double t = 0.0;
+    float on = 0.0f, off = 0.0f;
+    for (int done = 0; done < SR / 2; done += 512) {
+        for (int i = 0; i < 512; i++) buf[i] = 0.1f * (float)sin(2.0 * 3.14159265358979 * 185.0 * (t + (double)i / SR)) + noise1() * 0.002f;
+        t += 512.0 / SR;
+        fear_feed(e, buf, 512);
+        EarEvent q[16];
+        fear_poll(e, 0.0f, q, 16);
+        on = fear_string(e, 4);
+        off = fear_string(e, 11);
+    }
+    CHECK(on > 0.5f && off < 0.25f, "corde: la sua vibra (%.2f), una quinta sopra quasi no (%.2f)", on, off);
+
+    /* altoparlante o cuffia: un giardino di campane (una ogni 0,6 s); il microfono lo sente a -10 dB con
+       80 ms di ritardo, oppure non lo sente affatto. Dopo pochi attacchi l'orecchio lo sa, e con
+       l'altoparlante il giardino non supera piu' la soglia. */
+    for (int speaker = 1; speaker >= 0; speaker--) {
+        int n2 = 8 * SR, d = (int)(0.08f * SR), late = 0;
+        float *o = calloc((size_t)n2, sizeof(float)), env = 0.0f;
+        static const int BELLS[] = { 57, 62, 64, 69, 71, 74, 76, 81, 64, 69, 59, 66 };
+        for (int k = 0; k < 12; k++) {
+            int at = (int)(0.3f * SR) + k * (int)(0.6f * SR);
+            double fr = 440.0 * pow(2.0, (BELLS[k] - 69) / 12.0);
+            for (int i = 0; at + i < n2; i++) o[at + i] += 0.25f * expf(-(float)i / (1.2f * SR)) * (float)sin(2.0 * 3.14159265358979 * fr * i / SR) * fminf(1.0f, (float)i / 48.0f);
+        }
+        fear_set_rate(e, SR);
+        for (int done = 0; done < n2; done += 512) {
+            for (int i = 0; i < 512; i++) {
+                float p = fabsf(o[done + i]);
+                env += (p - env) * (p > env ? 0.01f : 0.0002f);
+                buf[i] = (speaker && done + i >= d ? 0.32f * o[done + i - d] : 0.0f) + noise1() * 0.002f;
+            }
+            fear_feed(e, buf, 512);
+            EarEvent q[16];
+            int k = fear_poll(e, env, q, 16);
+            for (int i = 0; i < k; i++) if (q[i].kind == EAR_NOTE && done > 3 * SR) late++;
+        }
+        if (speaker) CHECK(fear_hears_output(e) == 1 && late == 0, "altoparlante: riconosciuto (%d), poi il giardino non passa (%d note)", fear_hears_output(e), late);
+        else CHECK(fear_hears_output(e) == -1, "cuffia: riconosciuta (%d)", fear_hears_output(e));
+        free(o);
+    }
+
+    /* microfono a 16 kHz (cuffie USB economiche) */
+    fear_set_rate(e, 16000.0f);
+    {
+        double tt = 0.0;
+        int notes = 0;
+        float got = 0.0f;
+        for (int done = 0; done < 24000; done += 256) {
+            for (int i = 0; i < 256; i++) {
+                double u = tt + (double)i / 16000.0;
+                buf[i] = noise1() * 0.002f + (u > 0.8 ? 0.1f * (float)sin(2.0 * 3.14159265358979 * 330.0 * u) : 0.0f);
+            }
+            tt += 256.0 / 16000.0;
+            fear_feed(e, buf, 256);
+            EarEvent q[16];
+            int k = fear_poll(e, 0.0f, q, 16);
+            for (int i = 0; i < k; i++) if (q[i].kind == EAR_NOTE) { notes++; got = q[i].note; }
+        }
+        CHECK(notes == 1 && fabsf(got - 64.0f) < 0.2f, "microfono a 16 kHz: Mi 330 Hz (%d, %.2f)", notes, got);
+    }
+    fear_destroy(e);
+}
+
+/* L'app con il microfono: ogni blocco audio arriva anche un blocco del microfono, come sulla console. */
+static void run_mic(FioApp *a, float sec, const MicEv *ev, int n)
+{
+    static float blk[2 * BLOCK], mic[BLOCK];
+    double t = 0.0;
+    for (int done = 0; done < (int)(sec * SR); done += BLOCK) {
+        for (int i = 0; i < BLOCK; i++) mic[i] = scene(ev, n, t + (double)i / SR);
+        t += (double)BLOCK / SR;
+        fioapp_capture(a, mic, BLOCK);
+        fioapp_update(a, (float)BLOCK / SR);
+        fioapp_audio(a, blk, BLOCK);
+    }
+}
+
+/* Il microfono sente l'altoparlante: l'uscita dell'app, attenuata e in ritardo, piu' il fruscio. */
+static void run_echo(FioApp *a, float sec, float gain, float delay_s)
+{
+    static float blk[2 * BLOCK], mic[BLOCK], dl[SR];
+    static int dw;
+    int d = (int)(delay_s * SR);
+    for (int done = 0; done < (int)(sec * SR); done += BLOCK) {
+        for (int i = 0; i < BLOCK; i++) mic[i] = gain * dl[(dw + i - d + 2 * SR) % SR] + noise1() * 0.002f;
+        fioapp_capture(a, mic, BLOCK);
+        fioapp_update(a, (float)BLOCK / SR);
+        fioapp_audio(a, blk, BLOCK);
+        for (int i = 0; i < BLOCK; i++) { dl[dw] = 0.5f * (blk[2 * i] + blk[2 * i + 1]); dw = (dw + 1) % SR; }
+    }
+}
+
+static void test_ear_app(void)
+{
+    char path[600];
+    fresh_state("prova-microfono", path, sizeof(path));
+    static uint32_t px[640 * 480];
+    Canvas cv = { px, 640, 480 };
+    FioApp *a = fioapp_create(SR, path);
+    FioGlobal *g = fioapp_global(a);
+    g->sogno = 0;
+    CHECK(g->ascolto > 0.3f && !fioapp_mic(a), "ascolto acceso di serie, microfono assente");
+    fioapp_capture_status(a, NULL, 0.0f);
+    CHECK(!strstr(fioapp_toast(a), "scollegato"), "all'avvio senza microfono nessun avviso");
+    fioapp_capture_status(a, "Jabra SPEAK 710 USB", (float)SR);
+    CHECK(fioapp_mic(a) && strstr(fioapp_toast(a), "ascolta"), "microfono collegato: %s", fioapp_toast(a));
+    run_mic(a, 1.0f, NULL, 0);                          /* il fondo si impara */
+
+    /* canto: un La tenuto diventa un fiore sul La (Alba: pentatonica di Re, il La c'e') */
+    MicEv la[] = { { S_VOICE, 0.1, 0.7, 440.0f, 0.08f } };
+    run_mic(a, 1.2f, la, 1);
+    CHECK(fioapp_seed_count(a) == 1 && fabsf(fioapp_seed_pitch(a, 0) - 69.0f) < 0.01f, "canto: un fiore sul La (%d fiori, %.1f)",
+          fioapp_seed_count(a), fioapp_seed_pitch(a, 0));
+    /* una nota fuori scala (Sol#, 415 Hz) va sulla corda piu' vicina; un uomo che canta basso, nell'ottava giusta */
+    MicEv out[] = { { S_VOICE, 0.1, 0.6, 415.3f, 0.08f }, { S_VOICE, 1.0, 0.6, 73.4f, 0.08f } };
+    run_mic(a, 1.9f, out, 2);
+    float p1 = fioapp_seed_pitch(a, 1), p2 = fioapp_seed_pitch(a, 2);
+    CHECK(fioapp_seed_count(a) == 3 && (p1 == 69.0f || p1 == 66.0f) && fmodf(p2 - 2.0f, 12.0f) == 0.0f && p2 >= 45.0f,
+          "fuori scala sulla corda vicina (%.0f), Re2 portato nel giardino (%.0f)", p1, p2);
+
+    /* battito: nasce una lucciola e le lucciole partono */
+    int ff0 = fioapp_firefly_count(a);
+    MicEv one[] = { { S_CLAP, 0.1, 0.05, 0, 0.5f } };
+    run_mic(a, 2.5f, one, 1);
+    CHECK(fioapp_firefly_count(a) == ff0 + 1 && fioapp_playing(a), "un battito: una lucciola in volo (%d)", fioapp_firefly_count(a));
+    /* battiti regolari: il tempo delle lucciole li segue, senza altre lucciole */
+    MicEv beat[] = { { S_CLAP, 0.1, 0.05, 0, 0.5f }, { S_CLAP, 0.6, 0.05, 0, 0.5f }, { S_CLAP, 1.1, 0.05, 0, 0.5f },
+                     { S_CLAP, 1.6, 0.05, 0, 0.5f }, { S_CLAP, 2.1, 0.05, 0, 0.5f } };
+    run_mic(a, 2.6f, beat, 5);
+    CHECK(fabsf(g->tempo - 120.0f) < 1.5f && fioapp_firefly_count(a) == ff0 + 2, "battiti ogni 0,5 s: %.0f BPM, %d lucciole",
+          g->tempo, fioapp_firefly_count(a));
+
+    /* soffio: il vento pizzica i fiori (suonano), e su un giardino quasi vuoto semina */
+    Fio *f = fioapp_engine(a);
+    int v0 = fio_voice_starts(f), s0 = fioapp_seed_count(a);
+    MicEv wind[] = { { S_BLOW, 0.1, 1.6, 0, 0.3f } };
+    float gmax = 0.0f;
+    for (int k = 0; k < 9; k++) { MicEv w = wind[0]; w.t0 = k ? -0.1 - 0.2 * k : 0.1; run_mic(a, 0.2f, &w, 1); gmax = fmaxf(gmax, fioapp_gust(a)); }
+    CHECK(gmax > 0.2f, "soffio: vento %.2f", gmax);
+    CHECK(fio_voice_starts(f) - v0 >= 3, "il vento pizzica i fiori: %d note", fio_voice_starts(f) - v0);
+    CHECK(fioapp_seed_count(a) > s0, "su un giardino quasi vuoto il vento semina (%d -> %d)", s0, fioapp_seed_count(a));
+    run_mic(a, 1.5f, NULL, 0);
+    CHECK(fioapp_gust(a) < 0.1f, "smesso di soffiare, il vento cala (%.2f)", fioapp_gust(a));
+
+    /* ascolto spento: il canto non pianta */
+    int s1 = fioapp_seed_count(a);
+    g->ascolto = 0.0f;
+    run_mic(a, 1.2f, la, 1);
+    CHECK(fioapp_seed_count(a) == s1, "ascolto spento: niente fiori");
+    g->ascolto = 0.5f;
+
+    /* il canto tiene sveglio il giardino: niente sogno anche senza toccare tasti */
+    g->sogno = 1;
+    MicEv long_song[] = { { S_VOICE, 0.0, 9.0, 293.66f, 0.08f } };
+    run_mic(a, 8.5f, long_song, 1);
+    CHECK(!fioapp_dreaming(a), "chi canta tiene sveglio il giardino");
+    g->sogno = 0;
+    fioapp_destroy(a);
+
+    /* il giardino non sente se stesso: microfono vicino all'altoparlante (-10 dB, 80 ms), memoria per sempre */
+    fresh_state("prova-microfono-eco", path, sizeof(path));
+    a = fioapp_create(SR, path);
+    g = fioapp_global(a);
+    g->sogno = 0; g->memoria = 0; g->respiro = 6.0f;
+    fioapp_global_changed(a);
+    fioapp_capture_status(a, "USB mic", (float)SR);
+    for (int i = 0; i < 7; i++) { fioapp_set_cursor(a, 0.1f + 0.12f * (float)i, 0.15f + 0.11f * (float)i); press(a, PAD_A); run(a, 0.4f, NULL); }
+    int planted = fioapp_seed_count(a);
+    run_echo(a, 14.0f, 0.32f, 0.08f);
+    CHECK(fioapp_seed_count(a) == planted, "il giardino dall'altoparlante non pianta se stesso (%d -> %d)", planted, fioapp_seed_count(a));
+    CHECK(fioapp_firefly_count(a) == 0, "ne' fa nascere lucciole (%d)", fioapp_firefly_count(a));
+    fioapp_destroy(a);
+
+    /* schermate */
+    fresh_state("prova-microfono-schermate", path, sizeof(path));
+    a = fioapp_create(SR, path);
+    g = fioapp_global(a);
+    g->sogno = 0; g->respiro = 12.0f; g->memoria = 0;
+    fioapp_global_changed(a);
+    fioapp_set_mood(a, 3);
+    fioapp_capture_status(a, "USB mic", (float)SR);
+    unsigned sd = 11;
+    for (int i = 0; i < 14; i++) {
+        sd = sd * 1103515245u + 12345u; float x = (float)((sd >> 8) % 1000) / 1000.0f;
+        sd = sd * 1103515245u + 12345u; float y = (float)((sd >> 8) % 1000) / 1000.0f;
+        fioapp_set_cursor(a, 0.05f + 0.9f * x, 0.05f + 0.9f * y);
+        press(a, PAD_A);
+        run(a, 0.3f, NULL);
+    }
+    run_mic(a, 1.0f, NULL, 0);
+    MicEv melody[] = { { S_VOICE, 0.0, 0.45, 277.2f, 0.07f }, { S_VOICE, 0.45, 0.45, 329.6f, 0.07f },
+                       { S_VOICE, 0.9, 0.45, 370.0f, 0.07f }, { S_VOICE, 1.35, 0.9, 415.3f, 0.07f } };
+    scene_vib = 1.0f;
+    run_mic(a, 2.0f, melody, 4);
+    scene_vib = 0.0f;
+    fioapp_draw(a, &cv);
+    write_bmp("9-canto.bmp", &cv);
+    MicEv gust[] = { { S_BLOW, -0.2, 3.0, 0, 0.3f } };
+    run_mic(a, 0.9f, gust, 1);
+    fioapp_draw(a, &cv);
+    write_bmp("10-soffio.bmp", &cv);
+    run_mic(a, 2.0f, NULL, 0);
+    run_mic(a, 0.35f, one, 1);
+    fioapp_draw(a, &cv);
+    write_bmp("11-battito.bmp", &cv);
+    press(a, PAD_START);
+    for (int i = 0; i < 4; i++) press(a, PAD_UP);
+    run(a, 0.2f, NULL);
+    fioapp_draw(a, &cv);
+    write_bmp("12-pannello-ascolto.bmp", &cv);
+    CHECK(fioapp_panel(a) == 15, "riga Ascolto nel pannello (%d)", fioapp_panel(a));
+    press(a, PAD_B);
+    fioapp_button(a, PAD_SELECT, 1);
+    for (int i = 0; i < 30; i++) fioapp_update(a, 0.016f);
+    fioapp_draw(a, &cv);
+    write_bmp("13-aiuto-microfono.bmp", &cv);
+    fioapp_button(a, PAD_SELECT, 0);
+    fioapp_update(a, 0.016f);
+
+    /* prestazioni: giardino pieno mentre si canta e si soffia */
+    for (int i = 0; i < 36; i++) { fioapp_set_cursor(a, (float)(i % 12) / 12.0f + 0.04f, (float)(i / 12) / 3.0f + 0.1f); press(a, PAD_A); }
+    MicEv both[] = { { S_BLOW, -0.1, 5.0, 0, 0.3f } };
+    run_mic(a, 0.6f, both, 1);
+    static float mic[BLOCK];
+    clock_t t0 = clock();
+    double tt = 0.6;
+    for (int i = 0; i < 60; i++) {
+        for (int k = 0; k < 1600; k++) mic[k % BLOCK] = scene(both, 1, tt + (double)k / SR);
+        tt += 1600.0 / SR;
+        fioapp_capture(a, mic, BLOCK);
+        fioapp_capture(a, mic, 576);
+        fioapp_update(a, 1.0f / 30.0f);
+        fioapp_draw(a, &cv);
+    }
+    double ms = (double)(clock() - t0) * 1000.0 / CLOCKS_PER_SEC / 60.0;
+    t0 = clock();
+    for (int i = 0; i < 60; i++) fioapp_draw(a, &cv);
+    double dms = (double)(clock() - t0) * 1000.0 / CLOCKS_PER_SEC / 60.0;
+    printf("  ascolto e disegno con il vento: %.2f ms a fotogramma %s, di cui disegno %.2f (%d fiori, vento %.2f, %d petali)\n", ms, WHERE,
+           dms, fioapp_seed_count(a), fioapp_gust(a), fioapp_petals(a));
+    CHECK(ms < DRAW_MS * 1.3, "ascolto e disegno abbastanza leggeri: %.2f ms", ms);
+    fioapp_capture_status(a, NULL, 0.0f);
+    CHECK(!fioapp_mic(a) && strstr(fioapp_toast(a), "scollegato"), "microfono scollegato: %s", fioapp_toast(a));
     fioapp_destroy(a);
 }
 
@@ -856,7 +1209,8 @@ int main(int argc, char **argv)
         { "strumenti", test_timbres }, { "intonazione", test_pitch }, { "tempi e coda", test_timing },
         { "effetti", test_effects }, { "bordone", test_drone }, { "registrazione", test_tap },
         { "giardino", test_garden }, { "regole delle lucciole", test_fireflies_rules }, { "lucciole", test_fireflies_app },
-        { "Launchpad", test_launchpad }, { "stato e pannello", test_state_panel }, { "schermate e prestazioni", test_screens },
+        { "Launchpad", test_launchpad }, { "stato e pannello", test_state_panel },
+        { "orecchio", test_ear }, { "microfono nell'app", test_ear_app }, { "schermate e prestazioni", test_screens },
         { "primitive", bench_primitives },
     };
     for (size_t i = 0; i < sizeof(T) / sizeof(T[0]); i++) {

@@ -137,6 +137,44 @@ void fx_hline(Canvas *c, float y, int x0, int x1, uint32_t color, float alpha)
     }
 }
 
+void fx_wave(Canvas *c, float y, int x0, int x1, uint32_t color, float alpha, float as, int mode, float ps, float aw, float pw)
+{
+    /* tabelle per la larghezza della riga: seni dei tre modi e del vento (due lunghezze d'onda), cosi'
+       per ogni pixel bastano somme e prodotti */
+    enum { MAXW = 1024 };
+    static float s1[MAXW], s2[MAXW], s3[MAXW], ws[MAXW], wc[MAXW];
+    static int tw = -1;
+    if (alpha <= 0.004f) return;
+    if (alpha > 1.0f) alpha = 1.0f;
+    if (x0 < 0) x0 = 0;
+    if (x1 > c->w - 1) x1 = c->w - 1;
+    int n = x1 - x0;
+    if (n <= 0 || n >= MAXW) return;
+    if (tw != n) {
+        for (int i = 0; i <= n; i++) {
+            float u = (float)i / (float)n, p = 3.14159265f * u;
+            s1[i] = sinf(p); s2[i] = sinf(2.0f * p); s3[i] = sinf(3.0f * p);
+            ws[i] = sinf(4.0f * p) * s1[i];
+            wc[i] = cosf(4.0f * p) * s1[i];
+        }
+        tw = n;
+    }
+    const float *sm = mode == 2 ? s2 : (mode == 3 ? s3 : s1);
+    float st = as * sinf(ps), cpw = aw * cosf(pw), spw = aw * sinf(pw);
+    int cr = (int)((color >> 16) & 255), cg = (int)((color >> 8) & 255), cb = (int)(color & 255);
+    float A = alpha * 256.0f;
+    for (int i = 0; i <= n; i++) {
+        /* sin(4pi u - pw) = sin(4pi u) cos(pw) - cos(4pi u) sin(pw), gia' smorzato agli estremi */
+        float yy = y + st * sm[i] + ws[i] * cpw - wc[i] * spw - 0.5f;
+        int yi = (int)floorf(yy);
+        float fr = yy - (float)yi;
+        int a0 = (int)((1.0f - fr) * A), a1 = (int)(fr * A);
+        int x = x0 + i;
+        if (yi >= 0 && yi < c->h && a0 > 0) add_px(c->px + (size_t)yi * (size_t)c->w + x, cr, cg, cb, a0);
+        if (yi + 1 >= 0 && yi + 1 < c->h && a1 > 0) add_px(c->px + (size_t)(yi + 1) * (size_t)c->w + x, cr, cg, cb, a1);
+    }
+}
+
 void fx_sky(uint32_t *dst, int w, int h, uint32_t top, uint32_t bottom, uint32_t haze)
 {
     static const int BAYER[4][4] = { { 0, 8, 2, 10 }, { 12, 4, 14, 6 }, { 3, 11, 1, 9 }, { 15, 7, 13, 5 } };

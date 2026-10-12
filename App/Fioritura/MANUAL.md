@@ -9,6 +9,8 @@ It has two modes, and they play together:
 - **the Garden** (*Giardino*), after *Bloom* by Brian Eno and Peter Chilvers: every note you plant blooms on screen and comes back on each turn of the cycle, softer each time, until the garden forgets it;
 - **the Fireflies** (*Lucciole*), after *Otomata* by Batuhan Bozkurt: on an 8×8 grid fireflies fly straight, play a note when they hit an edge and turn when they meet.
 
+If you connect a USB microphone, the garden listens to you: sing and it blooms, blow and the wind rises, clap and a firefly is born (see [Microphone](#microphone)).
+
 Quit with **MENU** (then A). The garden, the fireflies and the settings are saved: next time the garden starts playing again where it was.
 
 ## The Garden
@@ -83,11 +85,12 @@ Up and down choose the row, left and right change the value, A runs the actions,
 | Eco (echo) | the echo bouncing left and right |
 | Bordone (drone) | a long low note (tonic and fifth) breathing under everything; 0 = off |
 | Sogno (dream) | on or off |
+| Ascolto (listening) | how sensitive the microphone is (10–100%), or off |
 | Volume | the main volume |
 | Registra in WAV | records what you hear (see below) |
 | Ripristina l'atmosfera | puts the mood's instrument, scale and space back as they were |
 
-Instrument, scale, tonic, light, tail, space, shimmer, echo and drone belong to the mood: each mood remembers its own. Breath, memory, wind, tempo, dream and volume apply to all of them. When you change instrument, scale, tonic, light or tail you hear a test note at once. If you change the scale, flowers stay on their string and change note with it.
+Instrument, scale, tonic, light, tail, space, shimmer, echo and drone belong to the mood: each mood remembers its own. Breath, memory, wind, tempo, dream, listening and volume apply to all of them. When you change instrument, scale, tonic, light or tail you hear a test note at once. If you change the scale, flowers stay on their string and change note with it.
 
 ## The six moods
 
@@ -117,6 +120,24 @@ Connected to the USB-C port, the Launchpad becomes a second surface with colour 
 
 When you quit, the Launchpad goes dark and returns to its normal mode.
 
+## Microphone
+
+Connect a USB-C microphone to the top port (a USB headset with a microphone works too, or a conference speakerphone such as the Jabra Speak) and the garden listens to you. **ascolta** ("listening") appears at the top right, with a dot that lights up with what it hears, and the strings start vibrating by themselves with the sounds of the room. Each one answers to its own note, like the strings of a harp when someone sings nearby. The Flip has no built-in microphone: without a USB microphone everything stays as before.
+
+Three gestures:
+
+| Gesture | What happens |
+|---|---|
+| **Sing** a note (humming or whistling works too) | a trail of light writes your voice from left to right, at its exact pitch, vibrato and flat notes included; every note you hold for a moment becomes a flower on the nearest string, and the garden repeats it like any other. Notes that are too low or too high are brought into the garden's three octaves. |
+| **Blow** on the microphone (or go "ssss") | the wind rises: the strings sway, petals fly away and a wave of light crosses the garden from left to right, softly playing the flowers it meets, like an aeolian harp. The wind can move a few flowers by one string. If the garden is nearly empty, the wind sows new flowers. |
+| **Clap** (or snap your fingers, or knock on the table) | a firefly is born and flies across the garden, and the fireflies start flying. If you keep clapping, the fireflies flash with you (a new firefly is born only after two seconds of silence); if you clap in time, from the fourth clap they take your tempo, one clap per quarter note, with a step on the clap. |
+
+Singing, blowing or clapping keeps the garden awake: the dream waits for the microphone to be quiet too.
+
+In the panel, **Ascolto** sets the sensitivity (10–100%) or turns listening off. With high sensitivity the garden also hears soft, distant sounds; with low sensitivity only loud, close ones.
+
+The garden does not listen to itself. If the microphone hears the Flip's speaker, after a few notes the ear notices, learns how loud the garden reaches it and only listens to what is louder; it also ignores a note that starts right after the garden played the same note. With headphones there is no such problem and listening is more sensitive. With the speaker, sing a little louder than the garden, or get closer to the microphone.
+
 ## Recording
 
 In the panel, "Registra in WAV" starts recording what you hear: **REC** and the time appear at the top right. Press A again on the same row to stop. On the Launchpad, use the last button on the right. Files are stereo WAV, 48 kHz, 16 bit, in `Saves/fioritura/registrazioni/`, named like `fioritura-2026-10-12-213000.wav`. A recording in progress is closed automatically when you quit.
@@ -127,6 +148,7 @@ In the panel, "Registra in WAV" starts recording what you hear: **REC** and the 
 - Wind at 20–30% with high memory gives melodies that change slowly and never quite repeat.
 - Two fireflies on different rows, one flying right and one flying up, already make a long loop.
 - Full shimmer with the bell or the glass gives a tail that rises like a choir.
+- With a microphone: Lago, memory "forever", sing a slow melody and then stop. The garden repeats it on every breath; when you want to change it, blow.
 
 ## Files
 

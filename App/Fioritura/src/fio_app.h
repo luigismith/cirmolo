@@ -26,6 +26,7 @@ typedef struct {
     float tempo;              /* battiti al minuto delle lucciole (un passo = un ottavo) */
     int   sogno;              /* 1: quando non si tocca niente il giardino pianta da solo */
     float volume;             /* 0..1 */
+    float ascolto;            /* 0..1: sensibilita' del microfono; 0 = non ascolta */
 } FioGlobal;
 
 /* Lucciola: riga (0 in basso) e colonna 0..7, direzione 0 su, 1 destra, 2 giu', 3 sinistra. */
@@ -43,6 +44,10 @@ void fioapp_destroy(FioApp *a);
 void fioapp_audio(FioApp *a, float *out, int frames);
 void fioapp_midi(FioApp *a, int port, const unsigned char *msg, int len);
 void fioapp_midi_status(FioApp *a, const char *device);
+/* Microfono USB (l'orecchio del giardino, fio_ear.h): campioni mono dal thread del microfono, e il
+   microfono collegato (nome e frequenza) o scollegato (NULL). */
+void fioapp_capture(FioApp *a, const float *in, int frames);
+void fioapp_capture_status(FioApp *a, const char *device, float sample_rate);
 void fioapp_button(FioApp *a, int pad, int pressed);
 void fioapp_axes(FioApp *a, float lx, float ly, float rx, float ry, float l2, float r2);
 void fioapp_update(FioApp *a, float dt);
@@ -66,6 +71,7 @@ void fioapp_set_cursor(FioApp *a, float x, float y);  /* giardino: 0..1 da sinis
 void fioapp_set_cell(FioApp *a, int row, int col);    /* lucciole */
 int  fioapp_seed_count(const FioApp *a);
 int  fioapp_seed_echoes(const FioApp *a, int i);      /* ripetizioni gia' fatte dall'i-esimo fiore vivo */
+float fioapp_seed_pitch(const FioApp *a, int i);      /* nota (MIDI) dell'i-esimo fiore vivo, -1 se non c'e' */
 int  fioapp_firefly_count(const FioApp *a);
 const Firefly *fioapp_fireflies(const FioApp *a);
 int  fioapp_playing(const FioApp *a);                 /* lucciole in volo */
@@ -77,5 +83,9 @@ const char *fioapp_toast(const FioApp *a);
 int  fioapp_dreaming(const FioApp *a);
 int  fioapp_lp_connected(const FioApp *a);
 void fioapp_set_record_dir(FioApp *a, const char *dir);
+int  fioapp_mic(const FioApp *a);                     /* 1 se c'e' un microfono */
+float fioapp_gust(const FioApp *a);                   /* 0..1: vento del soffio */
+int  fioapp_petals(const FioApp *a);                   /* petali in volo */
+float fioapp_ear_strings(const FioApp *a, int deg);   /* 0..1: vibrazione per simpatia della corda */
 
 #endif

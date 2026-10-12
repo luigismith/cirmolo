@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cirmolo Sampler · Cirmolo</title>
+<meta name="description" content="Cirmolo Sampler: campionatore a 16 pad con sequencer a 16 passi, registrazione dal microfono USB, libreria di campioni, esportazione in WAV, MIDI e Launchpad Mini MK3, per la Miyoo Flip.">
+<meta property="og:title" content="Cirmolo Sampler · un campionatore a pad per la Miyoo Flip">
+<meta property="og:description" content="Sedici pad, quattro pattern da 16 passi, il microfono USB e una libreria di campioni. Con la MPK mini o un Launchpad Mini MK3.">
+<meta property="og:image" content="https://luigismith.github.io/cirmolo/sampler/img/pad.png">
+<meta property="og:type" content="article">
+<meta name="theme-color" content="#0d1017">
+<link rel="icon" type="image/png" href="../favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=Be+Vietnam+Pro:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="../app.css">
+<style>
+:root { --accento: #f2b45c; --su-accento: #1e1406; }
+/* il Launchpad disegnato: 8 righe di pad, i tasti in alto e quelli a destra */
+.lp-blocco { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: clamp(22px, 4vw, 48px); align-items: center; }
+.lp-blocco > * { min-width: 0; }
+.lp { background: linear-gradient(160deg, #1e2230, #111319); border: 1px solid #343b4f; border-radius: 22px; padding: 14px; display: grid;
+  grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 5px; max-width: 460px; box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4); }
+.lp span { aspect-ratio: 1; border-radius: 6px; display: grid; place-items: center; font: 600 0.56rem var(--f-mono); color: #d5d8e4; text-align: center; line-height: 1.05; }
+.lp span.tondo { border-radius: 50%; background: #333a4c; }
+.lp span.vuoto { background: none; }
+.lp span.q { background: #5a4796; }
+.lp span.p { background: #2f6e4f; }
+.lp span.d { background: #8a6328; }
+.lp span.su { background: #f2b45c; color: #1e1406; }
+.lp span.bianco { background: #e9e9f2; color: #111; }
+.legenda { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.legenda li { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 12px; align-items: start; color: var(--chiaro); }
+.legenda li i { width: 18px; height: 18px; border-radius: 5px; margin-top: 3px; }
+.legenda b { color: var(--testo); }
+@media (max-width: 900px) { .lp-blocco { grid-template-columns: minmax(0, 1fr); } }
+</style>
+</head>
+<body>
+
+<header class="barra">
+  <div class="contenitore">
+    <a class="marchio" href="../"><img src="../favicon.png" alt="" width="30" height="30"><span>Cirmolo</span> <small>· Sampler</small></a>
+    <nav aria-label="Sezioni">
+      <a href="#pad">Pad</a>
+      <a href="#sequenza">Sequenza</a>
+      <a href="#suoni">Suoni</a>
+      <a href="#midi">MIDI</a>
+      <a href="#launchpad">Launchpad</a>
+      <a href="#file">File</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+<section class="copertina">
+  <div class="contenitore">
+    <div>
+      <p class="motto"><a href="../">Cirmolo</a> · app musicale per Miyoo Flip</p>
+      <h1>Cirmolo <em>Sampler</em></h1>
+      <p class="intro">Un campionatore a pad: metti un suono su ognuno dei sedici pad, lo suoni con i tasti della Flip o con i pad di una tastiera MIDI e lo metti in sequenza in sedici passi.</p>
+      <p class="intro">I suoni arrivano da una libreria di serie, dai tuoi WAV o dal microfono USB. Con un Launchpad Mini MK3 pad e passi si accendono di colori.</p>
+      <div class="cifre">
+        <div><b>16</b><span>pad in due banchi</span></div>
+        <div><b>4</b><span>pattern da 16 passi</span></div>
+        <div><b>24</b><span>voci</span></div>
+        <div><b>175</b><span>campioni di serie</span></div>
+      </div>
+      <div class="bottoni">
+        <a class="bottone primo" href="#pad">Come si suona</a>
+        <a class="bottone" href="https://github.com/luigismith/cirmolo/tree/cirmolo/App/CirmoloSampler">Codice</a>
+      </div>
+      <p class="dove">Nella Home di Cirmolo, sotto Musica. Le schermate vengono dal codice dell'app, compilato sul PC, con i campioni veri della libreria di serie.</p>
+    </div>
+    <figure class="schermo">
+      <img src="img/pad.png" width="640" height="480" alt="La pagina Pad: una griglia di otto pad con i nomi dei campioni, 909kick, 808HH1, TR707 CLAP, i pad del banco B sotto, a destra 112 BPM e l'oscilloscopio">
+      <figcaption>La pagina Pad mentre il pattern gira: i pad che suonano si accendono, a destra tempo, swing e oscilloscopio.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section class="sezione" id="pad">
+  <div class="contenitore">
+    <div class="testata">
+      <p class="etichetta">Le sei pagine</p>
+      <h2>Pad, Modifica, Sequenza, Libreria, Registra, Opzioni</h2>
+      <p>SELECT passa da una pagina all'altra, START fa partire e ferma la sequenza da qualunque pagina, MENU esce (A o giù conferma). Pad, pattern e opzioni restano salvati.</p>
+    </div>
+    <div class="due">
+      <div class="tabella">
+        <h3>Pagina Pad</h3>
+        <table>
+          <tr><td>Croce, Y B A X</td><td>suonano gli otto pad del banco</td></tr>
+          <tr><td>L1 · R1</td><td>banco A · banco B</td></tr>
+          <tr><td>L2 tenuto + tasto</td><td>sceglie il pad senza suonarlo</td></tr>
+          <tr><td>R2</td><td>registrazione dal vivo: i colpi che suoni finiscono nel pattern</td></tr>
+          <tr><td>Levetta sinistra</td><td>in orizzontale piega l'intonazione</td></tr>
+          <tr><td>Levetta destra</td><td>in verticale il filtro passa-basso</td></tr>
+        </table>
+      </div>
+      <div class="schede">
+        <div class="scheda"><h3>Colpo, tenuto, loop</h3><p>Un pad può suonare tutto il campione a ogni colpo, solo finché tieni il tasto, oppure in loop.</p></div>
+        <div class="scheda" style="--c: #9b7bf0"><h3>Gruppi di esclusione</h3><p>Quattro gruppi: un pad zittisce gli altri del suo gruppo, come il charleston aperto con quello chiuso.</p></div>
+        <div class="scheda" style="--c: var(--aghi)"><h3>Ritaglio e inverso</h3><p>Inizio e fine del campione al centesimo, e il campione al contrario.</p></div>
+        <div class="scheda" style="--c: #78aaff"><h3>Intonazione</h3><p>Più o meno dodici semitoni; nella pagina Modifica la levetta destra la ritocca di un decimo.</p></div>
+      </div>
+    </div>
+    <div class="due">
+      <figure class="foto">
+        <img src="img/modifica.png" width="640" height="480" loading="lazy" alt="La pagina Modifica del pad A8, Ambi_Strings: la forma d'onda viola, sotto volume, intonazione, inizio, fine, modo tenuto, inverso, gruppo, muto e solo">
+        <figcaption>La pagina Modifica: la forma d'onda del pad con la posizione di chi suona, e tutti i suoi parametri.</figcaption>
+      </figure>
+      <div class="tabella">
+        <h3>Pagina Modifica</h3>
+        <table>
+          <tr><td>Su · giù</td><td>sceglie il parametro</td></tr>
+          <tr><td>Sinistra · destra</td><td>lo cambia; L1 e R1 a passi grandi</td></tr>
+          <tr><td>L2 · R2</td><td>pad precedente · successivo</td></tr>
+          <tr><td>A</td><td>fa sentire il pad</td></tr>
+          <tr><td>Y</td><td>svuota il pad</td></tr>
+          <tr><td>B</td><td>torna ai pad</td></tr>
+        </table>
+        <p class="sotto">Parametri: volume (fino al 150%), intonazione, inizio, fine, modo, inverso, gruppo di esclusione, muto e solo nel sequencer.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="sezione" id="sequenza">
+  <div class="contenitore">
+    <div class="testata">
+      <p class="etichetta">Sequenza</p>
+      <h2>Sedici pad per sedici passi</h2>
+      <p>Una riga per pad, una colonna per passo. Quattro pattern, A, B, C e D, ognuno con la sua lunghezza da 1 a 16 passi, da mettere in catena. Il tempo va da 40 a 240 BPM, con lo swing.</p>
+    </div>
+    <div class="due">
+      <figure class="foto">
+        <img src="img/sequenza.png" width="640" height="480" loading="lazy" alt="La pagina Sequenza: sedici righe con i nomi dei pad, i passi accesi in viola, il cursore ambra sul rullante, in alto i pattern A B C D">
+        <figcaption>Il pattern A in moto a 112 BPM: cassa, rullante, charleston, battimani, basso e archi.</figcaption>
+      </figure>
+      <div class="tabella">
+        <h3>Pagina Sequenza</h3>
+        <table>
+          <tr><td>Croce</td><td>sposta il cursore; in cima c'è la riga dei pattern</td></tr>
+          <tr><td>A</td><td>accende o spegne il passo</td></tr>
+          <tr><td>B</td><td>forza del passo: normale, forte, piano</td></tr>
+          <tr><td>X · Y</td><td>muto · solo per il pad della riga</td></tr>
+          <tr><td>L1 · R1</td><td>tempo, un BPM alla volta</td></tr>
+          <tr><td>L2 · R2</td><td>pattern più corto · più lungo</td></tr>
+          <tr><td>START</td><td>play e stop</td></tr>
+        </table>
+        <p class="sotto">Sulla riga dei pattern: sinistra e destra scelgono il pattern, A lo mette in catena, B lo copia nel successivo, Y lo svuota.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="sezione" id="suoni">
+  <div class="contenitore">
+    <div class="testata">
+      <p class="etichetta">Da dove vengono i suoni</p>
+      <h2>La libreria, i tuoi WAV, il microfono</h2>
+      <p>La pagina Libreria apre due cartelle: le tue registrazioni e la libreria di serie, con 175 campioni divisi in batterie, bassi, pad, oscillatori e altro. A fa sentire un file, X lo mette nel pad scelto. Vanno bene WAV mono o stereo, a 8, 16 o 24 bit o in virgola mobile, a qualsiasi frequenza, fino a 30 secondi.</p>
+    </div>
+    <div class="galleria">
+      <figure><img src="img/libreria.png" width="640" height="480" loading="lazy" alt="La pagina Libreria nella cartella Drums della libreria di serie: le cartelle 808 e Breaks e i file 505 OPEN HH, 909kick, Kick1, TR707 CLAP"><figcaption><b>Libreria.</b> Su e giù scelgono, sinistra e destra saltano di otto righe, B torna indietro, L1 e R1 cambiano il pad di destinazione.</figcaption></figure>
+      <figure><img src="img/registra.png" width="640" height="480" loading="lazy" alt="La pagina Registra: Microfono USB Audio Device a 48000 Hz, la barra del livello, Registrazione in corso 2,3 secondi su 20"><figcaption><b>Registra.</b> A avvia e ferma; sinistra e destra la soglia (subito, oppure quando il suono supera −40, −30 o −20 dB). Al massimo 20 secondi, mono a 48 kHz.</figcaption></figure>
+      <figure><img src="img/opzioni.png" width="640" height="480" loading="lazy" alt="La pagina Opzioni: tempo 112 BPM, swing 10%, metronomo, volume generale, segui il clock MIDI, esporta il pattern in WAV; a destra la mappa MIDI della MPK mini"><figcaption><b>Opzioni.</b> Tempo (L1 e R1 a passi di dieci), swing, metronomo, volume, clock MIDI ed esportazione del pattern o della catena in WAV.</figcaption></figure>
+    </div>
+    <p class="nota blocco-sotto">La Flip non ha un microfono: serve un microfono USB-C o un adattatore. Il sampler lo cerca ogni tre secondi, quindi si può collegare anche ad app aperta. La registrazione finisce nel pad scelto e resta tra «Le mie registrazioni».</p>
+    <p class="avviso blocco-sotto">La libreria di serie viene dalla release ufficiale 1.5.0 di LittleGPTracker (licenza GPLv3), che Cirmolo includeva fino a ottobre 2026: la licenza e la provenienza sono nella cartella <code>App/CirmoloSampler/libreria</code>.</p>
+  </div>
+</section>
+
+<section class="sezione" id="midi">
+  <div class="contenitore">
+    <div class="testata">
+      <p class="etichetta">Tastiera MIDI</p>
+      <h2>Con la MPK mini o una tastiera MIDI</h2>
+      <p>Collegata alla porta USB-C, anche ad app aperta, una tastiera con i pad suona il sampler come una drum machine. La pagina Opzioni ricorda la mappa.</p>
+    </div>
+    <div class="tabelle">
+      <div class="tabella">
+        <h3>Note e pad</h3>
+        <table>
+          <tr><td>Pad, canale 10</td><td>note 36–51: i pad da 1 a 16</td></tr>
+          <tr><td>Tasti</td><td>su un altro canale suonano il pad scelto, cromatico attorno al Do4</td></tr>
+          <tr><td>Sustain (CC64)</td><td>tiene i pad tenuti</td></tr>
+          <tr><td>Pitch bend</td><td>più o meno due semitoni</td></tr>
+          <tr><td>Program change</td><td>sul canale 10 banco A o B, sugli altri pattern A–D</td></tr>
+          <tr><td>Clock, start, stop</td><td>sincronizzano il sequencer, se «Segui il clock MIDI» è acceso</td></tr>
+        </table>
+      </div>
+      <div class="tabella">
+        <h3>Manopole</h3>
+        <table>
+          <tr><td>CC70 · CC71</td><td>volume · intonazione del pad scelto</td></tr>
+          <tr><td>CC72 · CC73</td><td>inizio · fine del pad</td></tr>
+          <tr><td>CC74</td><td>tempo, da 40 a 240 BPM</td></tr>
+          <tr><td>CC75 · CC76</td><td>swing · volume generale</td></tr>
+          <tr><td>CC77</td><td>filtro passa-basso</td></tr>
+          <tr><td>CC7</td><td>volume</td></tr>
+          <tr><td>CC120 · CC123</td><td>tutto spento</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="sezione" id="launchpad">
+  <div class="contenitore">
+    <div class="testata">
+      <p class="etichetta">Launchpad Mini MK3</p>
+      <h2>Pad e passi accesi di colori</h2>
+      <p>Il sampler riconosce il Launchpad Mini MK3 dal nome, lo mette in modalità Programmer e ne accende i LED: i pad prendono il colore della loro cartella o del loro gruppo, i passi seguono il sequencer. All'uscita il Launchpad torna com'era.</p>
+    </div>
+    <div class="lp-blocco">
+      <div class="lp" id="lp" role="img" aria-label="Schema del Launchpad Mini MK3 nel sampler: le due righe in basso sono i 16 pad, sopra due righe con i 16 passi del pad scelto, in alto quattro righe con il quartetto del pad scelto; tasti in alto e scene a destra"></div>
+      <ul class="legenda">
+        <li><i style="background:#8a6328"></i><span><b>Righe 1 e 2, in basso: i 16 pad.</b> Il colore è quello del gruppo o della cartella del campione; bianco mentre suona, pulsante se è il pad scelto.</span></li>
+        <li><i style="background:#2f6e4f"></i><span><b>Righe 3 e 4: i 16 passi del pad scelto.</b> Il passo che suona diventa bianco.</span></li>
+        <li><i style="background:#5a4796"></i><span><b>Righe da 5 a 8: il quartetto del pad scelto.</b> Quattro pad, due passi per pad in ogni colonna: premendo si accendono o si spengono.</span></li>
+        <li><i style="background:#333a4c; border-radius:50%"></i><span><b>In alto.</b> ▲ e ▼ scelgono il banco A o B, ◀ e ▶ il pattern (con User: la lunghezza). Session suona, Drums registra dal vivo, Keys accende il metronomo.</span></li>
+        <li><i style="background:#f2b45c; border-radius:50%"></i><span><b>A destra, dall'alto.</b> I pattern A–D (verde quello che suona, lampeggia chi è in catena), poi muto e solo del pad scelto, svuota il pattern (solo con User tenuto) e tap tempo.</span></li>
+        <li><i style="background:#e9e9f2"></i><span><b>User tenuto:</b> un pad lo sceglie senza suonarlo, un passo lo cancella, i tasti dei pattern li mettono in catena.</span></li>
+      </ul>
+    </div>
+    <div class="galleria due-col blocco-sotto">
+      <figure><img src="img/pad-launchpad.png" width="640" height="480" loading="lazy" alt="La pagina Pad con la scritta Launchpad Mini MK3 collegato e microfono pronto"><figcaption>Con il Launchpad collegato la pagina Pad lo dice in verde.</figcaption></figure>
+      <figure><img src="img/launchpad.png" width="640" height="480" loading="lazy" alt="La pagina Opzioni con la legenda del Launchpad Mini MK3 al posto della mappa MIDI"><figcaption>E la pagina Opzioni mostra la sua legenda.</figcaption></figure>
+    </div>
+  </div>
+</section>
+
+<section class="sezione" id="file">
+  <div class="contenitore">
+    <div class="testata">
+      <p class="etichetta">File sulla scheda SD</p>
+      <h2>Registrazioni, esportazioni e stato</h2>
+      <p>I nomi dei file hanno la data e l'ora: niente si sovrascrive.</p>
+    </div>
+    <ul class="file">
+      <li><code>Saves/sampler/campioni/reg-2026-10-12-170647.wav</code> le registrazioni dal microfono</li>
+      <li><code>Saves/sampler/esportazioni/pattern-A-…wav</code> il pattern o la catena esportati, WAV stereo a 16 bit</li>
+      <li><code>Saves/sampler/stato.txt</code> pad, pattern e opzioni</li>
+      <li><code>App/CirmoloSampler/libreria</code> la libreria di serie</li>
+      <li><code>Saves/spruce/cirmolo-sampler.log</code> il registro dell'app</li>
+      <li><code>App/CirmoloSampler/src</code> i sorgenti in C, con le prove automatiche</li>
+    </ul>
+  </div>
+</section>
+
+<section class="sezione" id="altre">
+  <div class="contenitore">
+    <div class="testata">
+      <p class="etichetta">Le altre app</p>
+      <h2>Il resto di Cirmolo</h2>
+    </div>
+    <nav class="altre" aria-label="App di Cirmolo">
+      <a href="../openorc/"><b>OpenOrc</b><span>un tasto, un accordo intero</span></a>
+      <a href="../fioritura/"><b>Fioritura</b><span>un giardino di suoni e luci</span></a>
+      <a href="../synth/"><b>Cirmolo Synth</b><span>sintetizzatore e sequencer</span></a>
+      <a href="../sampler/" aria-current="page"><b>Cirmolo Sampler</b><span>campionatore a pad</span></a>
+      <a href="../piano/"><b>Cirmolo Piano</b><span>strumenti General MIDI</span></a>
+      <a href="../diapason/"><b>Diapason</b><span>accordatore e metronomo</span></a>
+      <a href="../chiedi-ia/"><b>Chiedi all'IA</b><span>chat, anche a voce</span></a>
+      <a href="../cosa-gioco/"><b>Cosa gioco?</b><span>l'IA sceglie tra i tuoi giochi</span></a>
+      <a href="../ia-giochi/"><b>L'IA nei giochi</b><span>traduttore, scheda, diario</span></a>
+    </nav>
+  </div>
+</section>
+</main>
+
+<footer class="piede">
+  <div class="contenitore">
+    <p>Cirmolo Sampler è un'app di <a href="../">Cirmolo</a>, il fork di spruceOS per la Miyoo Flip, scritta da zero in C con il kit comune delle app. Il Launchpad segue il manuale ufficiale di Novation per la modalità Programmer.</p>
+    <div class="link">
+      <a href="../">Cirmolo</a>
+      <a href="https://github.com/luigismith/cirmolo/tree/cirmolo/App/CirmoloSampler">Codice</a>
+      <a href="https://github.com/luigismith/cirmolo/releases">Release</a>
+      <a href="https://github.com/luigismith/cirmolo/issues">Segnala un problema</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+/* Il Launchpad disegnato: riga dei tasti in alto, poi 8 righe (dalla 8 alla 1) con il tasto di destra. */
+(function () {
+  var lp = document.getElementById("lp");
+  if (!lp) return;
+  function cella(cls, testo) { var s = document.createElement("span"); s.className = cls; if (testo) s.textContent = testo; lp.appendChild(s); }
+  ["▲", "▼", "◀", "▶", "Sess", "Drum", "Keys", "User"].forEach(function (t) { cella("tondo", t); });
+  cella("vuoto");
+  var scene = ["A", "B", "C", "D", "muto", "solo", "svuota", "tap"];
+  for (var fila = 8; fila >= 1; fila--) {
+    for (var c = 0; c < 8; c++) {
+      var cls = fila >= 5 ? "q" : (fila >= 3 ? "p" : "d");
+      if (fila === 2 && c === 2) cls = "bianco";
+      if (fila === 3 && c === 5) cls = "bianco";
+      cella(cls);
+    }
+    cella("tondo" + (fila >= 5 ? " su" : ""), scene[8 - fila]);
+  }
+})();
+</script>
+</body>
+</html>

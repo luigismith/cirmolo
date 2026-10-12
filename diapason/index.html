@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Diapason · Cirmolo</title>
+<meta name="description" content="Diapason: accordatore, note di riferimento e metronomo per la Miyoo Flip. Chitarra, basso, ukulele, violino o cromatico, con un microfono USB-C.">
+<meta property="og:title" content="Diapason · accordatore e metronomo per la Miyoo Flip">
+<meta property="og:description" content="Accordatore cromatico e per strumento, note di riferimento e metronomo con suddivisioni e tap tempo.">
+<meta property="og:image" content="https://luigismith.github.io/cirmolo/diapason/img/accordatore.png">
+<meta property="og:type" content="article">
+<meta name="theme-color" content="#0d1017">
+<link rel="icon" type="image/png" href="../favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=Be+Vietnam+Pro:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="../app.css">
+<style>
+:root { --accento: #5cbe7e; --su-accento: #07170d; }
+.scala-cent { display: grid; grid-template-columns: 1fr 1.4fr 1fr 1.4fr 1fr; border-radius: 12px; overflow: hidden; border: 1px solid var(--filo); font: 600 0.8rem var(--f-mono); text-align: center; }
+.scala-cent span { padding: 10px 4px; color: #0d1017; }
+</style>
+</head>
+<body>
+
+<header class="barra">
+  <div class="contenitore">
+    <a class="marchio" href="../"><img src="../favicon.png" alt="" width="30" height="30"><span>Cirmolo</span> <small>· Diapason</small></a>
+    <nav aria-label="Sezioni">
+      <a href="#accordatore">Accordatore</a>
+      <a href="#metronomo">Metronomo</a>
+      <a href="#microfono">Microfono</a>
+      <a href="#file">File</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+<section class="copertina">
+  <div class="contenitore">
+    <div>
+      <p class="motto"><a href="../">Cirmolo</a> · app musicale per Miyoo Flip</p>
+      <h1><em>Diapason</em></h1>
+      <p class="intro">Accordatore, note di riferimento e metronomo nella console che hai già in tasca. L'accordatore riconosce la nota dal microfono e ti dice di quanti centesimi sei sopra o sotto; per chitarra, basso, ukulele e violino sceglie da solo la corda più vicina.</p>
+      <div class="cifre">
+        <div><b>6</b><span>accordature</span></div>
+        <div><b>40–1500</b><span>Hz riconosciuti</span></div>
+        <div><b>400–480</b><span>Hz per il La</span></div>
+        <div><b>20–300</b><span>BPM</span></div>
+      </div>
+      <div class="bottoni">
+        <a class="bottone primo" href="#accordatore">Come si usa</a>
+        <a class="bottone" href="https://github.com/luigismith/cirmolo/tree/cirmolo/App/Diapason">Codice</a>
+      </div>
+      <p class="dove">Nella Home di Cirmolo, sotto Musica. Le schermate vengono dal codice dell'app, compilato sul PC e ascoltando note sintetiche.</p>
+    </div>
+    <figure class="schermo">
+      <img src="img/accordatore.png" width="640" height="480" alt="L'accordatore in modo cromatico: la lancetta verde quasi al centro, la nota La4 in verde, più 3 cent, 440,7 Hz">
+      <figcaption>Un La4 crescente di tre centesimi: la lancetta e la nota diventano verdi, sei intonato.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section class="sezione" id="accordatore">
+  <div class="contenitore">
+    <div class="testata">
+      <p class="etichetta">Accordatore</p>
+      <h2>Una lancetta, tre colori</h2>
+      <p>La lancetta va da −50 a +50 centesimi. Sotto la nota ci sono lo scarto in centesimi e la frequenza. Con uno strumento scelto, la corda riconosciuta si accende tra quelle in basso.</p>
+    </div>
+    <div class="due">
+      <figure class="foto">
+        <img src="img/chitarra.png" width="640" height="480" loading="lazy" alt="L'accordatore per chitarra: la lancetta ambra a sinistra, Mi2 meno 10 cent, 81,9 Hz, la sesta corda Mi2 accesa tra le sei corde">
+        <figcaption>Chitarra: la sesta corda, Mi2, è calante di dieci centesimi. La lancetta è ambra.</figcaption>
+      </figure>
+      <div class="testo">
+        <div class="scala-cent" role="img" aria-label="Colori della lancetta: rosso oltre 15 centesimi, ambra tra 5 e 15, verde entro 5">
+          <span style="background:#ec6068">−50</span><span style="background:#f4ba5c">−15</span><span style="background:#5cbe7e">±5</span><span style="background:#f4ba5c">+15</span><span style="background:#ec6068">+50</span>
+        </div>
+        <p><b>Verde</b> entro 5 centesimi: sei intonato. <b>Ambra</b> fino a 15: ci sei quasi. <b>Rosso</b> oltre: gira la chiavetta.</p>
+        <ul class="elenco">
+          <li><b>Cromatico</b><span>qualsiasi nota</span></li>
+          <li><b>Chitarra</b><span>Mi2 La2 Re3 Sol3 Si3 Mi4</span></li>
+          <li><b>Chitarra drop D</b><span>Re2 La2 Re3 Sol3 Si3 Mi4</span></li>
+          <li><b>Basso</b><span>Mi1 La1 Re2 Sol2</span></li>
+          <li><b>Ukulele</b><span>Sol4 Do4 Mi4 La4</span></li>
+          <li><b>Violino</b><span>Sol3 Re4 La4 Mi5</span></li>
+        </ul>
+      </div>
+    </div>
+    <div class="tabelle blocco-sotto">
+      <div class="tabella">
+        <h3>Pagina Accordatore</h3>
+        <table>
+          <tr><td>L1 · R1</td><td>accordatura precedente · successiva</td></tr>
+          <tr><td>Sinistra · destra</td><td>corda; in cromatico la nota di riferimento, da Do1 a Do7</td></tr>
+          <tr><td>A</td><td>suona o spegne la nota di riferimento</td></tr>
+          <tr><td>Su · giù</td><td>La di riferimento, un hertz alla volta (400–480)</td></tr>
+          <tr><td>Y</td><td>rimette il La a 440 Hz</td></tr>
+        </table>
+      </div>
+      <div class="tabella">
+        <h3>In ogni pagina</h3>
+        <table>
+          <tr><td>SELECT</td><td>passa tra Accordatore e Metronomo</td></tr>
+          <tr><td>START</td><td>avvia o ferma il metronomo, anche mentre accordi</td></tr>
+          <tr><td>MENU</td><td>esce (A o giù conferma); le scelte restano salvate</td></tr>
+        </table>
+        <p class="sotto">Senza microfono si accorda a orecchio: A fa suonare la nota della corda scelta.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="sezione" id="metronomo">
+  <div class="contenitore">
+    <div class="testata">
+      <p class="etichetta">Metronomo</p>
+      <h2>Il tempo, con il suo nome</h2>
+      <p>Il pendolo oscilla a tempo, i quadrati contano i battiti della battuta e sotto i BPM compare il nome italiano del tempo: da Grave a Prestissimo.</p>
+    </div>
+    <div class="due">
+      <figure class="foto">
+        <img src="img/metronomo.png" width="640" height="480" loading="lazy" alt="Il metronomo: 120 BPM, Allegro, il pendolo, quattro quadrati con il secondo acceso in verde, 4/4 semiminime accento sì, in corso">
+        <figcaption>120 BPM in 4/4, Allegro, con l'accento sul primo battito.</figcaption>
+      </figure>
+      <div class="tabella">
+        <h3>Pagina Metronomo</h3>
+        <table>
+          <tr><td>A</td><td>avvia o ferma</td></tr>
+          <tr><td>Su · giù</td><td>un BPM in più · in meno</td></tr>
+          <tr><td>L1 · R1</td><td>dieci BPM in meno · in più</td></tr>
+          <tr><td>Sinistra · destra</td><td>battiti per battuta, da 1 a 12</td></tr>
+          <tr><td>X</td><td>suddivisione: semiminime, crome, terzine, semicrome</td></tr>
+          <tr><td>Y</td><td>tap tempo: premilo a tempo</td></tr>
+          <tr><td>B</td><td>accento sul primo battito, sì o no</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="sezione" id="microfono">
+  <div class="contenitore">
+    <div class="testata">
+      <p class="etichetta">Il microfono</p>
+      <h2>La Flip non ha un microfono: collegane uno</h2>
+      <p>Serve un microfono USB-C, o un adattatore USB-C con l'ingresso per il microfono. Diapason lo cerca da solo, anche ad app aperta, e ne scrive il nome sotto le corde. Il riconoscimento usa l'algoritmo YIN di de Cheveigné e Kawahara.</p>
+    </div>
+    <div class="due">
+      <figure class="foto">
+        <img src="img/senza-microfono.png" width="640" height="480" loading="lazy" alt="L'accordatore senza microfono: la scritta Nessun microfono, La Flip non ne ha uno: collega un microfono USB-C, intanto A suona la nota di riferimento">
+        <figcaption>Senza microfono restano la nota di riferimento e il metronomo.</figcaption>
+      </figure>
+      <div class="schede una">
+        <div class="scheda"><h3>Accordare a orecchio</h3><p>Scegli la corda con sinistra e destra e premi A: la nota di riferimento suona finché non la spegni.</p></div>
+        <div class="scheda" style="--c: var(--oro)"><h3>Un La diverso</h3><p>Orchestre e strumenti antichi usano anche 442 o 415 Hz: su e giù spostano il La da 400 a 480 Hz, e note e corde seguono.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="sezione" id="file">
+  <div class="contenitore">
+    <div class="testata">
+      <p class="etichetta">File sulla scheda SD</p>
+      <h2>Le scelte restano</h2>
+    </div>
+    <ul class="file">
+      <li><code>Saves/diapason/stato.txt</code> La di riferimento, accordatura, corda, tempo, battiti, suddivisione e accento</li>
+      <li><code>Saves/spruce/diapason.log</code> il registro dell'app</li>
+      <li><code>App/Diapason/src</code> i sorgenti in C, con le prove su note sintetiche</li>
+    </ul>
+  </div>
+</section>
+
+<section class="sezione" id="altre">
+  <div class="contenitore">
+    <div class="testata">
+      <p class="etichetta">Le altre app</p>
+      <h2>Il resto di Cirmolo</h2>
+    </div>
+    <nav class="altre" aria-label="App di Cirmolo">
+      <a href="../openorc/"><b>OpenOrc</b><span>un tasto, un accordo intero</span></a>
+      <a href="../fioritura/"><b>Fioritura</b><span>un giardino di suoni e luci</span></a>
+      <a href="../synth/"><b>Cirmolo Synth</b><span>sintetizzatore e sequencer</span></a>
+      <a href="../sampler/"><b>Cirmolo Sampler</b><span>campionatore a pad</span></a>
+      <a href="../piano/"><b>Cirmolo Piano</b><span>strumenti General MIDI</span></a>
+      <a href="../diapason/" aria-current="page"><b>Diapason</b><span>accordatore e metronomo</span></a>
+      <a href="../chiedi-ia/"><b>Chiedi all'IA</b><span>chat, anche a voce</span></a>
+      <a href="../cosa-gioco/"><b>Cosa gioco?</b><span>l'IA sceglie tra i tuoi giochi</span></a>
+      <a href="../ia-giochi/"><b>L'IA nei giochi</b><span>traduttore, scheda, diario</span></a>
+    </nav>
+  </div>
+</section>
+</main>
+
+<footer class="piede">
+  <div class="contenitore">
+    <p>Diapason è un'app di <a href="../">Cirmolo</a>, il fork di spruceOS per la Miyoo Flip, scritta da zero in C con il kit comune delle app.</p>
+    <div class="link">
+      <a href="../">Cirmolo</a>
+      <a href="https://github.com/luigismith/cirmolo/tree/cirmolo/App/Diapason">Codice</a>
+      <a href="https://github.com/luigismith/cirmolo/releases">Release</a>
+      <a href="https://github.com/luigismith/cirmolo/issues">Segnala un problema</a>
+    </div>
+  </div>
+</footer>
+</body>
+</html>

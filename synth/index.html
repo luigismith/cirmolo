@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cirmolo Synth · Cirmolo</title>
+<meta name="description" content="Cirmolo Synth: sintetizzatore a otto voci con filtro risonante, batteria, sequencer a 16 passi e arpeggiatore per la Miyoo Flip, da suonare con i tasti o con una tastiera MIDI USB.">
+<meta property="og:title" content="Cirmolo Synth · sintetizzatore e sequencer per la Miyoo Flip">
+<meta property="og:description" content="Otto voci, filtro risonante, batteria, quattro pattern da 16 passi e arpeggiatore. Tasti sempre intonati nella scala che scegli.">
+<meta property="og:image" content="https://luigismith.github.io/cirmolo/synth/img/suona.png">
+<meta property="og:type" content="article">
+<meta name="theme-color" content="#0d1017">
+<link rel="icon" type="image/png" href="../favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=Be+Vietnam+Pro:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="../app.css">
+<style>:root { --accento: #9b7bf0; --su-accento: #140f24; }</style>
+</head>
+<body>
+
+<header class="barra">
+  <div class="contenitore">
+    <a class="marchio" href="../"><img src="../favicon.png" alt="" width="30" height="30"><span>Cirmolo</span> <small>· Synth</small></a>
+    <nav aria-label="Sezioni">
+      <a href="#suona">Suonare</a>
+      <a href="#suono">Il suono</a>
+      <a href="#sequenza">Sequenza</a>
+      <a href="#midi">MIDI</a>
+      <a href="#file">File</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+<section class="copertina">
+  <div class="contenitore">
+    <div>
+      <p class="motto"><a href="../">Cirmolo</a> · app musicale per Miyoo Flip</p>
+      <h1>Cirmolo <em>Synth</em></h1>
+      <p class="intro">Un sintetizzatore a otto voci con due oscillatori e un filtro risonante, una batteria a cinque strumenti e un sequencer a 16 passi. I tasti della Flip suonano sempre dentro la scala che scegli: non si sbaglia una nota.</p>
+      <p class="intro">Con una tastiera MIDI USB, come la MPK mini, diventa uno strumento vero: note con la dinamica, pad sulla batteria, manopole sul filtro e sugli effetti.</p>
+      <div class="cifre">
+        <div><b>8</b><span>voci</span></div>
+        <div><b>8 + 8</b><span>preset, di fabbrica e tuoi</span></div>
+        <div><b>4</b><span>pattern da 16 passi</span></div>
+        <div><b>8</b><span>scale</span></div>
+      </div>
+      <div class="bottoni">
+        <a class="bottone primo" href="#suona">Come si suona</a>
+        <a class="bottone" href="https://github.com/luigismith/cirmolo/tree/cirmolo/App/CirmoloSynth">Codice</a>
+      </div>
+      <p class="dove">Nella Home di Cirmolo, sotto Musica. Le schermate di questa pagina vengono dal codice dell'app, compilato sul PC.</p>
+    </div>
+    <figure class="schermo">
+      <img src="img/suona.png" width="640" height="480" alt="La pagina Suona di Cirmolo Synth: a sinistra la nota, il preset Pigna e la scala Do maggiore, a destra i tasti della Flip con le note, sotto l'oscilloscopio">
+      <figcaption>La pagina Suona: a sinistra preset, scala e ottava, a destra le note dei tasti, sotto l'oscilloscopio e le levette.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section class="sezione" id="suona">
+  <div class="contenitore">
+    <div class="testata">
+      <p class="etichetta">Suonare</p>
+      <h2>Otto tasti, otto note della scala</h2>
+      <p>La croce e i quattro tasti A, B, X e Y suonano otto gradi della scala, dal più grave al più acuto: croce sinistra, giù, destra, su, poi Y, B, A e X. Lo schermo mostra sempre quale nota c'è sotto ogni tasto.</p>
+    </div>
+    <div class="due">
+      <figure class="foto">
+        <img src="img/arpeggio.png" width="640" height="480" loading="lazy" alt="La pagina Suona con R2 tenuto e l'arpeggiatore acceso: il modo dice Arpeggio Su più accordi, in basso la barra rossa della registrazione">
+        <figcaption>R2 tenuto con l'arpeggiatore acceso: ogni tasto suona un accordo arpeggiato. In basso la barra della registrazione in WAV, partita con R3.</figcaption>
+      </figure>
+      <div class="schede">
+        <div class="scheda"><h3>Accordi</h3><p>Con <span class="tasto">R2</span> tenuto ogni tasto suona una triade della scala, e lo schermo ne scrive il nome: maggiore, minore, diminuito.</p></div>
+        <div class="scheda" style="--c: var(--oro)"><h3>Tenuto</h3><p>Con <span class="tasto">L2</span> tenuto le note continuano anche quando lasci il tasto, come con il pedale del pianoforte.</p></div>
+        <div class="scheda" style="--c: var(--aghi)"><h3>Ottava</h3><p><span class="tasto">L1</span> e <span class="tasto">R1</span> spostano la tastiera di un'ottava, dalla prima alla settima.</p></div>
+        <div class="scheda" style="--c: #78aaff"><h3>Levette</h3><p>Sinistra: in orizzontale piega la nota di due semitoni, in verticale apre e chiude il filtro. Destra: in orizzontale la risonanza, in su il vibrato.</p></div>
+      </div>
+    </div>
+    <div class="tabelle blocco-sotto">
+      <div class="tabella">
+        <h3>Pagina Suona</h3>
+        <table>
+          <tr><td>Croce, Y B A X</td><td>otto note della scala</td></tr>
+          <tr><td>R2 tenuto</td><td>accordi</td></tr>
+          <tr><td>L2 tenuto</td><td>note tenute</td></tr>
+          <tr><td>L1 · R1</td><td>ottava giù · su</td></tr>
+          <tr><td>Levette</td><td>bend, filtro, risonanza, vibrato</td></tr>
+        </table>
+      </div>
+      <div class="tabella">
+        <h3>In ogni pagina</h3>
+        <table>
+          <tr><td>SELECT</td><td>pagina successiva: Suona, Suono, Sequenza</td></tr>
+          <tr><td>START</td><td>fa partire o ferma la sequenza</td></tr>
+          <tr><td>R3</td><td>registra in WAV; di nuovo R3 ferma</td></tr>
+          <tr><td>L3</td><td>spegne tutte le note</td></tr>
+          <tr><td>MENU</td><td>esce (A o giù conferma); suoni e sequenza restano salvati</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="sezione" id="suono">
+  <div class="contenitore">
+    <div class="testata">
+      <p class="etichetta">Il suono</p>
+      <h2>Tutto il suono in una pagina</h2>
+      <p>Nella pagina Suono su e giù scelgono il parametro, sinistra e destra lo cambiano; tenendo L1 o R1 i passi sono più grandi. A fa sentire una nota di prova, Y salva il suono tra i tuoi preset, B torna a Suona.</p>
+    </div>
+    <div class="due">
+      <figure class="foto">
+        <img src="img/suono.png" width="640" height="480" loading="lazy" alt="La pagina Suono: l'elenco dei parametri con i valori, a destra i disegni degli inviluppi di ampiezza e di filtro">
+        <figcaption>La pagina Suono. A destra si vedono gli inviluppi dell'ampiezza e del filtro mentre li cambi.</figcaption>
+      </figure>
+      <ul class="elenco">
+        <li><b>Generale</b><span>preset, tonalità, scala, volume</span></li>
+        <li><b>Oscillatori</b><span>due onde (dente di sega, quadra, triangolo, sinusoide), intervallo e desintonia della seconda, miscela, larghezza dell'impulso, rumore</span></li>
+        <li><b>Filtro</b><span>taglio, risonanza, quantità dell'inviluppo, quanto segue la tastiera, e il suo inviluppo: attacco, decadimento, sostegno, rilascio</span></li>
+        <li><b>Ampiezza</b><span>attacco, decadimento, sostegno, rilascio</span></li>
+        <li><b>Modulazione</b><span>velocità dell'LFO, LFO sull'intonazione e sul filtro</span></li>
+        <li><b>Esecuzione</b><span>monofonico, glide, saturazione</span></li>
+        <li><b>Arpeggiatore</b><span>su, giù, su e giù, casuale; da 1/32 a 1/4; da una a tre ottave</span></li>
+        <li><b>Effetti</b><span>delay a tempo (da 1 a 8 sedicesimi) con ritorno e livello, riverbero, volume della batteria</span></li>
+      </ul>
+    </div>
+    <div class="schede tre blocco-sotto">
+      <div class="scheda"><h3>Otto preset di fabbrica</h3><p>Pigna, Basso Dolomiti, Lead Cirmolo, Pizzico, Organo, Archi, Campana, Otto bit.</p></div>
+      <div class="scheda" style="--c: var(--oro)"><h3>Otto preset tuoi</h3><p>Y nella pagina Suono salva il suono come «Mio 1», «Mio 2» e così via. Un preset modificato ha un asterisco accanto al nome.</p></div>
+      <div class="scheda" style="--c: var(--aghi)"><h3>Otto scale</h3><p>Maggiore, minore, dorica, misolidia, pentatonica maggiore e minore, blues, cromatica, su qualsiasi tonica.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="sezione" id="sequenza">
+  <div class="contenitore">
+    <div class="testata">
+      <p class="etichetta">Sequenza</p>
+      <h2>Batteria e melodia in 16 passi</h2>
+      <p>Cinque righe di batteria (cassa, rullante, charleston chiuso e aperto, battimani) e una riga di melodia, che usa le note della scala. Quattro pattern, A, B, C e D, che si possono mettere in catena. START fa partire tutto.</p>
+    </div>
+    <div class="due">
+      <figure class="foto">
+        <img src="img/sequenza.png" width="640" height="480" loading="lazy" alt="La pagina Sequenza: una griglia di passi verdi per cassa, rullante, charleston e battimani, la riga Melodia con i nomi delle note, sopra i pattern A B C D">
+        <figcaption>Il pattern A mentre suona a 110 BPM con lo swing al 10%. I passi più chiari sono gli accenti.</figcaption>
+      </figure>
+      <div class="tabella">
+        <h3>Pagina Sequenza</h3>
+        <table>
+          <tr><td>Croce</td><td>sposta il cursore; in cima c'è la riga dei pattern</td></tr>
+          <tr><td>A</td><td>accende o spegne il passo; nella melodia mette la nota</td></tr>
+          <tr><td>B</td><td>accento sul passo</td></tr>
+          <tr><td>X · Y</td><td>nella melodia: nota su · giù</td></tr>
+          <tr><td>L1 · R1</td><td>tempo, un BPM alla volta (da 40 a 240)</td></tr>
+          <tr><td>L2 · R2</td><td>swing, a passi del 5%</td></tr>
+          <tr><td>START</td><td>play e stop</td></tr>
+        </table>
+        <p class="sotto">Sulla riga dei pattern: sinistra e destra scelgono il pattern, A lo mette o lo toglie dalla catena, B lo copia nel successivo.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="sezione" id="midi">
+  <div class="contenitore">
+    <div class="testata">
+      <p class="etichetta">Tastiera MIDI</p>
+      <h2>Con una tastiera MIDI USB</h2>
+      <p>Collega la tastiera alla porta USB-C, anche ad app già aperta: compare il suo nome e si suona subito. Le note arrivano esatte, con la dinamica; i tasti della Flip continuano a funzionare insieme alla tastiera.</p>
+    </div>
+    <div class="due">
+      <figure class="foto">
+        <img src="img/midi.png" width="640" height="480" loading="lazy" alt="La pagina Suona con il messaggio Tastiera MIDI collegata: MPKminiIV e il nome della tastiera in verde sotto le voci">
+        <figcaption>La MPK mini IV appena collegata. Il nome della tastiera resta scritto in verde sotto le voci.</figcaption>
+      </figure>
+      <div class="tabella">
+        <h3>Cosa fa la tastiera</h3>
+        <table>
+          <tr><td>Tasti</td><td>note, con la forza con cui suoni</td></tr>
+          <tr><td>Pad, canale 10</td><td>batteria: i primi cinque pad sono cassa, rullante, charleston, charleston aperto e battimani; gli ultimi tre ripetono cassa, rullante e charleston più forti</td></tr>
+          <tr><td>CC70 – CC77</td><td>le otto manopole della MPK mini: taglio, risonanza, inviluppo del filtro, attacco, rilascio, velocità dell'LFO, livello del delay, riverbero</td></tr>
+          <tr><td>Modulazione (CC1)</td><td>vibrato</td></tr>
+          <tr><td>Sustain (CC64)</td><td>note tenute</td></tr>
+          <tr><td>Pitch bend</td><td>più o meno due semitoni</td></tr>
+          <tr><td>Program change</td><td>cambia preset</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="sezione" id="file">
+  <div class="contenitore">
+    <div class="testata">
+      <p class="etichetta">File sulla scheda SD</p>
+      <h2>Dove finisce quello che suoni</h2>
+      <p>Lo stato si salva da solo all'uscita: alla prossima apertura ritrovi preset, scala e pattern come li avevi lasciati.</p>
+    </div>
+    <ul class="file">
+      <li><code>Saves/cirmolo-synth/registrazioni/registrazione-001.wav</code> le registrazioni fatte con R3, WAV stereo a 16 bit</li>
+      <li><code>Saves/cirmolo-synth/preset-utente.txt</code> i tuoi preset</li>
+      <li><code>Saves/cirmolo-synth/stato.txt</code> suono, scala, tempo e pattern</li>
+      <li><code>Saves/spruce/cirmolo-synth.log</code> il registro dell'app</li>
+      <li><code>App/CirmoloSynth/src</code> i sorgenti in C, con le prove automatiche</li>
+    </ul>
+  </div>
+</section>
+
+<section class="sezione" id="altre">
+  <div class="contenitore">
+    <div class="testata">
+      <p class="etichetta">Le altre app</p>
+      <h2>Il resto di Cirmolo</h2>
+    </div>
+    <nav class="altre" aria-label="App di Cirmolo">
+      <a href="../openorc/"><b>OpenOrc</b><span>un tasto, un accordo intero</span></a>
+      <a href="../fioritura/"><b>Fioritura</b><span>un giardino di suoni e luci</span></a>
+      <a href="../synth/" aria-current="page"><b>Cirmolo Synth</b><span>sintetizzatore e sequencer</span></a>
+      <a href="../sampler/"><b>Cirmolo Sampler</b><span>campionatore a pad</span></a>
+      <a href="../piano/"><b>Cirmolo Piano</b><span>strumenti General MIDI</span></a>
+      <a href="../diapason/"><b>Diapason</b><span>accordatore e metronomo</span></a>
+      <a href="../chiedi-ia/"><b>Chiedi all'IA</b><span>chat, anche a voce</span></a>
+      <a href="../cosa-gioco/"><b>Cosa gioco?</b><span>l'IA sceglie tra i tuoi giochi</span></a>
+      <a href="../ia-giochi/"><b>L'IA nei giochi</b><span>traduttore, scheda, diario</span></a>
+    </nav>
+  </div>
+</section>
+</main>
+
+<footer class="piede">
+  <div class="contenitore">
+    <p>Cirmolo Synth è un'app di <a href="../">Cirmolo</a>, il fork di spruceOS per la Miyoo Flip. Suono, grafica e codice sono scritti da zero in C, con il kit comune delle app di Cirmolo.</p>
+    <div class="link">
+      <a href="../">Cirmolo</a>
+      <a href="https://github.com/luigismith/cirmolo/tree/cirmolo/App/CirmoloSynth">Codice</a>
+      <a href="https://github.com/luigismith/cirmolo/releases">Release</a>
+      <a href="https://github.com/luigismith/cirmolo/issues">Segnala un problema</a>
+    </div>
+  </div>
+</footer>
+</body>
+</html>

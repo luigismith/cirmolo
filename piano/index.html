@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cirmolo Piano · Cirmolo</title>
+<meta name="description" content="Cirmolo Piano: strumento General MIDI per la Miyoo Flip con il SoundFont GeneralUser GS, 287 preset e la batteria sul canale 10, da suonare con una tastiera MIDI USB o con i tasti della Flip.">
+<meta property="og:title" content="Cirmolo Piano · strumenti General MIDI per la Miyoo Flip">
+<meta property="og:description" content="Pianoforti, archi, chitarre, fiati e batterie: 287 preset del SoundFont GeneralUser GS da suonare con una tastiera MIDI USB.">
+<meta property="og:image" content="https://luigismith.github.io/cirmolo/piano/img/suona.png">
+<meta property="og:type" content="article">
+<meta name="theme-color" content="#0d1017">
+<link rel="icon" type="image/png" href="../favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=Be+Vietnam+Pro:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="../app.css">
+<style>:root { --accento: #8fa8ff; --su-accento: #0c1430; }</style>
+</head>
+<body>
+
+<header class="barra">
+  <div class="contenitore">
+    <a class="marchio" href="../"><img src="../favicon.png" alt="" width="30" height="30"><span>Cirmolo</span> <small>· Piano</small></a>
+    <nav aria-label="Sezioni">
+      <a href="#suona">Suonare</a>
+      <a href="#strumenti">Strumenti</a>
+      <a href="#midi">MIDI</a>
+      <a href="#file">File</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+<section class="copertina">
+  <div class="contenitore">
+    <div>
+      <p class="motto"><a href="../">Cirmolo</a> · app musicale per Miyoo Flip</p>
+      <h1>Cirmolo <em>Piano</em></h1>
+      <p class="intro">Un modulo sonoro General MIDI in tasca: colleghi una tastiera MIDI USB e suoni pianoforti, organi, chitarre, archi, fiati, sintetizzatori e batterie. I suoni sono quelli del SoundFont GeneralUser GS di S. Christian Collins.</p>
+      <p class="intro">Senza tastiera, i tasti della Flip suonano otto note della scala che scegli. La tastiera disegnata accende le note che stanno suonando.</p>
+      <div class="cifre">
+        <div><b>287</b><span>preset</span></div>
+        <div><b>16</b><span>canali MIDI</span></div>
+        <div><b>64</b><span>voci</span></div>
+        <div><b>10</b><span>il canale della batteria</span></div>
+      </div>
+      <div class="bottoni">
+        <a class="bottone primo" href="#suona">Come si suona</a>
+        <a class="bottone" href="https://github.com/luigismith/cirmolo/tree/cirmolo/App/CirmoloPiano">Codice</a>
+      </div>
+      <p class="dove">Nella Home di Cirmolo, sotto Musica. Le schermate vengono dal codice dell'app, compilato sul PC, con il SoundFont vero.</p>
+    </div>
+    <figure class="schermo">
+      <img src="img/suona.png" width="640" height="480" alt="La pagina Suona di Cirmolo Piano: Grand Piano, programma 1, l'oscilloscopio con la nota Do4, la tastiera disegnata e sotto gli otto tasti della Flip da Do4 a Do5">
+      <figcaption>La pagina Suona: lo strumento, l'oscilloscopio, la tastiera con le note accese e, sotto, le note dei tasti della Flip.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section class="sezione" id="suona">
+  <div class="contenitore">
+    <div class="testata">
+      <p class="etichetta">Suonare</p>
+      <h2>Una tastiera MIDI, oppure otto tasti</h2>
+      <p>La tastiera MIDI suona direttamente, su tutti i suoi canali. I tasti della Flip suonano otto gradi della scala scelta nelle Opzioni, dall'ottava che scegli: croce sinistra, giù, destra, su, poi Y, B, A e X.</p>
+    </div>
+    <div class="due">
+      <figure class="foto">
+        <img src="img/midi.png" width="640" height="480" loading="lazy" alt="La pagina Suona con la MPK mini IV collegata: il nome della tastiera in verde, una nota grave accesa sulla tastiera disegnata">
+        <figcaption>Con la MPK mini IV collegata il suo nome compare in verde; le note che suona si accendono sulla tastiera disegnata.</figcaption>
+      </figure>
+      <div class="tabella">
+        <h3>Pagina Suona</h3>
+        <table>
+          <tr><td>Croce, Y B A X</td><td>otto note della scala</td></tr>
+          <tr><td>L1 · R1</td><td>strumento precedente · successivo</td></tr>
+          <tr><td>L2 · R2</td><td>famiglia precedente · successiva (otto strumenti alla volta)</td></tr>
+          <tr><td>L3 · R3</td><td>ottava giù · su</td></tr>
+          <tr><td>START</td><td>un accordo di prova sulla scala</td></tr>
+          <tr><td>Levetta sinistra</td><td>in orizzontale piega la nota</td></tr>
+          <tr><td>Levetta destra</td><td>in su il vibrato</td></tr>
+          <tr><td>SELECT</td><td>pagina successiva: Suona, Strumenti, Opzioni</td></tr>
+          <tr><td>MENU</td><td>esce (A o giù conferma); strumento e volume restano salvati</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="sezione" id="strumenti">
+  <div class="contenitore">
+    <div class="testata">
+      <p class="etichetta">Strumenti e opzioni</p>
+      <h2>287 preset, divisi per famiglia</h2>
+      <p>La pagina Strumenti elenca i preset del SoundFont per famiglie General MIDI: pianoforti, percussioni cromatiche, organi, chitarre, bassi, archi, insiemi, ottoni, ance, flauti, synth lead, synth pad, effetti synth, etnici, percussioni, effetti sonori e, in fondo, le batterie. Su e giù scelgono, sinistra e destra saltano di otto, A usa lo strumento, B torna a Suona.</p>
+    </div>
+    <div class="galleria due-col">
+      <figure><img src="img/strumenti.png" width="640" height="480" loading="lazy" alt="La pagina Strumenti: l'elenco con Overdrive Guitar, Distortion Guitar, la famiglia Bassi, la famiglia Archi con Violin scelto, il numero del programma a destra"><figcaption><b>Strumenti.</b> Ogni preset con il suo numero di programma; le intestazioni sono le famiglie.</figcaption></figure>
+      <figure><img src="img/opzioni.png" width="640" height="480" loading="lazy" alt="La pagina Opzioni: volume 70%, ottava della tastierina 5, tonalità Do, scala maggiore, forza dei tasti 85%, sotto le note della tastierina della Flip"><figcaption><b>Opzioni.</b> Volume, ottava, tonalità, scala e forza dei tasti della Flip; A fa sentire una nota. Sotto, le note che suonano i tasti.</figcaption></figure>
+    </div>
+    <div class="schede tre blocco-sotto">
+      <div class="scheda"><h3>Otto scale</h3><p>Maggiore, minore, dorica, misolidia, pentatonica maggiore e minore, blues, cromatica, su qualsiasi tonalità.</p></div>
+      <div class="scheda" style="--c: var(--oro)"><h3>Forza dei tasti</h3><p>I tasti della Flip non sentono la pressione: la loro forza si sceglie, dal 30 al 100%.</p></div>
+      <div class="scheda" style="--c: var(--aghi)"><h3>GeneralUser GS</h3><p>Il SoundFont 2.0.3, originale e non modificato, è incluso con la sua licenza, che ne permette la ridistribuzione.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="sezione" id="midi">
+  <div class="contenitore">
+    <div class="testata">
+      <p class="etichetta">Tastiera MIDI</p>
+      <h2>Un modulo General MIDI completo</h2>
+      <p>Collega la tastiera alla porta USB-C, anche ad app aperta. Ogni canale ha il suo strumento, come in un modulo General MIDI: si può suonare con più tastiere o da un sequencer.</p>
+    </div>
+    <div class="tabelle una">
+      <div class="tabella">
+        <h3>Cosa arriva al motore</h3>
+        <table>
+          <tr><td>Note</td><td>con la dinamica, su tutti i 16 canali</td></tr>
+          <tr><td>Canale 10</td><td>batteria General MIDI, con le note accese a parte</td></tr>
+          <tr><td>Program change</td><td>cambia strumento sul canale; sul canale 1 si vede il nome sullo schermo</td></tr>
+          <tr><td>Banco (CC0, CC32)</td><td>le variazioni GS degli strumenti</td></tr>
+          <tr><td>Pitch bend</td><td>piega la nota</td></tr>
+          <tr><td>Modulazione (CC1)</td><td>vibrato</td></tr>
+          <tr><td>Altri controlli</td><td>volume, pan, espressione e sustain passano al motore TinySoundFont; CC120 e CC123 spengono tutto</td></tr>
+        </table>
+      </div>
+    </div>
+    <p class="nota blocco-sotto">TinySoundFont non ha il chorus e il riverbero dei SoundFont: alcuni strumenti di GeneralUser GS suonano un po' più asciutti che in FluidSynth.</p>
+  </div>
+</section>
+
+<section class="sezione" id="file">
+  <div class="contenitore">
+    <div class="testata">
+      <p class="etichetta">File sulla scheda SD</p>
+      <h2>Lo stato e il SoundFont</h2>
+    </div>
+    <ul class="file">
+      <li><code>Saves/piano/stato.txt</code> strumento, volume, ottava, scala e forza dei tasti</li>
+      <li><code>App/CirmoloPiano/sf2/GeneralUser-GS.sf2</code> il SoundFont, con <code>LICENZA.txt</code> accanto</li>
+      <li><code>Saves/spruce/cirmolo-piano.log</code> il registro dell'app</li>
+      <li><code>App/CirmoloPiano/src</code> i sorgenti in C, con le prove automatiche</li>
+    </ul>
+  </div>
+</section>
+
+<section class="sezione" id="altre">
+  <div class="contenitore">
+    <div class="testata">
+      <p class="etichetta">Le altre app</p>
+      <h2>Il resto di Cirmolo</h2>
+    </div>
+    <nav class="altre" aria-label="App di Cirmolo">
+      <a href="../openorc/"><b>OpenOrc</b><span>un tasto, un accordo intero</span></a>
+      <a href="../fioritura/"><b>Fioritura</b><span>un giardino di suoni e luci</span></a>
+      <a href="../synth/"><b>Cirmolo Synth</b><span>sintetizzatore e sequencer</span></a>
+      <a href="../sampler/"><b>Cirmolo Sampler</b><span>campionatore a pad</span></a>
+      <a href="../piano/" aria-current="page"><b>Cirmolo Piano</b><span>strumenti General MIDI</span></a>
+      <a href="../diapason/"><b>Diapason</b><span>accordatore e metronomo</span></a>
+      <a href="../chiedi-ia/"><b>Chiedi all'IA</b><span>chat, anche a voce</span></a>
+      <a href="../cosa-gioco/"><b>Cosa gioco?</b><span>l'IA sceglie tra i tuoi giochi</span></a>
+      <a href="../ia-giochi/"><b>L'IA nei giochi</b><span>traduttore, scheda, diario</span></a>
+    </nav>
+  </div>
+</section>
+</main>
+
+<footer class="piede">
+  <div class="contenitore">
+    <p>Cirmolo Piano è un'app di <a href="../">Cirmolo</a>, il fork di spruceOS per la Miyoo Flip. Usa <a href="https://github.com/schellingb/TinySoundFont">TinySoundFont</a> e il SoundFont <a href="https://www.schristiancollins.com/generaluser">GeneralUser GS</a> di S. Christian Collins, con le loro licenze.</p>
+    <div class="link">
+      <a href="../">Cirmolo</a>
+      <a href="https://github.com/luigismith/cirmolo/tree/cirmolo/App/CirmoloPiano">Codice</a>
+      <a href="https://github.com/luigismith/cirmolo/releases">Release</a>
+      <a href="https://github.com/luigismith/cirmolo/issues">Segnala un problema</a>
+    </div>
+  </div>
+</footer>
+</body>
+</html>

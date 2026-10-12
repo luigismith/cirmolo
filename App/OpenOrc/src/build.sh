@@ -10,8 +10,11 @@ ZIG="${ZIG:-zig}"
 SDL_INCLUDE="${SDL_INCLUDE:?serve SDL_INCLUDE con gli header di SDL 2.32}"
 OUT="${OUT:-build}"
 KIT=../../../spruce/cirmolo-kit
-CFLAGS="-O2 -std=gnu11 -Wall -Wextra -Wno-unused-parameter -Wno-missing-field-initializers -Wno-unused-function -I. -I$KIT"
-SRC="orc_app.c orc_dsp.c chords.c $KIT/gfx.c $KIT/midi.c"
+IA=../../../spruce/cirmolo-ia
+CFLAGS="-O2 -std=gnu11 -Wall -Wextra -Wno-unused-parameter -Wno-missing-field-initializers -Wno-unused-function -I. -I$KIT -I$IA"
+# Configurazione delle tastiere con l'IA: fornitori, chiavi e rete di Chiedi all'IA (spruce/cirmolo-ia).
+AI="orc_ia.c $IA/ask.c $IA/iaconf.c $IA/conv.c $IA/claude.c $IA/openai.c $IA/providers.c $IA/net.c $IA/json.c $KIT/i18n.c"
+SRC="orc_app.c orc_dsp.c chords.c $AI $KIT/gfx.c $KIT/midi.c"
 
 "$ZIG" cc $CFLAGS -s -target aarch64-linux-gnu.2.27 -mcpu=cortex_a55 -I"$SDL_INCLUDE" \
     -o ../openorc orc_main.c $KIT/platform.c $SRC -lm -ldl

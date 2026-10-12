@@ -50,6 +50,13 @@ int  orcapp_editing(const OrcApp *a);
 const char *orcapp_toast(const OrcApp *a);
 void orcapp_set_sound(OrcApp *a, const OrcSound *s);
 void orcapp_set_follow(OrcApp *a, int on);
+/* Configurazione della tastiera con l'IA (0 spenta, 1 domanda, 2 ascolto, 3 attesa, 4 proposta, 5 errore). */
+int  orcapp_ai_state(const OrcApp *a);
+void orcapp_ai_start(OrcApp *a);
+void orcapp_set_ai_dir(OrcApp *a, const char *dir);     /* cartella di fornitori e chiavi (Saves/claude) */
+void orcapp_ai_fake(OrcApp *a, const char *reply);      /* risposta del modello per le prove */
+const char *orcapp_ai_error(const OrcApp *a);
+const char *orcapp_map_device(const OrcApp *a);
 void orcapp_set_knob_mode(OrcApp *a, int mode);        /* 0 assolute, 1 relative, 2 relative (64) */
 void orcapp_save(OrcApp *a);
 

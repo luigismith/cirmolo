@@ -19,6 +19,7 @@ Questo manuale descrive la versione del ramo `cirmolo` di ottobre 2026.
 | cambiare tonalità al volo | **tieni SELECT** e premi sinistra/destra |
 | registrare un loop | **tieni SELECT** e premi A (oppure il pad 45) |
 | salvare un suono tuo | pagina **Suono**, riga «Salva come nuovo suono», **A** |
+| usare una tastiera MIDI nuova | collegala: OpenOrc chiede se farla configurare dall'**IA** (capitolo 10) |
 | cambiare pagina | **tocca SELECT** (Suona → Accordi → Suono → Ritmo → MIDI) |
 | far partire batteria e arpeggi a tempo | **START** |
 | spegnere tutte le note | **L3** (premi la levetta sinistra) |
@@ -414,6 +415,34 @@ che restano dopo gli aggiornamenti) e nella cartella `tastiere` dell'app. Il for
 [scheda della MPK](tastiere/akai-mpk-mini-iv.it.md#altre-tastiere). I preset scritti prima di ottobre 2026
 con la riga «Loop: cancella» funzionano ancora: oggi si chiama «Loop: annulla».
 
+### Configurare una tastiera nuova con l'IA
+Quando colleghi una tastiera che OpenOrc non conosce, compare la domanda «Tastiera nuova: vuoi che l'IA
+la configuri?». Si può fare anche dopo, dalla prima riga della pagina MIDI, «Configura la tastiera con
+l'IA».
+
+1. **Ascolto.** Muovi tutte le manopole, premi tutti i pad (anche negli altri banchi), qualche tasto, le
+   rotelle e i pulsanti di trasporto. Lo schermo conta cosa arriva: note, manopole, pulsanti, pitch bend.
+   In questa fase la tastiera non suona. **X** ricomincia, **A** passa all'IA.
+2. **L'IA studia la tastiera.** Riceve il nome della tastiera e i controlli che hai mosso e propone dove
+   mettere accordi, funzioni, manopole e trasporto. Usa anche quello che sa di quel modello, per
+   rispettare l'ordine dei pad e delle manopole.
+3. **La proposta.** Vedi tutte le assegnazioni e una frase che le spiega. **A** applica e salva, **X**
+   chiede un'altra proposta, **B** scarta e lascia la mappa com'era.
+
+OpenOrc controlla la risposta: tiene solo controlli che hai mosso davvero, ognuno una volta sola, e non
+assegna mai i tasti del pianoforte, che servono a suonare. Il tipo di manopole lo deduce dai valori.
+
+La mappa si salva in `Saves/openorc/tastiere/` insieme al nome della tastiera. Quando la ricolleghi si
+carica da sola, e così per ogni tastiera: la MPK mini IV ha già la sua.
+
+**Il modello.** OpenOrc usa il migliore gratuito tra quelli di cui hai una chiave, nell'ordine:
+- **Groq**, con gpt-oss 120B: gratis senza carta e velocissimo, è quello consigliato;
+- OpenRouter, GLM e Mistral, con i loro modelli gratuiti;
+- se non ce n'è nessuno, il modello scelto per le funzioni IA in Chiedi all'IA.
+
+La chiave di Groq si crea su console.groq.com, alla voce API Keys. Si salva in Chiedi all'IA, scheda
+Fornitori, oppure come file di testo in `Saves/claude/chiavi/groq.txt`. Serve il Wi-Fi.
+
 ## 11. File
 
 | File | Contenuto |
@@ -421,7 +450,8 @@ con la riga «Loop: cancella» funzionano ancora: oggi si chiama «Loop: annulla
 | `Saves/openorc/stato.txt` | impostazioni e suono corrente; cancellalo per tornare ai valori di fabbrica |
 | `Saves/openorc/loop.txt` | il loop dell'ultima sessione |
 | `Saves/openorc/suoni/*.txt` | i tuoi suoni |
-| `Saves/openorc/tastiere/*.txt` | i tuoi preset della tastiera |
+| `Saves/openorc/tastiere/*.txt` | i tuoi preset della tastiera, anche quelli fatti con l'IA |
+| `Saves/claude/chiavi/` | le chiavi dei fornitori di IA, le stesse di Chiedi all'IA |
 | `App/OpenOrc/tastiere/` | preset e scheda della MPK mini IV |
 | `Saves/spruce/openorc.log` | messaggi dell'ultima esecuzione, utili se qualcosa non va |
 
@@ -431,7 +461,8 @@ con la riga «Loop: cancella» funzionano ancora: oggi si chiama «Loop: annulla
 |---|---|
 | Non si sente nulla | Controlla il volume della console e la riga Volume (o K8). Se l'oscilloscopio si muove, il suono c'è. |
 | Una nota resta accesa | **L3**, oppure il pedale su e giù. |
-| La tastiera non fa nulla | Pagina MIDI: la spia deve essere verde. Se «Ultimo messaggio» cambia, la tastiera arriva: rifai l'apprendimento. |
+| La tastiera non fa nulla | Pagina MIDI: la spia deve essere verde. Se «Ultimo messaggio» cambia, la tastiera arriva: rifai l'apprendimento oppure «Configura la tastiera con l'IA». |
+| L'IA dice che serve una chiave | Crea una chiave gratuita su console.groq.com e salvala in Chiedi all'IA, scheda Fornitori. |
 | Gli accordi della MPK escono strani o doppi | Spegni Chords, Scales, ARP e Note Repeat sulla MPK. |
 | Una manopola va al contrario o a scatti | Prova un altro «Tipo di manopole» nella pagina MIDI. |
 | Arpeggio o pattern fuori tempo rispetto a un'altra macchina | Mandagli il clock MIDI e attiva «Segui il clock MIDI». |

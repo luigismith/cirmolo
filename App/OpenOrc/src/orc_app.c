@@ -23,6 +23,10 @@
  * tutte le pagine: su/giu' suono, L1/R1 categoria, sinistra/destra tonalita', L2 maggiore/minore, R2 modo
  * tonalita', A registra il loop, B lo suona o lo ferma, Y annulla, X batteria.
  *
+ * Tastiere: ogni mappa ricorda il dispositivo per cui e' fatta e si ricarica quando lo si ricollega. Una
+ * tastiera mai vista si configura con l'IA (pagina MIDI, prima riga, o la domanda che compare quando la si
+ * collega): si muovono i controlli, il modello gratuito migliore tra quelli con una chiave propone la mappa.
+ *
  * Suoni: quelli di fabbrica (PRESETS) e quelli dell'utente, un file di testo ciascuno in
  * Saves/openorc/suoni. Il suono corrente si puo' cambiare: un asterisco lo segnala finche' non lo si
  * salva o ripristina. Il loop si salva all'uscita in Saves/openorc/loop.txt e si riprende fermo.
@@ -42,9 +46,14 @@
 #define make_dir(p) mkdir(p, 0755)
 #endif
 
+#include "ask.h"
 #include "chords.h"
+#include "iaconf.h"
 #include "midi.h"
+#include "net.h"
+#include "orc_ia.h"
 #include "platform.h"
+#include "providers.h"
 
 /* ------------------------------------------------------------------ palette (come le altre app Cirmolo) */
 #define C_BG_TOP   RGB(13, 16, 22)
@@ -140,10 +149,24 @@ static const char *TARGET_NAMES[T_COUNT] = {
     "Play/Stop", "Record", "Overdub", "Loop", "Undo",
 };
 static const char *CHORD_PAD_NAMES[8] = { "Dim", "Min", "Maj", "Sus", "6", "m7", "M7", "9" };
+/* A cosa serve ogni funzione, per il modello che configura una tastiera nuova. */
+static const char *TARGET_DESCR[T_COUNT] = {
+    "chord pad 1 (top row): diminished quality, held while playing a key", "chord pad 2 (top row): minor quality",
+    "chord pad 3 (top row): major quality", "chord pad 4 (top row): sus4 quality",
+    "chord pad 5 (bottom row): adds the 6th", "chord pad 6 (bottom row): adds the minor 7th",
+    "chord pad 7 (bottom row): adds the major 7th", "chord pad 8 (bottom row): adds the 9th",
+    "function pad: drums on/off", "function pad: loop record/overdub", "function pad: loop play/stop",
+    "function pad: loop undo", "function pad: key mode on/off", "function pad: next play mode",
+    "function pad: previous sound", "function pad: next sound",
+    "knob K1: chord register (voicing)", "knob K2: bass level", "knob K3: play mode amount", "knob K4: tone",
+    "knob K5: chorus", "knob K6: delay", "knob K7: reverb", "knob K8: volume",
+    "transport button: play/stop", "transport button: record", "transport button: overdub",
+    "transport button: loop on/off", "transport button: undo",
+};
 
-enum { ROW_HEADER, ROW_TARGET, ROW_KNOB_MODE };
+enum { ROW_HEADER, ROW_TARGET, ROW_KNOB_MODE, ROW_AI };
 typedef struct { int kind, first, last; const char *label; } MidiRow;
-#define MIDI_ROW_COUNT 34
+#define MIDI_ROW_COUNT 35
 static MidiRow MIDI_ROWS[MIDI_ROW_COUNT];
 
 static void midi_rows_init(void)
@@ -155,6 +178,7 @@ static void midi_rows_init(void)
         { T_TRANS, T_TRANS + 4, "Tasti di trasporto" },
     };
     int r = 0;
+    MIDI_ROWS[r++] = (MidiRow){ ROW_AI, 0, 0, "Configura la tastiera con l'IA" };
     for (int g = 0; g < 4; g++) {
         MIDI_ROWS[r++] = (MidiRow){ ROW_HEADER, groups[g].first, groups[g].last, groups[g].label };
         for (int t = groups[g].first; t <= groups[g].last; t++) MIDI_ROWS[r++] = (MidiRow){ ROW_TARGET, t, t, TARGET_NAMES[t] };
@@ -218,6 +242,7 @@ typedef struct {
     float beat_level;
     int clock_follow, loop_bars, loop_quant, knob_mode;
     MidiMap map[T_COUNT];
+    char map_device[64];                          /* la tastiera per cui e' fatta la mappa */
 } Settings;
 
 #define USER_MAX 64
@@ -291,7 +316,23 @@ struct OrcApp {
     /* SELECT tenuto: elenco dei suoni e funzioni; peek: l'elenco in vista per un attimo */
     int sel_down, sel_used, overlay;
     float sel_time, peek_t;
+
+    /* configurazione della tastiera con l'IA */
+    int ai;                                       /* AI_OFF, AI_ASK, AI_LISTEN, AI_WAIT, AI_SHOW, AI_ERROR */
+    IaScan scan;
+    IaMap ai_map[T_COUNT];
+    int ai_knob_mode, ai_sel, ai_scroll, ai_count;
+    char ai_dev[64], ai_long[128], ai_name[64], ai_note[400], ai_err[300], ai_model[96], ai_last[96], ai_skip[64];
+    char ai_dir[512];                             /* Saves/claude: fornitori e chiavi di Chiedi all'IA */
+    char *ai_fake;                                /* risposta finta (prove) */
+    float ai_time;
+    Registry reg;
+    int reg_loaded;
+    Transfer xfer;
+    Reply reply;
 };
+enum { AI_OFF, AI_ASK, AI_LISTEN, AI_WAIT, AI_SHOW, AI_ERROR };
+static void ai_device_connected(OrcApp *a, const char *device);
 
 static void toast(OrcApp *a, const char *msg)
 {
@@ -918,6 +959,11 @@ void orcapp_midi(OrcApp *a, int port, const unsigned char *m, int len)
     a->midi_flash = 1.0f;
     int type = st & 0xF0, ch = st & 0x0F, d1 = len > 1 ? m[1] : 0, d2 = len > 2 ? m[2] : 0;
     describe(a, port, type, ch, d1, d2);
+    if (a->ai == AI_LISTEN) {                     /* configurazione con l'IA: si ascolta e basta */
+        ia_scan_add(&a->scan, port, type, ch, d1, d2);
+        snprintf(a->ai_last, sizeof(a->ai_last), "%s", a->last_msg);
+        return;
+    }
     int on = type == MIDI_NOTE_ON && d2 > 0, off = type == MIDI_NOTE_OFF || (type == MIDI_NOTE_ON && d2 == 0);
     if (a->learn >= 0 && (on || type == MIDI_CC)) { learn_message(a, port, type, ch, d1, d2); return; }
     if (on || off || type == MIDI_CC) {
@@ -962,7 +1008,9 @@ void orcapp_midi_status(OrcApp *a, const char *device)
         char t[112];
         snprintf(t, sizeof(t), "Tastiera collegata: %s", device);
         toast(a, t);
+        ai_device_connected(a, device);
     } else if (was) {
+        if (a->ai == AI_LISTEN || a->ai == AI_ASK) a->ai = AI_OFF;
         panic(a);
         memset(a->pad_held, 0, sizeof(a->pad_held));
         toast(a, "Tastiera MIDI scollegata");
@@ -1073,7 +1121,7 @@ int orcapp_load_keyboard(OrcApp *a, const char *path, char *name, size_t name_n)
     MidiMap m[T_COUNT];
     for (int t = 0; t < T_COUNT; t++) m[t] = (MidiMap){ MAP_NONE, -1, -1, 0 };
     int mode = a->set.knob_mode, found = 0;
-    char line[256], nm[64] = "";
+    char line[256], nm[64] = "", dev[64] = "";
     while (fgets(line, sizeof(line), f)) {
         char *s = line;
         if (!strncmp(s, "\xEF\xBB\xBF", 3)) s += 3;           /* file salvati con il Blocco note */
@@ -1083,6 +1131,7 @@ int orcapp_load_keyboard(OrcApp *a, const char *path, char *name, size_t name_n)
         *eq = 0;
         char *k = trim(s), *v = trim(eq + 1);
         if (ieq(k, "nome")) snprintf(nm, sizeof(nm), "%s", v);
+        else if (ieq(k, "dispositivo")) snprintf(dev, sizeof(dev), "%.63s", v);
         else if (ieq(k, "manopole")) { for (int i = 0; i < 3; i++) if (ieq(v, KNOB_MODE_NAMES[i])) mode = i; }
         else {
             int t = 0;                            /* prima il nome esatto: m7 e M7 sono diversi */
@@ -1096,6 +1145,7 @@ int orcapp_load_keyboard(OrcApp *a, const char *path, char *name, size_t name_n)
     if (!found) return -1;
     memcpy(a->set.map, m, sizeof(m));
     a->set.knob_mode = mode;
+    snprintf(a->set.map_device, sizeof(a->set.map_device), "%s", dev[0] ? dev : a->midi_name);
     a->learn = -1;
     a->dirty = 1;
     if (name) {
@@ -1116,7 +1166,9 @@ int orcapp_save_keyboard(OrcApp *a, const char *path, const char *name)
     if (!f) return -1;
     fprintf(f, "# OpenOrc - preset della tastiera MIDI (Y nella pagina MIDI lo carica)\n"
                "# Ogni riga: controllo = nota N | cc N, poi canale 1-16 e porta 1-8 se servono; - = nessuno\n"
-               "nome = %s\nmanopole = %s\n", name, KNOB_MODE_NAMES[a->set.knob_mode]);
+               "nome = %s\n", name);
+    if (a->set.map_device[0]) fprintf(f, "dispositivo = %s\n", a->set.map_device);
+    fprintf(f, "manopole = %s\n", KNOB_MODE_NAMES[a->set.knob_mode]);
     for (int t = 0; t < T_COUNT; t++) {
         const MidiMap *m = &a->set.map[t];
         fprintf(f, "%s = ", TARGET_NAMES[t]);
@@ -1144,6 +1196,7 @@ static void kbd_next(OrcApp *a)
         return;
     }
     default_map(a->set.map);
+    snprintf(a->set.map_device, sizeof(a->set.map_device), "MPK mini IV");
     a->dirty = 1;
     toast(a, "Pad e manopole come nella MPK mini IV");
 }
@@ -1177,6 +1230,7 @@ static void settings_default(Settings *s)
     s->loop_quant = 2;
     s->knob_mode = 1;                             /* le manopole della MPK mini IV sono relative di fabbrica */
     default_map(s->map);
+    snprintf(s->map_device, sizeof(s->map_device), "MPK mini IV");
 }
 
 /* I parametri di un suono come righe chiave=valore: li usano il file di stato e i suoni dell'utente. */
@@ -1228,6 +1282,7 @@ static void save(OrcApp *a)
             s->clock_follow, s->loop_bars, s->loop_quant, s->knob_mode);
     for (int t = 0; t < T_COUNT; t++)
         fprintf(f, "map%d=%d,%d,%d,%d\n", t, s->map[t].kind, s->map[t].port, s->map[t].ch, s->map[t].num);
+    fprintf(f, "map_device=%s\n", s->map_device);
     fclose(f);
 #ifdef _WIN32
     remove(a->path);
@@ -1262,6 +1317,11 @@ static int load(OrcApp *a)
             snprintf(nm, sizeof(nm), "%s", val);
             snprintf(s->sound_name, sizeof(s->sound_name), "%s", trim(nm));
             named = s->sound_name[0] != 0;
+        }
+        else if (!strcmp(k, "map_device")) {
+            char nm[96];
+            snprintf(nm, sizeof(nm), "%s", val);
+            snprintf(s->map_device, sizeof(s->map_device), "%.63s", trim(nm));
         }
         else if (sound_read(d, &s->spread, k, v)) {}
         else if (!strcmp(k, "key")) s->key = (int)clampf(v, 0, 11);
@@ -1636,6 +1696,248 @@ static void loop_load(OrcApp *a)
     if (n) orc_loop_import(a->orc, loop_buf, n, len, layers);
 }
 
+/* ------------------------------------------------------------------ tastiere: ricaricate e configurate con l'IA */
+/* Un preset con «dispositivo = <nome>» uguale alla tastiera collegata: si carica. */
+static int kbd_for_device(OrcApp *a, const char *device)
+{
+    static KbdFile files[KBD_MAX];
+    int n = kbd_list(a, files);
+    for (int i = 0; i < n; i++) {
+        FILE *f = fopen(files[i].path, "r");
+        if (!f) continue;
+        char line[256], dev[96] = "";
+        while (fgets(line, sizeof(line), f)) {
+            char *s = line;
+            if (!strncmp(s, "\xEF\xBB\xBF", 3)) s += 3;
+            s = trim(s);
+            char *eq = strchr(s, '=');
+            if (!eq || *s == '#') continue;
+            *eq = 0;
+            if (ieq(trim(s), "dispositivo")) { snprintf(dev, sizeof(dev), "%s", trim(eq + 1)); break; }
+        }
+        fclose(f);
+        char name[64];
+        if (dev[0] && ia_same_device(dev, device) && !orcapp_load_keyboard(a, files[i].path, name, sizeof(name))) {
+            char t[112];
+            snprintf(t, sizeof(t), "Tastiera %s: la sua mappa è pronta", name);
+            toast(a, t);
+            return 1;
+        }
+    }
+    return 0;
+}
+
+/* Una tastiera appena collegata: la sua mappa se c'e', altrimenti la proposta di configurarla con l'IA. */
+static void ai_device_connected(OrcApp *a, const char *device)
+{
+    if (!device || !*device || ia_same_device(device, a->set.map_device)) return;
+    if (kbd_for_device(a, device)) return;
+    if (a->ai == AI_OFF && !ia_same_device(device, a->ai_skip)) {
+        snprintf(a->ai_dev, sizeof(a->ai_dev), "%s", device);
+        ia_device_longname(device, a->ai_long, sizeof(a->ai_long));
+        a->ai = AI_ASK;
+    }
+}
+
+static void ai_listen(OrcApp *a)
+{
+    if (!a->midi_name[0]) { toast(a, "Collega prima una tastiera MIDI"); a->ai = AI_OFF; return; }
+    panic(a);
+    memset(a->pad_held, 0, sizeof(a->pad_held));
+    snprintf(a->ai_dev, sizeof(a->ai_dev), "%s", a->midi_name);
+    ia_device_longname(a->ai_dev, a->ai_long, sizeof(a->ai_long));
+    ia_scan_reset(&a->scan);
+    a->ai_last[0] = 0;
+    a->ai_err[0] = 0;
+    a->learn = -1;
+    a->ai = AI_LISTEN;
+}
+
+/* Il modello: il migliore gratuito tra quelli con una chiave salvata in Chiedi all'IA; altrimenti quello
+   scelto per le funzioni IA della console. Groq con gpt-oss 120B: gratis senza carta, veloce, bravo a
+   rispondere in JSON. */
+static int ai_pick(OrcApp *a, const Provider **pp, Model *mm, char *key, size_t keyn)
+{
+    static const struct { const char *prov, *model; } FREE[] = {
+        { "groq", "openai/gpt-oss-120b" },
+        { "openrouter", "nvidia/nemotron-3-ultra-550b-a55b:free" },
+        { "zai", "glm-4.7-flash" },
+        { "mistral", "mistral-medium-latest" },
+    };
+    if (!a->reg_loaded) { registry_load(&a->reg, a->ai_dir); a->reg_loaded = 1; }
+    for (size_t i = 0; i < sizeof(FREE) / sizeof(FREE[0]); i++) {
+        int pi = registry_find(&a->reg, FREE[i].prov);
+        if (pi < 0) continue;
+        const Provider *p = &a->reg.p[pi];
+        provider_key(p, a->ai_dir, key, keyn);
+        if (!key[0]) continue;
+        int mi = provider_find_model(p, FREE[i].model);
+        if (mi >= 0) *mm = p->models[mi];
+        else { memset(mm, 0, sizeof(*mm)); snprintf(mm->id, sizeof(mm->id), "%s", FREE[i].model); snprintf(mm->name, sizeof(mm->name), "%s", FREE[i].model); }
+        *pp = p;
+        return 0;
+    }
+    IaSettings st;
+    ia_settings_read(a->ai_dir, &st);
+    const Model *m = NULL;
+    char err[200];
+    if (!ia_console_model(&a->reg, &st, a->ai_dir, pp, &m, key, keyn, err, sizeof(err)) && m) { *mm = *m; return 0; }
+    return -1;
+}
+
+static void ai_finish(OrcApp *a, const char *text)
+{
+    int km = -1;
+    a->ai_count = ia_parse_reply(text, &a->scan, TARGET_NAMES, T_COUNT, a->ai_map, &km, a->ai_name, sizeof(a->ai_name),
+                                 a->ai_note, sizeof(a->ai_note), a->ai_err, sizeof(a->ai_err));
+    if (a->ai_count < 0) { a->ai = AI_ERROR; return; }
+    int guess = ia_guess_knob_mode(&a->scan, &a->ai_map[T_KNOB], 8);
+    a->ai_knob_mode = guess >= 0 ? guess : (km >= 0 ? km : a->set.knob_mode);
+    if (!a->ai_name[0]) snprintf(a->ai_name, sizeof(a->ai_name), "%s", a->ai_long[0] ? a->ai_long : a->ai_dev);
+    a->ai_sel = 1;
+    a->ai_scroll = 0;
+    a->ai = AI_SHOW;
+}
+
+static void reply_sink(void *ud, const char *d, size_t n) { reply_feed(ud, d, n); }
+
+static void ai_send(OrcApp *a)
+{
+    int notes, knobs, buttons, bends;
+    ia_scan_counts(&a->scan, &notes, &knobs, &buttons, &bends);
+    if (!notes && !knobs && !buttons) { toast(a, "Non è arrivato niente: muovi manopole e pad, poi A"); return; }
+    a->ai_err[0] = 0;
+    a->ai_time = 0.0f;
+    if (a->ai_fake) {                             /* prove: la risposta e' gia' qui */
+        snprintf(a->ai_model, sizeof(a->ai_model), "risposta di prova");
+        ai_finish(a, a->ai_fake);
+        return;
+    }
+    const Provider *p = NULL;
+    Model m;
+    char key[256];
+    if (ai_pick(a, &p, &m, key, sizeof(key))) {
+        snprintf(a->ai_err, sizeof(a->ai_err), "Serve una chiave gratuita. Consigliata: Groq, gratis senza carta, su console.groq.com. "
+                 "Salvala in Chiedi all'IA, scheda Fornitori, oppure in Saves/claude/chiavi/groq.txt.");
+        a->ai = AI_ERROR;
+        return;
+    }
+    snprintf(a->ai_model, sizeof(a->ai_model), "%s · %s", p->name, m.name[0] ? m.name : m.id);
+    char *sys = ia_system_prompt();
+    char *user = ia_user_prompt(&a->scan, a->ai_dev, a->ai_long, TARGET_NAMES, TARGET_DESCR, T_COUNT);
+    AskSpec q = { sys, user, NULL, NULL, 2500, "low", 0 };
+    char url[260];
+    char *body = ask_request(p, &m, &q, url, sizeof(url));
+    Buf h = { 0 };
+    provider_auth_headers(p, key, &h);
+    buf_adds(&h, "Content-Type: application/json\n");
+    memset(key, 0, sizeof(key));
+    reply_init(&a->reply, p->proto == PROTO_ANTHROPIC ? PROTO_ANTHROPIC : PROTO_OPENAI, p->name);
+    a->reply.state = RS_WAITING;
+    Request rq = { url, h.p, body, 0, NULL, NULL, 120 };
+    char msg[200];
+    if (net_start(&a->xfer, &rq, msg, sizeof(msg))) {
+        snprintf(a->ai_err, sizeof(a->ai_err), "%s", msg);
+        reply_free(&a->reply);
+        a->ai = AI_ERROR;
+    } else {
+        a->ai = AI_WAIT;
+    }
+    if (h.p) memset(h.p, 0, h.len);
+    buf_free(&h);
+    free(body);
+    free(sys);
+    free(user);
+}
+
+static void ai_poll(OrcApp *a)
+{
+    if (a->ai != AI_WAIT || !net_active(&a->xfer)) return;
+    int code = 0;
+    char err[200];
+    if (!net_poll(&a->xfer, reply_sink, &a->reply, &code, err, sizeof(err))) return;
+    reply_finish(&a->reply, code, err);
+    char *t = reply_text(&a->reply);
+    if (a->reply.state == RS_DONE) ai_finish(a, t);
+    else {
+        snprintf(a->ai_err, sizeof(a->ai_err), "%s", a->reply.error[0] ? a->reply.error : "La risposta dell'IA si è interrotta.");
+        a->ai = AI_ERROR;
+    }
+    free(t);
+    reply_free(&a->reply);
+}
+
+static void ai_cancel(OrcApp *a)
+{
+    if (a->ai == AI_WAIT && net_active(&a->xfer)) { net_cancel(&a->xfer); reply_free(&a->reply); }
+    a->ai = AI_OFF;
+}
+
+/* La proposta accettata: diventa la mappa e un preset della tastiera, che si ricarica da solo. */
+static void ai_apply(OrcApp *a)
+{
+    for (int t = 0; t < T_COUNT; t++) {
+        const IaMap *m = &a->ai_map[t];
+        a->set.map[t] = m->kind == IA_NONE ? (MidiMap){ MAP_NONE, -1, -1, 0 }
+                                           : (MidiMap){ m->kind == IA_NOTE ? MAP_NOTE : MAP_CC, m->port, m->ch, m->num };
+    }
+    a->set.knob_mode = a->ai_knob_mode;
+    snprintf(a->set.map_device, sizeof(a->set.map_device), "%s", a->ai_dev);
+    a->dirty = 1;
+    a->ai = AI_OFF;
+    char dir[512], sl[48], path[600], t[112];
+    if (user_kbd_dir(a, dir, sizeof(dir))) {
+        make_dir(dir);
+        slug(a->ai_name, sl, sizeof(sl));
+        snprintf(path, sizeof(path), "%s/%s.txt", dir, sl);
+        if (!orcapp_save_keyboard(a, path, a->ai_name)) {
+            snprintf(t, sizeof(t), "%s configurata e salvata", a->ai_name);
+            toast(a, t);
+            return;
+        }
+    }
+    snprintf(t, sizeof(t), "%s configurata", a->ai_name);
+    toast(a, t);
+}
+
+static void ai_move(OrcApp *a, int dir)
+{
+    /* righe della proposta: 4 intestazioni e le funzioni, come nella pagina MIDI (senza la riga dell'IA) */
+    int r = a->ai_sel;
+    do { r = (r + dir + (MIDI_ROW_COUNT - 1)) % (MIDI_ROW_COUNT - 1); } while (MIDI_ROWS[r + 1].kind != ROW_TARGET);
+    a->ai_sel = r;
+}
+
+static void ai_press(OrcApp *a, int b)
+{
+    switch (a->ai) {
+    case AI_ASK:
+        if (b == PAD_A) ai_listen(a);
+        else if (b == PAD_B || b == PAD_MENU) { snprintf(a->ai_skip, sizeof(a->ai_skip), "%s", a->ai_dev); a->ai = AI_OFF; }
+        break;
+    case AI_LISTEN:
+        if (b == PAD_A) ai_send(a);
+        else if (b == PAD_B || b == PAD_MENU) { a->ai = AI_OFF; toast(a, "Configurazione annullata"); }
+        else if (b == PAD_X) { ia_scan_reset(&a->scan); a->ai_last[0] = 0; }
+        break;
+    case AI_WAIT:
+        if (b == PAD_B || b == PAD_MENU) { ai_cancel(a); toast(a, "Configurazione annullata"); }
+        break;
+    case AI_SHOW:
+        if (b == PAD_A) ai_apply(a);
+        else if (b == PAD_B || b == PAD_MENU) { a->ai = AI_OFF; toast(a, "Proposta scartata: la mappa resta com'era"); }
+        else if (b == PAD_X) ai_send(a);
+        else if (b == PAD_UP) ai_move(a, -1);
+        else if (b == PAD_DOWN) ai_move(a, 1);
+        break;
+    case AI_ERROR:
+        if (b == PAD_A) { if (a->scan.n) ai_send(a); else ai_listen(a); }
+        else if (b == PAD_B || b == PAD_MENU) a->ai = AI_OFF;
+        else if (b == PAD_X) ai_listen(a);
+        break;
+    }
+}
+
 /* ------------------------------------------------------------------ API */
 OrcApp *orcapp_create(float sample_rate, const char *state_path)
 {
@@ -1646,6 +1948,12 @@ OrcApp *orcapp_create(float sample_rate, const char *state_path)
     if (!MIDI_ROWS[0].label) midi_rows_init();
     a->sr = sample_rate;
     if (state_path) snprintf(a->path, sizeof(a->path), "%s", state_path);
+    {   /* Saves/claude accanto a Saves/openorc: fornitori e chiavi di Chiedi all'IA */
+        const char *slash = strrchr(a->path, '/');
+        const char *up = NULL;
+        for (const char *q = a->path; slash && q < slash; q++) if (*q == '/') up = q;
+        if (up) snprintf(a->ai_dir, sizeof(a->ai_dir), "%.*s/claude", (int)(up - a->path), a->path);
+    }
     settings_default(&a->set);
     int named = load(a);
     users_scan(a);
@@ -1679,7 +1987,7 @@ OrcApp *orcapp_create(float sample_rate, const char *state_path)
     a->degree = -1;
     a->sound_sel = 1;
     a->chords_sel = 1;
-    a->midi_sel = 1;
+    a->midi_sel = 0;
     a->rng = 0x9E3779B9u;
     orc_set_sound(a->orc, &a->set.snd);
     orc_set_tempo(a->orc, a->set.bpm);
@@ -1695,6 +2003,9 @@ void orcapp_destroy(OrcApp *a)
     if (!a) return;
     save(a);
     loop_save(a);
+    if (a->ai == AI_WAIT) ai_cancel(a);
+    if (a->reg_loaded) registry_free(&a->reg);
+    free(a->ai_fake);
     orc_destroy(a->orc);
     free(a);
 }
@@ -1734,6 +2045,12 @@ int orcapp_editing(const OrcApp *a) { return a->editing; }
 const char *orcapp_toast(const OrcApp *a) { return a->toast_t > 0.0f ? a->toast : ""; }
 void orcapp_set_sound(OrcApp *a, const OrcSound *s) { a->set.snd = *s; sound_changed(a); }
 void orcapp_set_follow(OrcApp *a, int on) { a->set.follow = on != 0; a->dirty = 1; }
+int orcapp_ai_state(const OrcApp *a) { return a->ai; }
+void orcapp_ai_start(OrcApp *a) { ai_listen(a); }
+void orcapp_set_ai_dir(OrcApp *a, const char *dir) { snprintf(a->ai_dir, sizeof(a->ai_dir), "%s", dir ? dir : ""); }
+void orcapp_ai_fake(OrcApp *a, const char *reply) { free(a->ai_fake); a->ai_fake = reply ? strdup(reply) : NULL; }
+const char *orcapp_ai_error(const OrcApp *a) { return a->ai_err; }
+const char *orcapp_map_device(const OrcApp *a) { return a->set.map_device; }
 
 void orcapp_select(OrcApp *a, int row)
 {
@@ -2018,6 +2335,8 @@ static void release_flip(OrcApp *a)
 static int repeats(const OrcApp *a, int b)
 {
     int dpad = b == PAD_UP || b == PAD_DOWN || b == PAD_LEFT || b == PAD_RIGHT;
+    if (a->ai == AI_SHOW) return b == PAD_UP || b == PAD_DOWN;
+    if (a->ai != AI_OFF) return 0;
     if (a->overlay) return dpad;
     if (a->page == PAGE_PLAY) return 0;
     if (dpad) return 1;
@@ -2070,6 +2389,7 @@ static void press(OrcApp *a, int b)
         else if (b == PAD_B || b == PAD_MENU) rename_finish(a, 0);
         return;
     }
+    if (a->ai != AI_OFF) { ai_press(a, b); return; }
     if (b == PAD_SELECT) { a->sel_down = 1; a->sel_used = 0; a->sel_time = 0.0f; return; }
     if (b == PAD_MENU) { release_flip(a); a->learn = -1; a->overlay = 0; a->sel_down = 0; a->quit_dialog = 1; return; }
     if (a->sel_down) { overlay_open(a); a->sel_used = 1; overlay_press(a, b); return; }
@@ -2136,6 +2456,7 @@ static void press(OrcApp *a, int b)
             break;
         case PAD_A:
             if (r->kind == ROW_KNOB_MODE) { a->set.knob_mode = (a->set.knob_mode + 1) % 3; a->dirty = 1; }
+            else if (r->kind == ROW_AI) ai_listen(a);
             else learn_start(a, r->first, r->last);
             break;
         case PAD_B:
@@ -2238,6 +2559,8 @@ void orcapp_update(OrcApp *a, float dt)
         if (a->sel_time >= 0.3f) overlay_open(a);
     }
     a->peek_t = fmaxf(0.0f, a->peek_t - dt);
+    a->ai_time += dt;
+    ai_poll(a);
     for (int k = 0; k < 8; k++) a->knob_t[k] = fmaxf(0.0f, a->knob_t[k] - dt);
     if (a->del_armed) { a->del_t -= dt; if (a->del_t <= 0.0f) a->del_armed = 0; }
     for (int b = 0; b < PAD_COUNT; b++) {
@@ -2275,7 +2598,7 @@ int orcapp_needs_draw(OrcApp *a)
 {
     int knobs = 0;
     for (int k = 0; k < 8; k++) knobs |= a->knob_t[k] > 0.0f;
-    if (a->glow > 0.0f || a->toast_t > 0.0f || a->flash_t > 0.0f || a->midi_flash > 0.0f || a->learn >= 0 ||
+    if (a->glow > 0.0f || a->toast_t > 0.0f || a->flash_t > 0.0f || a->midi_flash > 0.0f || a->learn >= 0 || a->ai != AI_OFF ||
         a->quit_dialog || orc_transport_on(a->orc) || a->peek_t > 0.0f || a->editing || knobs)
         return 1;
     if (a->page == PAGE_PLAY && scope_peak(a, 256) > 0.002f) return 1;      /* l'oscilloscopio si muove */
@@ -2833,6 +3156,10 @@ static void draw_midi(OrcApp *a, Canvas *c)
         if (m->kind == ROW_HEADER) {
             r->header = 1;
             snprintf(r->value, sizeof(r->value), "A: impara tutti in fila");
+        } else if (m->kind == ROW_AI) {
+            if (!a->midi_name[0]) snprintf(r->value, sizeof(r->value), "collega una tastiera");
+            else snprintf(r->value, sizeof(r->value), "%.40s", a->midi_name);
+            r->color = a->midi_name[0] ? C_VIOLET : C_DIM;
         } else if (m->kind == ROW_KNOB_MODE) {
             snprintf(r->value, sizeof(r->value), "%s", KNOB_MODE_NAMES[a->set.knob_mode]);
         } else if (a->learn == m->first) {
@@ -2849,6 +3176,117 @@ static void draw_midi(OrcApp *a, Canvas *c)
     snprintf(t, sizeof(t), "Ultimo messaggio: %s", a->last_msg[0] ? a->last_msg : "nessuno");
     gfx_text(c, FONT_SMALL, 24, 434, t, a->midi_flash > 0.05f ? C_TEXT : C_MUTED);
     draw_hints(c, "A impara · B annulla · X toglie · Y preset della tastiera · R2 salva · L1/R1 gruppo");
+}
+
+/* Testo a capo nella larghezza w: restituisce l'altezza usata. */
+static int draw_wrapped(Canvas *c, int font, int x, int y, int w, int lh, const char *text, uint32_t color, int max_lines)
+{
+    char line[256], cand[256];
+    int lines = 0;
+    const char *p = text ? text : "";
+    while (*p && lines < max_lines) {
+        size_t len = 0;
+        line[0] = 0;
+        while (*p && *p != '\n') {
+            const char *e = p;
+            while (*e && *e != ' ' && *e != '\n') e++;
+            int n = snprintf(cand, sizeof(cand), "%s%s%.*s", line, len ? " " : "", (int)(e - p), p);
+            if (n < 0 || n >= (int)sizeof(cand)) { if (!len) p = e; break; }      /* parola lunghissima */
+            if (len && gfx_text_width(font, cand) > w) break;
+            memcpy(line, cand, (size_t)n + 1);
+            len = (size_t)n;
+            p = e;
+            while (*p == ' ') p++;
+        }
+        if (*p == '\n') p++;
+        if (len) gfx_text(c, font, x, y + lines * lh, line, color);
+        lines++;
+    }
+    return lines * lh;
+}
+
+/* Configurazione con l'IA: domanda, ascolto, attesa, proposta, errore. */
+static void draw_ai(OrcApp *a, Canvas *c)
+{
+    char t[200];
+    if (a->ai == AI_ASK) {
+        gfx_rect_alpha(c, 0, 0, c->w, c->h, RGB(0, 0, 0), 0.6f);
+        gfx_round_rect(c, 70, 120, 500, 240, 18, C_PANEL_HI, 1.0f);
+        gfx_round_frame(c, 70, 120, 500, 240, 18, 2, C_VIOLET, 1.0f);
+        gfx_text_center(c, FONT_SMALL, 320, 152, "Tastiera nuova", C_VIOLET);
+        gfx_text_center(c, FONT_TITLE, 320, 186, a->ai_long[0] ? a->ai_long : a->ai_dev, C_TEXT);
+        draw_wrapped(c, FONT_BODY, 100, 224, 440, 24, "Vuoi che l'IA la configuri? Muovi manopole, pad e pulsanti: lei sceglie dove metterli, poi decidi tu se tenerla.", C_MUTED, 4);
+        gfx_text_center(c, FONT_BOLD, 320, 338, "A sì, configurala   ·   B no", C_GOLD);
+        return;
+    }
+    gfx_vgradient(c, 0, 47, c->w, 399, C_BG_TOP, C_BG_BOT);
+    if (a->ai == AI_LISTEN) {
+        gfx_text(c, FONT_SMALL, 24, 74, "Configura con l'IA · 1 di 2", C_VIOLET);
+        snprintf(t, sizeof(t), "Ascolto la %s", a->ai_long[0] ? a->ai_long : a->ai_dev);
+        gfx_text(c, FONT_TITLE, 24, 106, t, C_TEXT);
+        draw_wrapped(c, FONT_BODY, 24, 134, 592, 22, "Muovi tutte le manopole, premi tutti i pad (anche negli altri banchi), qualche tasto, le rotelle e i pulsanti di trasporto. Poi premi A.", C_MUTED, 3);
+        int notes, knobs, buttons, bends;
+        ia_scan_counts(&a->scan, &notes, &knobs, &buttons, &bends);
+        const char *lab[4] = { "note", "manopole", "pulsanti", "pitch bend" };
+        int val[4] = { notes, knobs, buttons, bends };
+        for (int i = 0; i < 4; i++) {
+            int x = 24 + i * 150;
+            gfx_round_rect(c, x, 198, 140, 56, 12, C_PANEL, 1.0f);
+            snprintf(t, sizeof(t), "%d", val[i]);
+            gfx_text(c, FONT_TITLE, x + 14, 232, t, val[i] ? C_GOLD : C_DIM);
+            gfx_text(c, FONT_SMALL, x + 14, 248, lab[i], C_MUTED);
+        }
+        char *d = ia_scan_describe(&a->scan, 0);
+        draw_wrapped(c, FONT_SMALL, 28, 284, 584, 20, d, C_TEXT, 6);
+        free(d);
+        snprintf(t, sizeof(t), "Ultimo: %s", a->ai_last[0] ? a->ai_last : "niente ancora");
+        gfx_text(c, FONT_SMALL, 28, 428, t, C_DIM);
+        draw_hints(c, "A fatto, chiedi all'IA · X ricomincia · B annulla");
+        return;
+    }
+    if (a->ai == AI_WAIT) {
+        gfx_text(c, FONT_SMALL, 24, 74, "Configura con l'IA · 2 di 2", C_VIOLET);
+        int dots = (int)(a->ai_time * 2.5f) % 4;
+        snprintf(t, sizeof(t), "L'IA studia la tua tastiera%.*s", dots, "...");
+        gfx_text_center(c, FONT_TITLE, 320, 230, t, C_TEXT);
+        gfx_text_center(c, FONT_BODY, 320, 262, a->ai_long[0] ? a->ai_long : a->ai_dev, C_MUTED);
+        gfx_text_center(c, FONT_SMALL, 320, 292, a->ai_model, C_DIM);
+        for (int i = 0; i < 5; i++) {
+            float ph = a->ai_time * 3.0f - i * 0.5f, al = 0.25f + 0.75f * (0.5f + 0.5f * sinf(ph));
+            gfx_circle(c, 280 + i * 20, 330, 5.0f, C_VIOLET, al);
+        }
+        draw_hints(c, "B annulla");
+        return;
+    }
+    if (a->ai == AI_ERROR) {
+        gfx_text(c, FONT_SMALL, 24, 74, "Configura con l'IA", C_VIOLET);
+        gfx_text(c, FONT_TITLE, 24, 110, "Non ci sono riuscito", C_TEXT);
+        draw_wrapped(c, FONT_BODY, 24, 150, 592, 24, a->ai_err, C_RED, 8);
+        draw_hints(c, "A riprova · X riascolta la tastiera · B chiudi");
+        return;
+    }
+    /* proposta */
+    gfx_text(c, FONT_SMALL, 24, 72, "Proposta dell'IA", C_VIOLET);
+    snprintf(t, sizeof(t), "%s · %d funzioni", a->ai_name, a->ai_count);
+    gfx_text(c, FONT_BOLD, 24, 96, t, C_TEXT);
+    int h = draw_wrapped(c, FONT_SMALL, 24, 120, 592, 18, a->ai_note[0] ? a->ai_note : "Controlla le assegnazioni qui sotto.", C_MUTED, 3);
+    ListRow rows[MIDI_ROW_COUNT - 1];
+    for (int i = 0; i < MIDI_ROW_COUNT - 1; i++) {
+        const MidiRow *m = &MIDI_ROWS[i + 1];
+        ListRow *r = &rows[i];
+        memset(r, 0, sizeof(*r));
+        r->label = m->label;
+        r->bar = -1.0f;
+        if (m->kind == ROW_HEADER) { r->header = 1; continue; }
+        if (m->kind == ROW_KNOB_MODE) { snprintf(r->value, sizeof(r->value), "%s", KNOB_MODE_NAMES[a->ai_knob_mode]); continue; }
+        const IaMap *im = &a->ai_map[m->first];
+        MidiMap mm = im->kind == IA_NONE ? (MidiMap){ MAP_NONE, -1, -1, 0 }
+                                         : (MidiMap){ im->kind == IA_NOTE ? MAP_NOTE : MAP_CC, im->port, im->ch, im->num };
+        map_text(&mm, r->value, sizeof(r->value));
+        if (mm.kind == MAP_NONE) r->color = C_DIM;
+    }
+    draw_list(c, rows, MIDI_ROW_COUNT - 1, a->ai_sel, &a->ai_scroll, 126 + h, 442, 24);
+    draw_hints(c, "A applica e salva · X chiedi un'altra proposta · B scarta · su/giù scorre");
 }
 
 static void draw_quit(Canvas *c)
@@ -2882,6 +3320,7 @@ void orcapp_draw(OrcApp *a, Canvas *c)
         gfx_round_frame(c, 320 - w / 2.0f, 398, w, 36, 18, 1.5f, C_GOLD, al);
         gfx_text_center(c, FONT_BOLD, 320, 422, a->toast, gfx_mix(C_BAR, C_TEXT, al));
     }
+    if (a->ai != AI_OFF) draw_ai(a, c);
     if (a->editing) draw_edit(a, c);
     if (a->quit_dialog) draw_quit(c);
 }

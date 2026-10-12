@@ -82,6 +82,7 @@ Rotelle: pitch ±2 · modulazione = vibrato · pedale = sustain · program chang
 | **Suono**, azioni | A: Salva come nuovo · Aggiorna · Ripristina · Variazione · Rinomina (tastiera USB) · Elimina (A due volte) |
 | **Ritmo** | A registra · B suona/ferma · Y annulla · X tap tempo · L1 R1 tempo ±10 |
 | **MIDI** | A impara · B annulla · X togli · Y preset tastiera · R2 salva · L1 R1 gruppo |
+| **MIDI**, prima riga | Configura la tastiera con l'IA: muovi tutto, A, poi A applica |
 
 ## Suoni di fabbrica (numero = program change)
 

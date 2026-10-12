@@ -23,6 +23,7 @@
 #include "gfx.h"
 #include "orc_app.h"
 #include "orc_dsp.h"
+#include "orc_ia.h"
 #include "platform.h"
 
 #define SR 48000
@@ -390,7 +391,7 @@ static void test_session(const char *outdir)
 
     /* apprendimento: CC 21 diventa K4 (riga 22 della pagina MIDI) */
     orcapp_set_page(a, PAGE_MIDI);
-    orcapp_select(a, 22);
+    orcapp_select(a, 23);
     btn(a, PAD_A, 1); btn(a, PAD_A, 0);
     orcapp_set_knob_mode(a, 0);                   /* la prova usa valori assoluti */
     cc(a, 21, 0); run(a, 0.02f);
@@ -400,7 +401,7 @@ static void test_session(const char *outdir)
     CHECK(orcapp_sound(a)->tone < 0.1f, "il vecchio CC 27 non comanda piu' il tono");
 
     /* in fila: i pad delle funzioni sul canale 2, note 60-67 */
-    orcapp_select(a, 9);
+    orcapp_select(a, 10);
     btn(a, PAD_A, 1); btn(a, PAD_A, 0);
     for (int i = 0; i < 8; i++) { midi3(a, 0, 0x91, 60 + i, 90); midi3(a, 0, 0x81, 60 + i, 0); }
     CHECK(!orc_transport_on(o), "trasporto fermo prima della prova");
@@ -411,7 +412,7 @@ static void test_session(const char *outdir)
     pad(a, 44, 1); pad(a, 44, 0); run(a, 0.05f);
     CHECK(!orc_transport_on(o), "la nota 44 non e' piu' la batteria");
     /* tasti di trasporto su un'altra porta, imparati in fila */
-    orcapp_select(a, 28);
+    orcapp_select(a, 29);
     btn(a, PAD_A, 1); btn(a, PAD_A, 0);
     for (int i = 0; i < 5; i++) midi3(a, 3, 0x90, 100 + i, 127);
     midi3(a, 3, 0x90, 100, 127); run(a, 0.05f);
@@ -427,7 +428,7 @@ static void test_session(const char *outdir)
     pad(a, 44, 1); pad(a, 44, 0); run(a, 0.05f);
 
     /* salvataggio e ripresa */
-    orcapp_select(a, 22);                         /* di nuovo CC 21 come K4, da salvare */
+    orcapp_select(a, 23);                         /* di nuovo CC 21 come K4, da salvare */
     btn(a, PAD_A, 1); btn(a, PAD_A, 0);
     orcapp_set_knob_mode(a, 0);                   /* la prova usa valori assoluti */
     cc(a, 21, 64);
@@ -1079,6 +1080,132 @@ static void test_loop_layers(const char *outdir)
     remove(state);
 }
 
+/* ------------------------------------------------------------------ tastiera configurata con l'IA */
+/* Una tastiera finta, come una Arturia MiniLab: tasti 48-72 sul canale 1, pad 36-43 sul canale 10,
+   manopole assolute, quattro pulsanti di trasporto, rotella di modulazione e pitch bend. */
+static void explore_minilab(OrcApp *a)
+{
+    for (int n = 48; n <= 72; n++) { midi3(a, 0, 0x90, n, 30 + n); midi3(a, 0, 0x80, n, 0); }
+    for (int n = 36; n <= 43; n++) { midi3(a, 0, 0x99, n, 90); midi3(a, 0, 0x89, n, 0); }
+    const int knobs[8] = { 74, 71, 76, 77, 93, 18, 19, 16 };
+    for (int k = 0; k < 8; k++) for (int v = 0; v <= 127; v += 16) midi3(a, 0, 0xB0, knobs[k], v);
+    for (int b = 105; b <= 108; b++) { midi3(a, 0, 0xB0, b, 127); midi3(a, 0, 0xB0, b, 0); }
+    for (int v = 0; v <= 127; v += 32) midi3(a, 0, 0xB0, 1, v);
+    midi3(a, 0, 0xE0, 0, 100);
+    midi3(a, 0, 0xE0, 0, 64);
+}
+
+static const char *MINILAB_REPLY =
+    "Ecco la configurazione:\n```json\n"
+    "{\"device\":\"Arturia MiniLab 3\",\"knob_mode\":\"absolute\",\"map\":{"
+    "\"Dim\":{\"type\":\"note\",\"number\":36,\"channel\":10,\"port\":1},"
+    "\"Min\":{\"type\":\"note\",\"number\":37,\"channel\":10,\"port\":1},"
+    "\"Maj\":{\"type\":\"note\",\"number\":38,\"channel\":10,\"port\":1},"
+    "\"Sus\":{\"type\":\"note\",\"number\":39,\"channel\":10,\"port\":1},"
+    "\"6\":{\"type\":\"note\",\"number\":40,\"channel\":10,\"port\":1},"
+    "\"m7\":{\"type\":\"note\",\"number\":41,\"channel\":10,\"port\":1},"
+    "\"M7\":{\"type\":\"note\",\"number\":42,\"channel\":10,\"port\":1},"
+    "\"9\":{\"type\":\"note\",\"number\":43,\"channel\":10,\"port\":1},"
+    "\"Batteria\":{\"type\":\"note\",\"number\":99,\"channel\":10,\"port\":1},"
+    "\"Loop: registra\":{\"type\":\"note\",\"number\":60,\"channel\":1,\"port\":1},"
+    "\"Suono successivo\":{\"type\":\"note\",\"number\":36,\"channel\":10,\"port\":1},"
+    "\"K1 Voicing\":{\"type\":\"cc\",\"number\":74,\"channel\":1},\"K2 Basso\":{\"type\":\"cc\",\"number\":71,\"channel\":1},"
+    "\"K3 Esecuzione\":{\"type\":\"cc\",\"number\":76,\"channel\":1},\"K4 Tono\":{\"type\":\"cc\",\"number\":77,\"channel\":1},"
+    "\"K5 Chorus\":{\"type\":\"cc\",\"number\":93,\"channel\":1},\"K6 Delay\":{\"type\":\"cc\",\"number\":18,\"channel\":1},"
+    "\"K7 Riverbero\":{\"type\":\"cc\",\"number\":19,\"channel\":1},\"K8 Volume\":{\"type\":\"cc\",\"number\":16,\"channel\":1},"
+    "\"Play/Stop\":{\"type\":\"cc\",\"number\":105,\"channel\":1},\"Record\":{\"type\":\"cc\",\"number\":106,\"channel\":1},"
+    "\"Overdub\":null},"
+    "\"notes_it\":\"Pad sugli accordi, manopole da sinistra a destra, Play e Record sui pulsanti di trasporto.\"}\n```";
+
+static void test_ai_keyboard(const char *outdir)
+{
+    char base[512], dir[600], sdir[600], state[700], state2[700], kfile[800];
+    static char buf[4096];
+    snprintf(base, sizeof(base), "%s/ia-prova", outdir);
+    snprintf(dir, sizeof(dir), "%s/openorc", base);
+    snprintf(sdir, sizeof(sdir), "%s/tastiere", dir);
+    snprintf(state, sizeof(state), "%s/stato.txt", dir);
+    snprintf(state2, sizeof(state2), "%s/stato2.txt", dir);
+    snprintf(kfile, sizeof(kfile), "%s/arturia-minilab-3.txt", sdir);
+    make_dir(base);
+    make_dir(dir);
+    clean_dir(sdir);
+    remove(state);
+    remove(state2);
+
+    CHECK(ia_same_device("MPKminiIV", "MPK mini IV"), "id ALSA e nome della MPK");
+    CHECK(ia_same_device("LaunchpadMiniMK", "Launchpad Mini MK3"), "id ALSA tagliato a 15 caratteri");
+    CHECK(!ia_same_device("MiniLab3", "MPK mini IV"), "tastiere diverse");
+
+    OrcApp *a = orcapp_create(SR, state);
+    orcapp_midi_status(a, "MPK mini IV");
+    CHECK(orcapp_ai_state(a) == 0, "la MPK ha gia' la sua mappa: nessuna domanda");
+    orcapp_midi_status(a, NULL);
+    orcapp_midi_status(a, "MiniLab3");
+    CHECK(orcapp_ai_state(a) == 1, "tastiera nuova: la domanda (stato %d)", orcapp_ai_state(a));
+    btn(a, PAD_B, 1); btn(a, PAD_B, 0);
+    CHECK(orcapp_ai_state(a) == 0, "B: niente IA");
+    orcapp_midi_status(a, NULL);
+    orcapp_midi_status(a, "MiniLab3");
+    CHECK(orcapp_ai_state(a) == 0, "la stessa tastiera non chiede di nuovo nella sessione");
+
+    /* ascolto: i messaggi non suonano */
+    orcapp_ai_start(a);
+    CHECK(orcapp_ai_state(a) == 2, "ascolto (stato %d)", orcapp_ai_state(a));
+    explore_minilab(a);
+    run(a, 0.05f);
+    CHECK(!orcapp_chord_live(a), "durante l'ascolto pad e tasti non suonano");
+    /* senza chiavi: l'errore dice dove prenderne una gratis */
+    btn(a, PAD_A, 1); btn(a, PAD_A, 0);
+    CHECK(orcapp_ai_state(a) == 5 && strstr(orcapp_ai_error(a), "Groq"), "senza chiave: %s", orcapp_ai_error(a));
+
+    /* la risposta del modello: controlli inventati e tasti del pianoforte scartati */
+    orcapp_ai_fake(a, MINILAB_REPLY);
+    btn(a, PAD_A, 1); btn(a, PAD_A, 0);
+    CHECK(orcapp_ai_state(a) == 4, "proposta (stato %d, %s)", orcapp_ai_state(a), orcapp_ai_error(a));
+    btn(a, PAD_A, 1); btn(a, PAD_A, 0);
+    CHECK(orcapp_ai_state(a) == 0 && !strcmp(orcapp_map_device(a), "MiniLab3"), "applicata alla MiniLab3 (%s)", orcapp_map_device(a));
+    slurp(kfile, buf, sizeof(buf));
+    CHECK(strstr(buf, "dispositivo = MiniLab3") != NULL, "preset salvato con il dispositivo (%s)", kfile);
+    CHECK(strstr(buf, "Maj = nota 38 canale 10 porta 1") != NULL, "Maj sul pad 38");
+    CHECK(strstr(buf, "Batteria = -") != NULL, "nota 99 inventata: scartata");
+    CHECK(strstr(buf, "Loop: registra = -") != NULL, "un tasto del pianoforte non diventa una funzione");
+    CHECK(strstr(buf, "Suono successivo = -") != NULL, "lo stesso pad non vale due volte");
+    CHECK(strstr(buf, "Play/Stop = cc 105 canale 1 porta 1") != NULL, "Play/Stop sul pulsante 105");
+    CHECK(strstr(buf, "manopole = Assolute") != NULL, "manopole assolute dedotte dai valori");
+
+    /* la mappa funziona: pad Maj + tasto Do, manopola K4 */
+    midi3(a, 0, 0x99, 38, 100); key(a, 60, 1);
+    run(a, 0.03f);
+    CHECK(orcapp_chord_live(a) && !strcmp(orcapp_chord_name(a), "Do"), "MiniLab: Maj + Do = %s", orcapp_chord_name(a));
+    key(a, 60, 0); midi3(a, 0, 0x89, 38, 0);
+    midi3(a, 0, 0xB0, 77, 0); run(a, 0.02f);
+    CHECK(orcapp_sound(a)->tone < 0.01f, "MiniLab: K4 sul CC 77");
+    orcapp_destroy(a);
+
+    /* ricollegata: la sua mappa si carica da sola */
+    a = orcapp_create(SR, state2);
+    orcapp_midi_status(a, "MiniLab3");
+    CHECK(orcapp_ai_state(a) == 0 && !strcmp(orcapp_map_device(a), "MiniLab3"), "ricollegata: mappa caricata (%s)", orcapp_map_device(a));
+    CHECK(strstr(orcapp_toast(a), "la sua mappa") != NULL, "e lo dice: %s", orcapp_toast(a));
+    orcapp_destroy(a);
+
+    /* risposta illeggibile */
+    IaScan sc;
+    ia_scan_reset(&sc);
+    ia_scan_add(&sc, 0, 0x99 & 0xF0, 9, 36, 100);
+    IaMap mp[4];
+    const char *tg[4] = { "Dim", "Min", "Maj", "Sus" };
+    char nm[64], nt[200], er[200];
+    int km;
+    CHECK(ia_parse_reply("non so", &sc, tg, 4, mp, &km, nm, sizeof(nm), nt, sizeof(nt), er, sizeof(er)) < 0, "risposta senza JSON");
+    CHECK(ia_parse_reply("{\"map\":{\"Dim\":{\"type\":\"note\",\"number\":36,\"channel\":10}}}", &sc, tg, 4, mp, &km, nm, sizeof(nm), nt,
+                         sizeof(nt), er, sizeof(er)) == 1 && mp[0].ch == 9 && mp[0].port == 0, "risposta minima");
+    clean_dir(sdir);
+    remove(state);
+    remove(state2);
+}
+
 /* ------------------------------------------------------------------ prestazioni */
 static void test_performance(void)
 {
@@ -1155,7 +1282,7 @@ static void test_keyboard(const char *outdir, const char *repo)
 
     /* R2 salva la mappa imparata, Y la ricarica */
     orcapp_set_page(a, PAGE_MIDI);
-    orcapp_select(a, 10);                         /* Batteria */
+    orcapp_select(a, 11);                         /* Batteria */
     btn(a, PAD_A, 1); btn(a, PAD_A, 0);
     midi3(a, 0, 0x91, 60, 90); midi3(a, 0, 0x81, 60, 0);
     btn(a, PAD_R2, 1); btn(a, PAD_R2, 0);
@@ -1360,11 +1487,11 @@ static void screenshots(OrcApp *a, const char *outdir)
     SHOT("orc-4-ritmo");
     pad(a, 44, 1); pad(a, 44, 0);
     orcapp_set_page(a, PAGE_MIDI);
-    orcapp_select(a, 5);
+    orcapp_select(a, 6);
     btn(a, PAD_A, 1); btn(a, PAD_A, 0);
     midi3(a, 0, 0x99, 38, 77);
     btn(a, PAD_B, 1); btn(a, PAD_B, 0);
-    orcapp_select(a, 20);
+    orcapp_select(a, 21);
     btn(a, PAD_A, 1); btn(a, PAD_A, 0);
     run(a, 2.5f);
     SHOT("orc-5-midi");
@@ -1441,6 +1568,8 @@ int main(int argc, char **argv)
     printf("SELECT tenuto e pad dei suoni: %d controlli, %d errori\n", checks, fails);
     test_loop_layers(outdir);
     printf("loop a strati e salvato: %d controlli, %d errori\n", checks, fails);
+    test_ai_keyboard(outdir);
+    printf("tastiera configurata con l'IA: %d controlli, %d errori\n", checks, fails);
     test_performance();
 
     char state[512];

@@ -83,6 +83,7 @@ Wheels: pitch ±2 · modulation = vibrato · pedal = sustain · program change =
 | **Suono**, actions | A: save as new · update · restore · random variation · rename (USB keyboard) · delete (A twice) |
 | **Ritmo** (Rhythm) | A record · B play/stop · Y undo · X tap tempo · L1 R1 tempo ±10 |
 | **MIDI** | A learn · B cancel · X clear · Y keyboard preset · R2 save · L1 R1 group |
+| **MIDI**, first row | set up the keyboard with AI: move everything, A, then A to apply |
 
 ## Factory sounds (number = program change)
 

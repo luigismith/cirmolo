@@ -12,6 +12,7 @@
 # sulle porte 1 e 2, le manopole solo sulla porta 2, in modo relativo (1-63 a destra, 65-127 a sinistra).
 
 nome = Akai MPK mini IV
+dispositivo = MPK mini IV
 manopole = Relative
 
 # Pad, banco A (canale 10): fila in alto Dim Min Maj Sus, fila in basso 6 m7 M7 9

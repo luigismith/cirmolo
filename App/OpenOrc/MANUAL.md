@@ -20,6 +20,7 @@ describes the `cirmolo` branch as of October 2026.
 | change key on the fly | **hold SELECT** and press left/right |
 | record a loop | **hold SELECT** and press A (or pad 45) |
 | save a sound of your own | **Suono** (Sound) page, "Salva come nuovo suono" (save as new sound) row, **A** |
+| use a new MIDI keyboard | plug it in: OpenOrc offers to have it configured by **AI** (chapter 10) |
 | change page | **tap SELECT** (Play → Chords → Sound → Rhythm → MIDI) |
 | start drums and tempo-synced arpeggios | **START** |
 | silence every note | **L3** (press the left stick) |
@@ -413,6 +414,34 @@ across updates) and in the app's `tastiere` folder. The format is described in t
 [MPK sheet](tastiere/akai-mpk-mini-iv.md). Presets written before October 2026 with a "Loop: cancella"
 line still work: it is now called "Loop: annulla".
 
+### Setting up a new keyboard with AI
+When you plug in a keyboard OpenOrc doesn't know, it asks "Tastiera nuova: vuoi che l'IA la configuri?"
+(new keyboard: shall the AI set it up?). You can also start it later from the first row of the MIDI
+page, "Configura la tastiera con l'IA".
+
+1. **Listening.** Move every knob, press every pad (other banks too), a few keys, the wheels and the
+   transport buttons. The screen counts what arrives: notes, knobs, buttons, pitch bend. The keyboard
+   does not play meanwhile. **X** starts over, **A** hands it to the AI.
+2. **The AI studies the keyboard.** It gets the keyboard's name and the controls you moved and proposes
+   where chords, functions, knobs and transport go. It also uses what it knows about that model, to keep
+   the order of the pads and knobs.
+3. **The proposal.** You see every assignment and a sentence explaining it. **A** applies and saves,
+   **X** asks for another proposal, **B** discards it and keeps the old map.
+
+OpenOrc checks the answer: it keeps only controls you actually moved, each once, and never assigns the
+piano keys, which are for playing. It works out the knob type from the values.
+
+The map is saved in `Saves/openorc/tastiere/` with the keyboard's name. Plug the keyboard in again and it
+loads by itself, for every keyboard: the MPK mini IV already has its own.
+
+**The model.** OpenOrc uses the best free one you have a key for, in this order:
+- **Groq**, with gpt-oss 120B: free without a card and very fast, the recommended one;
+- OpenRouter, GLM and Mistral, with their free models;
+- if none, the model chosen for the AI functions in Chiedi all'IA (Ask the AI).
+
+Create the Groq key at console.groq.com, under API Keys. Save it in Chiedi all'IA, Providers tab, or as a
+text file in `Saves/claude/chiavi/groq.txt`. Wi-Fi is needed.
+
 ## 11. Files
 
 | File | Contents |
@@ -420,7 +449,8 @@ line still work: it is now called "Loop: annulla".
 | `Saves/openorc/stato.txt` | settings and current sound; delete it to go back to factory values |
 | `Saves/openorc/loop.txt` | the loop from the last session |
 | `Saves/openorc/suoni/*.txt` | your sounds |
-| `Saves/openorc/tastiere/*.txt` | your keyboard presets |
+| `Saves/openorc/tastiere/*.txt` | your keyboard presets, including the AI-made ones |
+| `Saves/claude/chiavi/` | AI provider keys, the same as Chiedi all'IA |
 | `App/OpenOrc/tastiere/` | MPK mini IV preset and sheet |
 | `Saves/spruce/openorc.log` | messages from the last run, useful if something goes wrong |
 

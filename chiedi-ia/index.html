@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Chiedi all'IA · Cirmolo</title>
+<meta name="description" content="Chiedi all'IA: chat con Claude e altri modelli di intelligenza artificiale sulla Miyoo Flip, con la tastiera a schermo o a voce, risposte lette ad alta voce e azioni sulla console.">
+<meta property="og:title" content="Chiedi all'IA · la chat di Cirmolo per la Miyoo Flip">
+<meta property="og:description" content="Claude e altri undici fornitori, anche con modelli gratuiti. Si scrive con i tasti o si parla tenendo premuto R2.">
+<meta property="og:image" content="https://luigismith.github.io/cirmolo/chiedi-ia/img/risposta.png">
+<meta property="og:type" content="article">
+<meta name="theme-color" content="#0d1017">
+<link rel="icon" type="image/png" href="../favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=Be+Vietnam+Pro:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="../app.css">
+<style>
+:root { --accento: #f2c45c; --su-accento: #1a1406; }
+.fornitori { display: flex; flex-wrap: wrap; gap: 8px; }
+.fornitori span { font-size: 0.9rem; padding: 6px 12px; border-radius: 999px; background: var(--pannello); border: 1px solid var(--filo); color: var(--chiaro); }
+.fornitori span.primo { border-color: var(--accento); color: var(--testo); }
+.fornitori span small { color: var(--aghi); font-size: 0.78rem; margin-left: 6px; }
+</style>
+</head>
+<body>
+
+<header class="barra">
+  <div class="contenitore">
+    <a class="marchio" href="../"><img src="../favicon.png" alt="" width="30" height="30"><span>Cirmolo</span> <small>· Chiedi all'IA</small></a>
+    <nav aria-label="Sezioni">
+      <a href="#scrivere">Scrivere</a>
+      <a href="#voce">A voce</a>
+      <a href="#fornitori">Fornitori</a>
+      <a href="#azioni">Azioni</a>
+      <a href="#file">File</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+<section class="copertina">
+  <div class="contenitore">
+    <div>
+      <p class="motto"><a href="../">Cirmolo</a> · intelligenza artificiale sulla Miyoo Flip</p>
+      <h1>Chiedi <em>all'IA</em></h1>
+      <p class="intro">Una chat con Claude e con molti altri modelli, da scrivere con la tastiera a schermo o da dire a voce tenendo premuto R2. Le risposte compaiono mentre il modello le scrive, con titoli ed elenchi, e si possono ascoltare.</p>
+      <p class="intro">Il modello può anche fare qualcosa sulla console: alzare il volume, cercare un gioco e avviarlo.</p>
+      <div class="cifre">
+        <div><b>12</b><span>fornitori, più i tuoi</span></div>
+        <div><b>R2</b><span>tenuto per parlare</span></div>
+        <div><b>10</b><span>lingue dell'interfaccia</span></div>
+      </div>
+      <div class="bottoni">
+        <a class="bottone primo" href="#scrivere">Come si usa</a>
+        <a class="bottone" href="https://github.com/luigismith/cirmolo/tree/cirmolo/App/ClaudeChat">Codice</a>
+      </div>
+      <p class="dove">In App, cartella Altro. Servono il Wi-Fi e una chiave API del fornitore, che resta solo sulla scheda SD.</p>
+    </div>
+    <figure class="schermo">
+      <img src="img/risposta.png" width="640" height="480" alt="Chiedi all'IA: la domanda Cos'è il cirmolo? in un fumetto viola a destra, sotto la risposta con il titolo In breve e un elenco su legno, pigne e parenti">
+      <figcaption>Una domanda e la sua risposta. Le conversazioni di queste schermate sono esempi scritti per la pagina: l'app gira sul PC senza rete.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section class="sezione" id="scrivere">
+  <div class="contenitore">
+    <div class="testata">
+      <p class="etichetta">Scrivere e leggere</p>
+      <h2>Una tastiera a schermo, o quella USB</h2>
+      <p>Nella pagina della chat si scrive con la tastiera a schermo; una tastiera USB collegata alla porta USB-C scrive direttamente. START invia. Mentre la risposta arriva si legge e si scorre con la croce.</p>
+    </div>
+    <div class="due">
+      <figure class="foto">
+        <img src="img/tastiera.png" width="640" height="480" loading="lazy" alt="La tastiera a schermo: la casella con Cos'è il cirmolo?, i tasti in tre file e sotto Maiusc, simboli, spazio, Cancella, Invia; sopra le istruzioni per la chiave e la voce">
+        <figcaption>La tastiera a schermo. All'inizio la chat spiega come mettere la chiave e come parlare.</figcaption>
+      </figure>
+      <div class="tabelle una">
+        <div class="tabella">
+          <h3>Mentre scrivi</h3>
+          <table>
+            <tr><td>Croce · A</td><td>sceglie il tasto · lo preme</td></tr>
+            <tr><td>B · Y</td><td>cancella · spazio</td></tr>
+            <tr><td>X · L2</td><td>maiuscole · simboli e lettere accentate</td></tr>
+            <tr><td>START</td><td>invia</td></tr>
+          </table>
+        </div>
+        <div class="tabella">
+          <h3>Mentre leggi</h3>
+          <table>
+            <tr><td>Su · giù</td><td>scorre la conversazione</td></tr>
+            <tr><td>A</td><td>torna a scrivere</td></tr>
+            <tr><td>X</td><td>domande veloci</td></tr>
+            <tr><td>Y</td><td>riprova l'ultima domanda</td></tr>
+            <tr><td>B</td><td>ferma la risposta o la lettura</td></tr>
+            <tr><td>SELECT</td><td>impostazioni</td></tr>
+            <tr><td>MENU</td><td>esce; la conversazione resta salvata</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="due">
+      <figure class="foto">
+        <img src="img/veloci.png" width="640" height="480" loading="lazy" alt="Le domande veloci: Continua, Spiegamelo in modo più semplice, Fammi un esempio, Riassumi in tre punti, Traducilo in inglese, Grazie!, Rileggi l'ultima risposta ad alta voce">
+        <figcaption>Le domande veloci, con X o con R2 premuto e lasciato subito.</figcaption>
+      </figure>
+      <div class="schede una">
+        <div class="scheda"><h3>Domande veloci</h3><p>Continua, spiegamelo in modo più semplice, fammi un esempio, riassumi in tre punti, traducilo in inglese, grazie. E «Rileggi l'ultima risposta ad alta voce».</p></div>
+        <div class="scheda" style="--c: var(--aghi)"><h3>Una conversazione alla volta</h3><p>La conversazione resta anche quando esci. Nelle impostazioni, «Nuova conversazione» la archivia in un file di testo e ne apre una nuova.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="sezione" id="voce">
+  <div class="contenitore">
+    <div class="testata">
+      <p class="etichetta">A voce</p>
+      <h2>Tieni premuto R2 e parla</h2>
+      <p>Quando lasci R2 la voce diventa testo e la domanda parte; B mentre parli annulla. Al massimo un minuto per volta. Le risposte possono essere lette ad alta voce frase per frase, mentre arrivano.</p>
+    </div>
+    <div class="galleria due-col">
+      <figure><img src="img/ascolto.png" width="640" height="480" loading="lazy" alt="Il riquadro Ti ascolto, 1,8 secondi, con il microfono rosso e la scritta Lascia R2 per inviare, B annulla"><figcaption><b>Ti ascolto.</b> Il riquadro resta finché tieni R2.</figcaption></figure>
+      <figure><img src="img/legge.png" width="640" height="480" loading="lazy" alt="La chat con la seconda domanda, Come si dice pigna in tedesco?, la risposta su Zapfen e Zirbe, in alto l'icona dell'altoparlante"><figcaption><b>La risposta letta.</b> L'altoparlante in alto dice che sta leggendo; B la ferma.</figcaption></figure>
+    </div>
+    <div class="due blocco-sotto">
+      <figure class="foto">
+        <img src="img/voce.png" width="640" height="480" loading="lazy" alt="La scheda Voce delle impostazioni: leggi le risposte sì, sintesi vocale OpenAI, voce marin, trascrizione Groq, invio automatico sì, microfono USB, stato USB Audio Device">
+        <figcaption>La scheda Voce delle impostazioni.</figcaption>
+      </figure>
+      <ul class="elenco">
+        <li><b>Trascrizione</b><span>chi trasforma la voce in testo: Groq (Whisper, con un piano gratuito), OpenAI o Gemini</span></li>
+        <li><b>Sintesi vocale</b><span>chi legge le risposte: OpenAI, con voci naturali a pagamento, o Gemini, con limiti gratuiti; la voce si sceglie</span></li>
+        <li><b>Invio automatico</b><span>sì: la domanda parte appena lasci R2; no: il testo va nella casella, da correggere e inviare con START</span></li>
+        <li><b>Microfono</b><span>un microfono o delle cuffie USB-C, anche collegati ad app aperta; le cuffie Bluetooth sono in prova (passano alla modalità telefono, a 8 kHz)</span></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="sezione" id="fornitori">
+  <div class="contenitore">
+    <div class="testata">
+      <p class="etichetta">Fornitori e modelli</p>
+      <h2>Claude per primo, e altri undici</h2>
+      <p>Il fornitore e il modello si scelgono nelle impostazioni, anche a metà conversazione. Accanto a ogni modello c'è il prezzo in dollari per milione di token, oppure «gratis». Con X l'elenco dei modelli si aggiorna dal fornitore.</p>
+    </div>
+    <div class="fornitori" role="list">
+      <span class="primo" role="listitem">Claude (Anthropic)</span>
+      <span role="listitem">OpenAI</span>
+      <span role="listitem">Google Gemini</span>
+      <span role="listitem">DeepSeek</span>
+      <span role="listitem">Qwen (Alibaba)</span>
+      <span role="listitem">GLM (Z.ai)<small>Flash gratis</small></span>
+      <span role="listitem">Kimi (Moonshot)</span>
+      <span role="listitem">MiniMax</span>
+      <span role="listitem">Groq<small>gratis</small></span>
+      <span role="listitem">OpenRouter<small>:free</small></span>
+      <span role="listitem">Mistral<small>gratis</small></span>
+      <span role="listitem">Cerebras</span>
+    </div>
+    <div class="due blocco-sotto">
+      <figure class="foto">
+        <img src="img/impostazioni.png" width="640" height="480" loading="lazy" alt="La scheda Chat delle impostazioni: fornitore Claude (Anthropic), modello Claude Opus 5.5 con il prezzo, impegno medio, stile breve, chiave API presente, azioni sulla console sì, nuova conversazione, consumo in token e dollari">
+        <figcaption>La scheda Chat: fornitore, modello, impegno, stile, chiave, azioni, nuova conversazione e consumo della conversazione.</figcaption>
+      </figure>
+      <figure class="foto">
+        <img src="img/modelli.png" width="640" height="480" loading="lazy" alt="L'elenco dei modelli di GLM (Z.ai): GLM-4.7 Flash, GLM-4.6V Flash e GLM-4.5 Flash segnati gratis, poi GLM-5.3 e GLM-4.7">
+        <figcaption>L'elenco dei modelli di GLM, con quelli gratuiti segnati in verde.</figcaption>
+      </figure>
+    </div>
+    <div class="schede tre blocco-sotto">
+      <div class="scheda"><h3>La chiave API</h3><p>Si crea sul sito del fornitore. Si mette dal PC nel file <code>Saves/claude/chiavi/&lt;fornitore&gt;.txt</code> della SD, oppure dall'app: SELECT, «Chiave API», A, la scrivi e START.</p></div>
+      <div class="scheda" style="--c: var(--aghi)"><h3>Server tuoi</h3><p>Il file <code>Saves/claude/fornitori.json</code> aggiunge qualunque server compatibile con OpenAI, per esempio Ollama sul PC di casa.</p></div>
+      <div class="scheda" style="--c: #9b7bf0"><h3>Impegno e stile</h3><p>L'impegno, solo per Claude, è quanto ragiona prima di rispondere. Lo stile «Brevi» dà risposte corte, adatte allo schermo piccolo.</p></div>
+    </div>
+    <p class="avviso blocco-sotto">Le chiavi restano sulla scheda SD e vanno solo al loro fornitore. Il login con l'abbonamento a claude.ai non vale per le app come questa: serve una chiave API.</p>
+  </div>
+</section>
+
+<section class="sezione" id="azioni">
+  <div class="contenitore">
+    <div class="testata">
+      <p class="etichetta">Azioni sulla console</p>
+      <h2>«Apri Zelda»</h2>
+      <p>Con «Azioni sulla console» acceso, il modello può usare alcuni strumenti della Flip. Funziona con tutti i fornitori che li supportano; con gli altri l'app riprova senza.</p>
+    </div>
+    <div class="schede tre">
+      <div class="scheda"><h3>Stato</h3><p>Batteria e ricarica, data e ora, rete Wi-Fi, spazio libero sulla SD, temperatura, volume e luminosità.</p></div>
+      <div class="scheda" style="--c: var(--aghi)"><h3>Volume e luminosità</h3><p>«Abbassa il volume», «più luce»: il volume va da 0 a 20, la luminosità da 0 a 10.</p></div>
+      <div class="scheda" style="--c: #78aaff"><h3>Cerca e avvia</h3><p>Cerca i giochi sulla SD per titolo e sistema; se gli chiedi di aprirne uno, la chat si chiude e il gioco parte.</p></div>
+      <div class="scheda" style="--c: #9b7bf0"><h3>Diario delle partite</h3><p>Legge le ultime partite: a cosa hai giocato, per quanto e dove eri rimasto.</p></div>
+      <div class="scheda" style="--c: var(--rosso)"><h3>Traduttore e schede</h3><p>La scheda Console delle impostazioni accende il traduttore dei giochi, il diario e il promemoria: sono nella pagina <a href="../ia-giochi/">L'IA nei giochi</a>.</p></div>
+      <div class="scheda" style="--c: var(--oro)"><h3>Cosa gioco?</h3><p>Per farti consigliare un gioco della tua collezione c'è un'app apposta: <a href="../cosa-gioco/">Cosa gioco?</a></p></div>
+    </div>
+  </div>
+</section>
+
+<section class="sezione" id="file">
+  <div class="contenitore">
+    <div class="testata">
+      <p class="etichetta">File sulla scheda SD</p>
+      <h2>Tutto in <code>Saves/claude</code></h2>
+      <p>L'interfaccia segue la lingua di Cirmolo: italiano, inglese, spagnolo, francese, tedesco, portoghese (del Brasile e del Portogallo), catalano, polacco, rumeno e turco.</p>
+    </div>
+    <ul class="file">
+      <li><code>Saves/claude/chiavi/&lt;fornitore&gt;.txt</code> le chiavi API, una per fornitore</li>
+      <li><code>Saves/claude/conversazione.json</code> la conversazione aperta</li>
+      <li><code>Saves/claude/archivio/</code> le conversazioni chiuse, in testo semplice</li>
+      <li><code>Saves/claude/impostazioni.txt</code> fornitore, modelli e scelte</li>
+      <li><code>Saves/claude/fornitori.json</code> facoltativo: fornitori e server in più</li>
+      <li><code>Saves/claude/modelli/</code> gli elenchi dei modelli scaricati</li>
+      <li><code>Saves/spruce/claude-chat.log</code> il registro dell'app</li>
+      <li><code>App/ClaudeChat/src</code> i sorgenti in C, con le prove automatiche</li>
+    </ul>
+  </div>
+</section>
+
+<section class="sezione" id="altre">
+  <div class="contenitore">
+    <div class="testata">
+      <p class="etichetta">Le altre app</p>
+      <h2>Il resto di Cirmolo</h2>
+    </div>
+    <nav class="altre" aria-label="App di Cirmolo">
+      <a href="../openorc/"><b>OpenOrc</b><span>un tasto, un accordo intero</span></a>
+      <a href="../fioritura/"><b>Fioritura</b><span>un giardino di suoni e luci</span></a>
+      <a href="../synth/"><b>Cirmolo Synth</b><span>sintetizzatore e sequencer</span></a>
+      <a href="../sampler/"><b>Cirmolo Sampler</b><span>campionatore a pad</span></a>
+      <a href="../piano/"><b>Cirmolo Piano</b><span>strumenti General MIDI</span></a>
+      <a href="../diapason/"><b>Diapason</b><span>accordatore e metronomo</span></a>
+      <a href="../chiedi-ia/" aria-current="page"><b>Chiedi all'IA</b><span>chat, anche a voce</span></a>
+      <a href="../cosa-gioco/"><b>Cosa gioco?</b><span>l'IA sceglie tra i tuoi giochi</span></a>
+      <a href="../ia-giochi/"><b>L'IA nei giochi</b><span>traduttore, scheda, diario</span></a>
+    </nav>
+  </div>
+</section>
+</main>
+
+<footer class="piede">
+  <div class="contenitore">
+    <p>Chiedi all'IA è un'app di <a href="../">Cirmolo</a>, il fork di spruceOS per la Miyoo Flip, scritta in C. Le richieste HTTPS le fa il curl di spruceOS; ogni fornitore ha i suoi prezzi e le sue condizioni d'uso.</p>
+    <div class="link">
+      <a href="../">Cirmolo</a>
+      <a href="https://github.com/luigismith/cirmolo/tree/cirmolo/App/ClaudeChat">Codice</a>
+      <a href="https://github.com/luigismith/cirmolo/releases">Release</a>
+      <a href="https://github.com/luigismith/cirmolo/issues">Segnala un problema</a>
+    </div>
+  </div>
+</footer>
+</body>
+</html>

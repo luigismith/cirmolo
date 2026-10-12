@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>L'IA nei giochi · Cirmolo</title>
+<meta name="description" content="L'intelligenza artificiale nei giochi della Miyoo Flip con Cirmolo: traduttore dei giochi in RetroArch, scheda del gioco, diario delle partite e promemoria di dove eri rimasto.">
+<meta property="og:title" content="L'IA nei giochi · traduttore, scheda e diario">
+<meta property="og:description" content="SELECT + giù traduce il testo sullo schermo, ogni gioco ha la sua scheda, e la console ricorda dove eri rimasto.">
+<meta property="og:image" content="https://luigismith.github.io/cirmolo/ia-giochi/img/traduzione.png">
+<meta property="og:type" content="article">
+<meta name="theme-color" content="#0d1017">
+<link rel="icon" type="image/png" href="../favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=Be+Vietnam+Pro:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="../app.css">
+<style>
+:root { --accento: #f2c45c; --su-accento: #1a1406; }
+.prima-dopo { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.prima-dopo figure { margin: 0; display: grid; gap: 8px; }
+.prima-dopo img { border-radius: 12px; border: 1px solid var(--filo); width: 100%; height: auto; aspect-ratio: 4 / 3; image-rendering: pixelated; }
+.prima-dopo figcaption { font-size: 0.86rem; color: var(--tenue); }
+.prima-dopo figcaption b { color: var(--testo); font-weight: 600; }
+@media (max-width: 560px) { .prima-dopo { grid-template-columns: minmax(0, 1fr); } }
+</style>
+</head>
+<body>
+
+<header class="barra">
+  <div class="contenitore">
+    <a class="marchio" href="../"><img src="../favicon.png" alt="" width="30" height="30"><span>Cirmolo</span> <small>· L'IA nei giochi</small></a>
+    <nav aria-label="Sezioni">
+      <a href="#traduttore">Traduttore</a>
+      <a href="#scheda">Scheda</a>
+      <a href="#diario">Diario</a>
+      <a href="#accendere">Accenderli</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+<section class="copertina">
+  <div class="contenitore">
+    <div>
+      <p class="motto"><a href="../">Cirmolo</a> · intelligenza artificiale sulla Miyoo Flip</p>
+      <h1>L'IA <em>nei giochi</em></h1>
+      <p class="intro">Tre aiuti che lavorano attorno ai tuoi giochi. Il <b>traduttore</b> mette in pausa e traduce il testo sullo schermo, per esempio dal giapponese. La <b>scheda del gioco</b> racconta di cosa parla e come si gioca. Il <b>diario</b> annota ogni partita e, quando riapri un gioco, ti ricorda dove eri rimasto.</p>
+      <div class="bottoni">
+        <a class="bottone primo" href="#traduttore">Il traduttore</a>
+        <a class="bottone" href="#accendere">Come accenderli</a>
+      </div>
+      <p class="dove">Si accendono in <a href="../chiedi-ia/">Chiedi all'IA</a>, scheda Console. Servono il Wi-Fi, una chiave API e un modello che legge le immagini; ce ne sono anche di gratuiti.</p>
+    </div>
+    <figure class="schermo">
+      <img src="img/traduzione.png" width="640" height="480" alt="Una schermata di gioco in stile 16 bit con, in basso, il riquadro scuro della traduzione: Anziano: Benvenuto, viaggiatore. Stai attento alla foresta a nord. Di notte il sentiero scompare.">
+      <figcaption>Il riquadro del traduttore sopra un dialogo in giapponese. La scena è inventata per questa pagina; il riquadro è quello vero dell'app, con una risposta finta al posto del modello.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section class="sezione" id="traduttore">
+  <div class="contenitore">
+    <div class="testata">
+      <p class="etichetta">Traduttore dei giochi</p>
+      <h2>SELECT + giù, e il testo è in italiano</h2>
+      <p>Nei giochi di RetroArch, SELECT + giù mette in pausa e manda la schermata al modello scelto. La traduzione compare in un riquadro sopra il gioco; di nuovo SELECT + giù e si continua. La lingua di partenza la riconosce il modello.</p>
+    </div>
+    <div class="prima-dopo">
+      <figure><img src="img/gioco.png" width="640" height="480" loading="lazy" alt="La stessa schermata di gioco prima della traduzione: un villaggio al tramonto, montagne, pini e una finestra di dialogo in giapponese"><figcaption><b>Prima.</b> Il dialogo nel gioco.</figcaption></figure>
+      <figure><img src="img/traduzione.png" width="640" height="480" loading="lazy" alt="La stessa schermata con il riquadro della traduzione in italiano sopra la finestra di dialogo"><figcaption><b>Dopo SELECT + giù.</b> Il gioco è in pausa e il riquadro mostra il modello usato.</figcaption></figure>
+    </div>
+    <div class="schede tre blocco-sotto">
+      <div class="scheda"><h3>Un modello che vede</h3><p>Serve un modello che legge le immagini: Claude, GPT, Gemini, Qwen-VL o GLM-4.6V-Flash, che è gratuito.</p></div>
+      <div class="scheda" style="--c: var(--aghi)"><h3>Anche ad alta voce</h3><p>Con «Leggi la traduzione» il riquadro viene anche letto, con la sintesi vocale scelta in Chiedi all'IA.</p></div>
+      <div class="scheda" style="--c: #78aaff"><h3>Le traduzioni restano</h3><p>Ogni traduzione si aggiunge a un file per gioco in <code>Saves/claude/traduzioni</code>.</p></div>
+    </div>
+    <p class="nota blocco-sotto">Il traduttore è un piccolo server per il servizio IA di RetroArch: parte e si ferma con il gioco, e risponde sempre con un'immagine, perché RetroArch sulla Flip non mostra il testo da solo. Funziona solo nei giochi aperti con RetroArch.</p>
+  </div>
+</section>
+
+<section class="sezione" id="scheda">
+  <div class="contenitore">
+    <div class="testata">
+      <p class="etichetta">Scheda del gioco</p>
+      <h2>Di cosa parla, come si gioca</h2>
+      <p>Nell'elenco dei giochi premi MENU su un gioco e scegli «Scheda del gioco (IA)». Il modello scrive una scheda con la copertina: in breve, di cosa parla, come si gioca, consigli per iniziare e curiosità. La scheda si salva: la volta dopo si apre subito.</p>
+    </div>
+    <div class="due">
+      <figure class="foto">
+        <img src="img/scheda.png" width="640" height="480" loading="lazy" alt="La scheda di Chrono Trigger, Super Nintendo: a sinistra la copertina, a destra In breve, Di cosa parla, Come si gioca, Consigli per iniziare, Curiosità">
+        <figcaption>La scheda di Chrono Trigger. In questa schermata la copertina è un segnaposto; sulla console c'è quella scaricata con «Scarica copertine».</figcaption>
+      </figure>
+      <div class="tabella">
+        <h3>Nella scheda</h3>
+        <table>
+          <tr><td>Su · giù</td><td>scorre</td></tr>
+          <tr><td>X</td><td>la legge ad alta voce</td></tr>
+          <tr><td>Y</td><td>la fa riscrivere</td></tr>
+          <tr><td>B</td><td>torna ai giochi</td></tr>
+        </table>
+        <p class="sotto">In fondo la scheda dice quale modello l'ha scritta e quando: può contenere errori. Si salva in <code>Saves/claude/schede/&lt;sistema&gt;/&lt;gioco&gt;.md</code>.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="sezione" id="diario">
+  <div class="contenitore">
+    <div class="testata">
+      <p class="etichetta">Diario delle partite</p>
+      <h2>La console ricorda dove eri rimasto</h2>
+      <p>A ogni fine partita in RetroArch il diario annota gioco, data, durata e ultima schermata; le partite sotto i 20 secondi, aperte per sbaglio, non contano. Con «Diario con l'IA» il modello guarda l'ultima schermata e scrive in una o due frasi dove eri rimasto.</p>
+    </div>
+    <div class="galleria due-col">
+      <figure><img src="img/promemoria.png" width="640" height="480" loading="lazy" alt="Il promemoria Dove eri rimasto: Chrono Trigger, l'ultima schermata, Ultima partita 10/10 alle 10:53, un'ora e dieci minuti, Eri nella foresta di Guardia con Lucca, Un tasto qualsiasi per giocare subito"><figcaption><b>Il promemoria.</b> Quando riapri un gioco vedi per qualche secondo l'ultima schermata e dove eri rimasto; un tasto qualsiasi e si gioca.</figcaption></figure>
+      <figure><img src="img/scheda-diario.png" width="640" height="480" loading="lazy" alt="La scheda di Chrono Trigger con in cima l'ultima partita, il tempo totale in due partite e dove eri rimasto"><figcaption><b>Nella scheda.</b> In cima alla scheda del gioco: l'ultima partita, il tempo in tutto e dove eri rimasto.</figcaption></figure>
+    </div>
+    <div class="schede tre blocco-sotto">
+      <div class="scheda"><h3>Senza IA</h3><p>Data e durata delle partite si annotano comunque, anche con il diario con l'IA spento.</p></div>
+      <div class="scheda" style="--c: var(--aghi)"><h3>Chi lo legge</h3><p><a href="../cosa-gioco/">Cosa gioco?</a> lo usa per proporti i giochi da riprendere, e in <a href="../chiedi-ia/#azioni">Chiedi all'IA</a> il modello può consultarlo.</p></div>
+      <div class="scheda" style="--c: #78aaff"><h3>Un file solo</h3><p>Tutto sta in <code>Saves/claude/diario/diario.jsonl</code>, una riga per partita.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="sezione" id="accendere">
+  <div class="contenitore">
+    <div class="testata">
+      <p class="etichetta">Come accenderli</p>
+      <h2>La scheda Console di Chiedi all'IA</h2>
+      <p>Apri Chiedi all'IA, premi SELECT per le impostazioni e L1 o R1 fino alla scheda Console.</p>
+    </div>
+    <div class="due">
+      <figure class="foto">
+        <img src="img/console.png" width="640" height="480" loading="lazy" alt="La scheda Console: traduzione dei giochi sì, fornitore per le immagini GLM (Z.ai), modello GLM-4.6V Flash gratis, lingua della traduzione come l'interfaccia, leggi la traduzione, diario con l'IA, promemoria all'avvio, come si usa SELECT + giù nel gioco">
+        <figcaption>La scheda Console con il traduttore acceso e un modello gratuito.</figcaption>
+      </figure>
+      <ul class="elenco">
+        <li><b>Traduzione dei giochi</b><span>accende il traduttore e il tasto SELECT + giù in RetroArch</span></li>
+        <li><b>Fornitore e modello per le immagini</b><span>quello che legge le schermate; se non lo scegli vale quello della chat. A apre l'elenco dei modelli</span></li>
+        <li><b>Lingua della traduzione</b><span>come l'interfaccia, oppure un'altra</span></li>
+        <li><b>Leggi la traduzione</b><span>anche ad alta voce</span></li>
+        <li><b>Diario con l'IA</b><span>a fine partita il modello scrive dove eri rimasto</span></li>
+        <li><b>Promemoria all'avvio</b><span>quando riapri un gioco, l'ultima schermata e dove eri rimasto</span></li>
+      </ul>
+    </div>
+    <p class="nota blocco-sotto">L'IA aiuta anche con la musica: in OpenOrc colleghi una tastiera MIDI qualsiasi, muovi i suoi controlli e un modello gratuito sceglie dove metterli. È nel <a href="../openorc/#ia">manuale di OpenOrc</a>.</p>
+  </div>
+</section>
+
+<section class="sezione" id="altre">
+  <div class="contenitore">
+    <div class="testata">
+      <p class="etichetta">Le altre app</p>
+      <h2>Il resto di Cirmolo</h2>
+    </div>
+    <nav class="altre" aria-label="App di Cirmolo">
+      <a href="../openorc/"><b>OpenOrc</b><span>un tasto, un accordo intero</span></a>
+      <a href="../fioritura/"><b>Fioritura</b><span>un giardino di suoni e luci</span></a>
+      <a href="../synth/"><b>Cirmolo Synth</b><span>sintetizzatore e sequencer</span></a>
+      <a href="../sampler/"><b>Cirmolo Sampler</b><span>campionatore a pad</span></a>
+      <a href="../piano/"><b>Cirmolo Piano</b><span>strumenti General MIDI</span></a>
+      <a href="../diapason/"><b>Diapason</b><span>accordatore e metronomo</span></a>
+      <a href="../chiedi-ia/"><b>Chiedi all'IA</b><span>chat, anche a voce</span></a>
+      <a href="../cosa-gioco/"><b>Cosa gioco?</b><span>l'IA sceglie tra i tuoi giochi</span></a>
+      <a href="../ia-giochi/" aria-current="page"><b>L'IA nei giochi</b><span>traduttore, scheda, diario</span></a>
+    </nav>
+  </div>
+</section>
+</main>
+
+<footer class="piede">
+  <div class="contenitore">
+    <p>Traduttore, scheda e diario sono parte di <a href="../chiedi-ia/">Chiedi all'IA</a>, in <a href="../">Cirmolo</a>, il fork di spruceOS per la Miyoo Flip. Cirmolo non contiene e non conterrà mai giochi o BIOS.</p>
+    <div class="link">
+      <a href="../">Cirmolo</a>
+      <a href="https://github.com/luigismith/cirmolo/tree/cirmolo/App/ClaudeChat">Codice</a>
+      <a href="https://github.com/luigismith/cirmolo/releases">Release</a>
+      <a href="https://github.com/luigismith/cirmolo/issues">Segnala un problema</a>
+    </div>
+  </div>
+</footer>
+</body>
+</html>

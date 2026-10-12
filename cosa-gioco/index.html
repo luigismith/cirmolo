@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cosa gioco? · Cirmolo</title>
+<meta name="description" content="Cosa gioco?: tre domande e un modello di intelligenza artificiale sceglie quattro giochi tra quelli sulla scheda SD della Miyoo Flip, tenendo conto del diario delle partite. A li avvia.">
+<meta property="og:title" content="Cosa gioco? · l'IA sceglie tra i tuoi giochi">
+<meta property="og:description" content="Quanto tempo hai, che voglia hai, nuovo o da riprendere: quattro consigli dalla tua collezione, e A fa partire il gioco.">
+<meta property="og:image" content="https://luigismith.github.io/cirmolo/cosa-gioco/img/risultati.png">
+<meta property="og:type" content="article">
+<meta name="theme-color" content="#0d1017">
+<link rel="icon" type="image/png" href="../favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=Be+Vietnam+Pro:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="../app.css">
+<style>:root { --accento: #f2c45c; --su-accento: #1a1406; }</style>
+</head>
+<body>
+
+<header class="barra">
+  <div class="contenitore">
+    <a class="marchio" href="../"><img src="../favicon.png" alt="" width="30" height="30"><span>Cirmolo</span> <small>· Cosa gioco?</small></a>
+    <nav aria-label="Sezioni">
+      <a href="#domande">Le domande</a>
+      <a href="#consigli">I consigli</a>
+      <a href="#serve">Cosa serve</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+<section class="copertina">
+  <div class="contenitore">
+    <div>
+      <p class="motto"><a href="../">Cirmolo</a> · intelligenza artificiale sulla Miyoo Flip</p>
+      <h1>Cosa <em>gioco?</em></h1>
+      <p class="intro">Hai migliaia di giochi sulla scheda SD e non sai da dove cominciare. Rispondi a tre domande e un modello di intelligenza artificiale sceglie quattro giochi della tua collezione, spiegando perché. A fa partire quello che ti convince.</p>
+      <p class="intro">Tiene conto del diario delle partite: sa a cosa hai giocato e dove eri rimasto.</p>
+      <div class="cifre">
+        <div><b>3</b><span>domande</span></div>
+        <div><b>4</b><span>giochi consigliati</span></div>
+        <div><b>A</b><span>e si gioca</span></div>
+      </div>
+      <div class="bottoni">
+        <a class="bottone primo" href="#domande">Come funziona</a>
+        <a class="bottone" href="https://github.com/luigismith/cirmolo/tree/cirmolo/App/CosaGioco">Codice</a>
+      </div>
+      <p class="dove">In App, cartella Giochi. Usa lo stesso modello e le stesse chiavi di <a href="../chiedi-ia/">Chiedi all'IA</a>.</p>
+    </div>
+    <figure class="schermo">
+      <img src="img/risultati.png" width="640" height="480" alt="Cosa gioco?: quattro consigli, Chrono Trigger, Golden Sun, The Legend of Zelda Link's Awakening e Secret of Mana, ognuno con il sistema e una frase sul perché">
+      <figcaption>Quattro consigli per mezz'ora e una bella storia. In questa schermata la collezione è finta e le copertine sono segnaposto; sulla console ci sono le tue.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section class="sezione" id="domande">
+  <div class="contenitore">
+    <div class="testata">
+      <p class="etichetta">Le domande</p>
+      <h2>Quanto tempo, che voglia, nuovo o da riprendere</h2>
+      <p>Su e giù scelgono la domanda, sinistra e destra la risposta. A chiede i consigli, B esce.</p>
+    </div>
+    <div class="due">
+      <figure class="foto">
+        <img src="img/domande.png" width="640" height="480" loading="lazy" alt="Le tre domande: Quanto tempo hai? Mezz'ora; Che voglia hai? Una bella storia, evidenziata; Nuovo o da riprendere? Indifferente; in alto il numero dei giochi sulla SD">
+        <figcaption>In alto il numero dei giochi trovati sulla SD.</figcaption>
+      </figure>
+      <ul class="elenco">
+        <li><b>Quanto tempo hai?</b><span>pochi minuti, mezz'ora, un'ora o più</span></li>
+        <li><b>Che voglia hai?</b><span>qualunque cosa, azione veloce, una bella storia, qualcosa di rilassante, una sfida, da giocare in due</span></li>
+        <li><b>Nuovo o da riprendere?</b><span>indifferente, un gioco nuovo, uno da riprendere tra quelli del diario</span></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="sezione" id="consigli">
+  <div class="contenitore">
+    <div class="testata">
+      <p class="etichetta">I consigli</p>
+      <h2>Solo giochi che hai davvero</h2>
+      <p>Il modello riceve l'elenco dei giochi della tua SD, sistema per sistema, e il riassunto del diario. I giochi che propone vengono cercati nella collezione: quelli che non ci sono vengono scartati.</p>
+    </div>
+    <div class="tabelle">
+      <div class="tabella">
+        <h3>Nella pagina dei consigli</h3>
+        <table>
+          <tr><td>Su · giù</td><td>sceglie il gioco</td></tr>
+          <tr><td>A</td><td>lo avvia</td></tr>
+          <tr><td>X</td><td>altri quattro consigli, diversi da quelli già visti</td></tr>
+          <tr><td>B</td><td>torna alle domande</td></tr>
+        </table>
+      </div>
+      <div class="schede una">
+        <div class="scheda"><h3>Si parte da qui</h3><p>Il gioco scelto parte come da PyUI, con il registro delle attività e la ripresa automatica. Quando esci dal gioco torni al menu.</p></div>
+        <div class="scheda" style="--c: var(--aghi)"><h3>Una collezione grande</h3><p>La SD viene letta all'apertura: sulla Flip di prova oltre cinquemila giochi in 34 sistemi, in circa un secondo. Di ogni gioco si tiene una sola edizione, preferendo quella con l'italiano.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="sezione" id="serve">
+  <div class="contenitore">
+    <div class="testata">
+      <p class="etichetta">Cosa serve</p>
+      <h2>Il Wi-Fi e un modello</h2>
+      <p>Cosa gioco? usa il modello della console scelto in Chiedi all'IA, scheda Console; se non ce n'è uno, quello della chat. Va bene anche un modello gratuito, come GLM-4.6V-Flash di Z.ai.</p>
+    </div>
+    <ul class="file">
+      <li><code>Saves/claude/chiavi/&lt;fornitore&gt;.txt</code> la chiave del fornitore, la stessa di Chiedi all'IA</li>
+      <li><code>Saves/claude/diario/diario.jsonl</code> il diario delle partite, vedi <a href="../ia-giochi/#diario">L'IA nei giochi</a></li>
+      <li><code>Saves/spruce/ia-consigli.log</code> il registro dell'app</li>
+      <li><code>App/ClaudeChat/src/consigli_app.c</code> il codice, con le prove automatiche</li>
+    </ul>
+  </div>
+</section>
+
+<section class="sezione" id="altre">
+  <div class="contenitore">
+    <div class="testata">
+      <p class="etichetta">Le altre app</p>
+      <h2>Il resto di Cirmolo</h2>
+    </div>
+    <nav class="altre" aria-label="App di Cirmolo">
+      <a href="../openorc/"><b>OpenOrc</b><span>un tasto, un accordo intero</span></a>
+      <a href="../fioritura/"><b>Fioritura</b><span>un giardino di suoni e luci</span></a>
+      <a href="../synth/"><b>Cirmolo Synth</b><span>sintetizzatore e sequencer</span></a>
+      <a href="../sampler/"><b>Cirmolo Sampler</b><span>campionatore a pad</span></a>
+      <a href="../piano/"><b>Cirmolo Piano</b><span>strumenti General MIDI</span></a>
+      <a href="../diapason/"><b>Diapason</b><span>accordatore e metronomo</span></a>
+      <a href="../chiedi-ia/"><b>Chiedi all'IA</b><span>chat, anche a voce</span></a>
+      <a href="../cosa-gioco/" aria-current="page"><b>Cosa gioco?</b><span>l'IA sceglie tra i tuoi giochi</span></a>
+      <a href="../ia-giochi/"><b>L'IA nei giochi</b><span>traduttore, scheda, diario</span></a>
+    </nav>
+  </div>
+</section>
+</main>
+
+<footer class="piede">
+  <div class="contenitore">
+    <p>Cosa gioco? è un'app di <a href="../">Cirmolo</a>, il fork di spruceOS per la Miyoo Flip. Cirmolo non contiene e non conterrà mai giochi o BIOS: i consigli vengono dai tuoi.</p>
+    <div class="link">
+      <a href="../">Cirmolo</a>
+      <a href="https://github.com/luigismith/cirmolo/tree/cirmolo/App/CosaGioco">Codice</a>
+      <a href="https://github.com/luigismith/cirmolo/releases">Release</a>
+      <a href="https://github.com/luigismith/cirmolo/issues">Segnala un problema</a>
+    </div>
+  </div>
+</footer>
+</body>
+</html>

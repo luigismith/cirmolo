@@ -86,13 +86,13 @@ Rotelle: pitch ±2 · modulazione = vibrato · pedale = sustain · program chang
 
 ## Suoni di fabbrica (numero = program change)
 
-| Atmosfere | Tastiere | Corde | Arpeggi | Campane, Ottoni |
-|---|---|---|---|---|
-| 0 Lungolago | 6 Tramonto FM | 11 Chitarra di carta | 17 Cascata | 21 Campane lunari |
-| 1 Nebbia | 7 Wurli di notte | 12 Dodici corde | 18 Pioggia | 22 Carillon |
-| 2 Psichedelia | 8 Valigia stereo | 13 Koto del lago | 19 Ritmo in levare | 23 Ottoni |
-| 3 Aurora | 9 Organo della pieve | 14 Arpa celtica | 20 Treno notturno | 24 Fanfara |
-| 4 Archi d'inverno | 10 Organo rotante | 15 Arpa di vetro | | |
-| 5 Respiro di vetro | | 16 Pizzicato | | |
+| Atmosfere | Voci | Tastiere | Corde | Arpeggi | Campane, Ottoni |
+|---|---|---|---|---|---|
+| 0 Lungolago | 5 Coro di montagna | 7 Tramonto FM | 13 Chitarra di carta | 18 Cascata | 24 Campane lunari |
+| 1 Nebbia | 6 Voci dal nastro | 8 Wurli di notte | 14 Dodici corde | 19 Pioggia | 25 Cristalli |
+| 2 Psichedelia |  | 9 Valigia stereo | 15 Koto del lago | 20 Acido | 26 Ottoni |
+| 3 Aurora |  | 10 Cassetta | 16 Arpa celtica | 21 Ritmo in levare | 27 Ottanta |
+| 4 Cattedrale |  | 11 Organo della pieve | 17 Arpa di vetro | 22 Treno notturno |  |
+|  |  | 12 Organo rotante |  | 23 Pompa francese |  |
 
-Dal 25 in poi: i tuoi suoni. **\*** dopo il nome = suono modificato, non salvato.
+Dal 28 in poi: i tuoi suoni. **\*** dopo il nome = suono modificato, non salvato.

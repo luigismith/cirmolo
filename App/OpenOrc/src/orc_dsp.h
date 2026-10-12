@@ -2,8 +2,8 @@
  *
  * Clone dell'Orchid (Telepathic Instruments) pensato per la Akai MPK mini IV: accordi eseguiti in
  * 6 modi (accordo, strum, slop, arpeggio, pattern, arpa), 6 motori di suono (analogico, FM, piano
- * elettrico, organo, corda pizzicata, ensemble) da 16 voci in stereo, basso monofonico, batteria con
- * 4 stili, looper a strati con annulla, chorus, delay e riverbero.
+ * elettrico, organo, corda pizzicata, ensemble, coro) da 16 voci in stereo, basso monofonico, batteria con
+ * 4 stili, looper a strati con annulla, chorus, delay, riverbero con shimmer, nastro e pompa sul battito.
  *
  * Stereo: ogni voce ha una posizione (le note dell'accordo dalla piu' grave a sinistra alla piu' acuta a
  * destra, gli arpeggi che si spostano da un lato all'altro); OrcSound.stereo dice quanto si allargano.
@@ -25,7 +25,7 @@
 #define ORC_SCOPE 2048
 #define ORC_LOOP_MAX 1024
 
-enum { ENG_VA, ENG_FM, ENG_REED, ENG_ORGAN, ENG_PLUCK, ENG_SUPER, ENG_COUNT };
+enum { ENG_VA, ENG_FM, ENG_REED, ENG_ORGAN, ENG_PLUCK, ENG_SUPER, ENG_VOICE, ENG_COUNT };
 enum { PERF_CHORD, PERF_STRUM, PERF_SLOP, PERF_ARP, PERF_PATTERN, PERF_HARP, PERF_COUNT };
 enum { BEAT_DISCO, BEAT_PSYCH, BEAT_TRAP, BEAT_BOSSA, BEAT_COUNT };
 enum { DRUM_KICK, DRUM_SNARE, DRUM_HAT, DRUM_OPEN, DRUM_CLAP, DRUM_PARTS };
@@ -36,7 +36,7 @@ typedef struct {
     int   engine;              /* ENG_* */
     float tone;                /* 0..1: brillantezza (taglio del filtro, indice FM, armoniche) */
     float character;           /* 0..1: VA desintonia e forma, FM rapporto, reed spinta, organo registri,
-                                  corda durata, ensemble desintonia */
+                                  corda durata, ensemble desintonia, coro vocale (U O A E I) */
     float attack, decay;       /* secondi */
     float sustain;             /* 0..1 */
     float release;             /* secondi */
@@ -48,6 +48,10 @@ typedef struct {
     float perform_amount;      /* 0..1: tempo dello strum, velocita' dell'arpeggio, pattern, slop */
     float volume;              /* 0..1 */
     float stereo;              /* 0..1: ampiezza stereo (0 = tutto al centro) */
+    float resonance;           /* 0..1: risonanza del filtro (analogico ed ensemble), con piu' inviluppo */
+    float shimmer;             /* 0..1: il riverbero rimanda un'ottava sopra (serve il riverbero) */
+    float tape;                /* 0..1: nastro: wow, flutter, saturazione, fruscio */
+    float pump;                /* 0..1: il suono respira sul battito (a trasporto in moto) */
 } OrcSound;
 
 typedef struct {

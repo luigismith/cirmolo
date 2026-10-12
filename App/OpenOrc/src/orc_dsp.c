@@ -36,6 +36,7 @@ typedef struct {
     float pan;               /* -1 sinistra .. 1 destra, moltiplicato per OrcSound.stereo */
     float pc, pm, ph2, ic1, ic2;
     float ph3, ph4, ph5, icr1, icr2;     /* ensemble: altri tre oscillatori e il filtro del canale destro */
+    float fs[6], fsrc;                   /* coro: tre formanti (stati dei filtri) e la sorgente filtrata */
     int kpos, kready;                    /* corda: posizione nel buffer, pizzico gia' fatto */
     float klast;
     uint32_t age;
@@ -96,6 +97,9 @@ struct Orc {
     Allpass ap_l[2], ap_r[2];
 
     float mix_l[SUB], mix_r[SUB];
+    /* nastro, shimmer, pompa */
+    float *tp_l, *tp_r; int tp_len, tp_pos; float tp_wow, tp_flut, tp_lp_l, tp_lp_r;
+    float *sh; int sh_len, sh_pos; float sh_fb;
     float ks[ORC_VOICES][KS_LEN];       /* corde pizzicate, una per voce */
     float scope[ORC_SCOPE];
     int scope_pos;
@@ -856,6 +860,11 @@ static inline float read_frac(const float *buf, int len, int pos, float delay)
     return buf[i0] + (buf[i1] - buf[i0]) * fr;
 }
 
+/* Coro: formanti (Hz) e ampiezze delle vocali, dalla piu' scura alla piu' chiara: U O A E I. */
+static const float VOWEL_F[5][3] = { { 325, 700, 2530 }, { 450, 800, 2830 }, { 780, 1180, 2800 }, { 450, 1900, 2600 }, { 290, 2250, 2900 } };
+static const float VOWEL_A[5][3] = { { 1.0f, 0.45f, 0.12f }, { 1.0f, 0.55f, 0.15f }, { 1.0f, 0.6f, 0.22f }, { 1.0f, 0.5f, 0.3f }, { 1.0f, 0.35f, 0.32f } };
+static const float VOWEL_BW[3] = { 80.0f, 150.0f, 240.0f };
+
 /* ------------------------------------------------------------------ voci: un passo di n campioni */
 static int render_voices(Orc *o, int n, float pitch)
 {
@@ -881,12 +890,29 @@ static int render_voices(Orc *o, int n, float pitch)
     const float w2 = 0.55f + 0.25f * chr, w3 = 0.15f + 0.45f * chr, w4 = 0.5f * chr, w6 = 0.35f * chr * chr, w8 = 0.4f * tone;
     const float wnorm = 1.0f / (1.0f + w2 + w3 + w4 + w6 + w8);
     /* stereo */
-    const float width = clamp01(s->stereo);
+    const float width = clamp01(s->stereo), res = clamp01(s->resonance);
     /* ensemble: cinque denti di sega; i quattro desintonizzati si aprono a sinistra e a destra */
     const float sdet = 4.0f + chr * 40.0f;                                   /* centesimi */
     const float rt1 = exp2f(-sdet / 1200.0f), rt2 = exp2f(sdet / 1200.0f);
     const float rt3 = exp2f(-0.47f * sdet / 1200.0f), rt4 = exp2f(0.47f * sdet / 1200.0f);
     const float aw = 0.5f + 0.5f * width, bw = 0.5f - 0.5f * width;
+    /* coro: le tre formanti della vocale scelta dal carattere (interpolate tra due vocali vicine) */
+    float fa1[3] = { 0 }, fa2[3] = { 0 }, fa3[3] = { 0 }, fgain[3] = { 0 };
+    if (eng == ENG_VOICE) {
+        float vpos = chr * 4.0f;
+        int vi0 = (int)vpos;
+        if (vi0 > 3) vi0 = 3;
+        float vt = vpos - (float)vi0;
+        for (int f = 0; f < 3; f++) {
+            float fc = VOWEL_F[vi0][f] + (VOWEL_F[vi0 + 1][f] - VOWEL_F[vi0][f]) * vt;
+            float g = tanf(PI_F * fminf(fc, 0.42f * sr) * inv), k = VOWEL_BW[f] / fc;
+            fa1[f] = 1.0f / (1.0f + g * (g + k));
+            fa2[f] = g * fa1[f];
+            fa3[f] = g * fa2[f];
+            fgain[f] = (VOWEL_A[vi0][f] + (VOWEL_A[vi0 + 1][f] - VOWEL_A[vi0][f]) * vt) * k * 6.5f * powf(fc / 500.0f, 0.9f);   /* passa banda a guadagno 1, piu' peso alle formanti alte (la sorgente cala a 6 dB/ottava) */
+        }
+    }
+    const float vsrc_lp = 0.25f + 0.7f * tone;    /* coro: brillantezza della sorgente */
     /* corda: durata (T60) dal carattere, armoniche smorzate dal tono */
     const float t60 = 0.25f * exp2f(chr * 5.0f), blend = 1.0f - 0.85f * tone;
     float *ml = o->mix_l, *mr = o->mix_r;
@@ -920,9 +946,9 @@ static int render_voices(Orc *o, int n, float pitch)
         float a1 = 0.0f, a2 = 0.0f, a3 = 0.0f;
         if (eng == ENG_VA || eng == ENG_SUPER) {
             float env = (v->stage == ST_ATTACK || v->stage == ST_DECAY) ? v->level : 0.0f;
-            float oct = 6.6f + tone * 6.8f + env * 0.9f + (float)(v->note - 60) / 24.0f + v->vel * 0.5f;
+            float oct = 6.6f + tone * 6.8f + env * (0.9f + 3.2f * res) + (float)(v->note - 60) / 24.0f + v->vel * 0.5f;
             float fc = fminf(exp2f(oct), 0.42f * sr);
-            float g = tanf(PI_F * fc * inv), k = 1.6f;
+            float g = tanf(PI_F * fc * inv), k = 1.6f - 1.45f * res;
             a1 = 1.0f / (1.0f + g * (g + k));
             a2 = g * a1;
             a3 = g * a2;
@@ -985,6 +1011,22 @@ static int render_voices(Orc *o, int n, float pitch)
                 v->icr2 = 2.0f * r2 - v->icr2;
                 x = l2;
                 xr = r2;
+            } else if (eng == ENG_VOICE) {
+                /* coro: due denti di sega appena desintonizzati e un filo di fiato, attraverso tre formanti */
+                v->pc += dt; if (v->pc >= 1.0f) v->pc -= 1.0f;
+                v->ph2 += dt2; if (v->ph2 >= 1.0f) v->ph2 -= 1.0f;
+                float src = 0.5f * ((2.0f * v->pc - 1.0f - polyblep(v->pc, dt)) + (2.0f * v->ph2 - 1.0f - polyblep(v->ph2, dt2)));
+                src += white(o) * 0.06f;
+                v->fsrc += vsrc_lp * (src - v->fsrc);
+                float y = 0.0f;
+                for (int f = 0; f < 3; f++) {
+                    float *st = &v->fs[2 * f];
+                    float q3 = v->fsrc - st[1], q1 = fa1[f] * st[0] + fa2[f] * q3, q2 = st[1] + fa2[f] * st[0] + fa3[f] * q3;
+                    st[0] = 2.0f * q1 - st[0];
+                    st[1] = 2.0f * q2 - st[1];
+                    y += q1 * fgain[f];
+                }
+                x = y * (0.6f + 0.4f * chr);   /* le vocali scure (U, O) hanno piu' energia: si pareggiano */
             } else if (eng == ENG_PLUCK) {
                 /* Karplus-Strong: il buffer ricircola, filtrato e smorzato, a ogni periodo della nota */
                 float rp = (float)v->kpos - kd;
@@ -1038,7 +1080,7 @@ Orc *orc_create(float sr)
     o->loop_q = 0.5f;
     o->loop_len = 16.0;
 
-    Control c = { { ENG_VA, 0.5f, 0.4f, 0.01f, 0.8f, 0.7f, 0.5f, 0.1f, 0.5f, 0.3f, 0.3f, 0.2f, 0.3f, PERF_CHORD, 0.3f, 0.8f, 0.0f },
+    Control c = { { ENG_VA, 0.5f, 0.4f, 0.01f, 0.8f, 0.7f, 0.5f, 0.1f, 0.5f, 0.3f, 0.3f, 0.2f, 0.3f, PERF_CHORD, 0.3f, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f },
                   0.0f, 0.0f, 0.0f };
     o->ctl_stage = o->ctl = c;
     for (int i = 0; i < 3; i++) o->ctl_buf[i] = c;
@@ -1051,6 +1093,11 @@ Orc *orc_create(float sr)
     o->clap_a2 = g * o->clap_a1;
     o->clap_a3 = g * o->clap_a2;
 
+    o->tp_len = (int)(sr * 0.05f);
+    o->tp_l = calloc((size_t)o->tp_len, sizeof(float));
+    o->tp_r = calloc((size_t)o->tp_len, sizeof(float));
+    o->sh_len = 4096;
+    o->sh = calloc((size_t)o->sh_len, sizeof(float));
     o->ch_len = (int)(sr * 0.05f);
     o->ch_l = calloc((size_t)o->ch_len, sizeof(float));
     o->ch_r = calloc((size_t)o->ch_len, sizeof(float));
@@ -1061,7 +1108,7 @@ Orc *orc_create(float sr)
     float r = sr / 44100.0f;
     for (int i = 0; i < 4; i++) { comb_init(&o->comb_l[i], (int)(combs[i] * r)); comb_init(&o->comb_r[i], (int)((combs[i] + 23) * r)); }
     for (int i = 0; i < 2; i++) { allpass_init(&o->ap_l[i], (int)(aps[i] * r)); allpass_init(&o->ap_r[i], (int)((aps[i] + 23) * r)); }
-    int ok = o->ch_l && o->ch_r && o->dl && o->dr_;
+    int ok = o->ch_l && o->ch_r && o->dl && o->dr_ && o->tp_l && o->tp_r && o->sh;
     for (int i = 0; i < 4; i++) ok = ok && o->comb_l[i].buf && o->comb_r[i].buf;
     for (int i = 0; i < 2; i++) ok = ok && o->ap_l[i].buf && o->ap_r[i].buf;
     if (!ok) { orc_destroy(o); return NULL; }
@@ -1072,6 +1119,7 @@ void orc_destroy(Orc *o)
 {
     if (!o) return;
     free(o->ch_l); free(o->ch_r); free(o->dl); free(o->dr_);
+    free(o->tp_l); free(o->tp_r); free(o->sh);
     for (int i = 0; i < 4; i++) { free(o->comb_l[i].buf); free(o->comb_r[i].buf); }
     for (int i = 0; i < 2; i++) { free(o->ap_l[i].buf); free(o->ap_r[i].buf); }
     free(o);
@@ -1275,6 +1323,8 @@ void orc_render(Orc *o, float *out, int frames)
     const float width = clamp01(s->stereo);       /* nel piano elettrico il tremolo va da un lato all'altro */
     const float chorus = clamp01(s->chorus), delay = clamp01(s->delay), reverb = clamp01(s->reverb);
     const float vol = clamp01(s->volume);
+    const float tape = clamp01(s->tape), shimmer = clamp01(s->shimmer), pump = clamp01(s->pump);
+    const float tp_alpha = 1.0f - 0.8f * tape;    /* nastro: le alte calano da circa 1700 Hz, a fondo */
     const float bass_lvl = clamp01(s->bass_level) * 0.8f, bass_cut = 0.04f + clamp01(s->bass_tone) * 0.12f;
     const int dtime = (int)fmin(sr * 60.0 / o->bpm * 0.75, (double)(o->dlen - 1));     /* croma puntata */
     int voices = 0, sp = o->scope_pos;
@@ -1298,6 +1348,33 @@ void orc_render(Orc *o, float *out, int frames)
 
         for (int i = 0; i < n; i++) {
             float vl = softclip(o->mix_l[i] * 0.25f) * trem, vr = softclip(o->mix_r[i] * 0.25f) * trem_r;
+            if (tape > 0.001f) {
+                /* nastro: velocita' che oscilla (wow lento, flutter veloce), saturazione, alte smorzate, fruscio */
+                o->tp_wow += 0.55f * inv; if (o->tp_wow >= 1.0f) o->tp_wow -= 1.0f;
+                o->tp_flut += 6.5f * inv; if (o->tp_flut >= 1.0f) o->tp_flut -= 1.0f;
+                o->tp_l[o->tp_pos] = vl;
+                o->tp_r[o->tp_pos] = vr;
+                float dd = (0.012f + tape * (0.0032f * sin_t(o->tp_wow) + 0.00035f * sin_t(o->tp_flut))) * sr;
+                float tl = read_frac(o->tp_l, o->tp_len, o->tp_pos, dd), tr = read_frac(o->tp_r, o->tp_len, o->tp_pos, dd);
+                if (++o->tp_pos >= o->tp_len) o->tp_pos = 0;
+                float drive = 1.0f + 1.6f * tape;
+                tl = softclip(tl * drive) / drive * (1.0f + 0.1f * tape);
+                tr = softclip(tr * drive) / drive * (1.0f + 0.1f * tape);
+                o->tp_lp_l += tp_alpha * (tl - o->tp_lp_l);
+                o->tp_lp_r += tp_alpha * (tr - o->tp_lp_r);
+                float hiss = white(o) * 0.006f * tape;
+                vl = o->tp_lp_l + hiss;
+                vr = o->tp_lp_r + hiss;
+            }
+            float duck = 1.0f;
+            if (pump > 0.001f && o->transport) {
+                /* pompa: a ogni battito il suono si abbassa e risale, come con il sidechain della cassa */
+                double b = o->beats + (double)i * bps;
+                float ph = (float)(b - floor(b));
+                duck = 1.0f - pump * 0.85f * expf(-ph * 6.0f);
+            }
+            vl *= duck;
+            vr *= duck;
 
             float bass = 0.0f;
             if (o->bass_active) {
@@ -1343,14 +1420,34 @@ void orc_render(Orc *o, float *out, int frames)
             o->dl[o->dpos] = 0.5f * (cl + cr) + o->dlp_r * 0.38f;
             o->dr_[o->dpos] = o->dlp_l * 0.38f;
             if (++o->dpos >= o->dlen) o->dpos = 0;
+            bass *= duck;
             float out_l = cl + bass + drums + rl * delay;
             float out_r = cr + bass + drums + rr * delay;
             if (reverb > 0.001f) {
-                float in_l = (cl + drums * 0.2f) * 0.03f, in_r = (cr + drums * 0.2f) * 0.03f, wl = 0.0f, wr = 0.0f;
+                float in_l = (cl + drums * 0.2f) * 0.03f + o->sh_fb, in_r = (cr + drums * 0.2f) * 0.03f + o->sh_fb, wl = 0.0f, wr = 0.0f;
                 for (int c = 0; c < 4; c++) { wl += comb_run(&o->comb_l[c], in_l, 0.86f, 0.25f); wr += comb_run(&o->comb_r[c], in_r, 0.86f, 0.25f); }
                 for (int a = 0; a < 2; a++) { wl = allpass_run(&o->ap_l[a], wl); wr = allpass_run(&o->ap_r[a], wr); }
                 out_l += wl * reverb * 3.0f;
                 out_r += wr * reverb * 3.0f;
+                if (shimmer > 0.001f) {
+                    /* shimmer: la coda del riverbero letta al doppio della velocita' (un'ottava sopra) con due
+                       testine in dissolvenza, rimandata nel riverbero e un po' in uscita */
+                    o->sh[o->sh_pos] = 0.5f * (wl + wr);
+                    const int win = 2048;
+                    float sum = 0.0f;
+                    for (int h = 0; h < 2; h++) {
+                        int age = (o->sh_pos + h * win / 2) % win;   /* sale da 0 a win */
+                        float d = (float)(win - age);                 /* il ritardo cala di 1 a campione: velocita' doppia */
+                        float w = sin_t(0.5f * (float)age / (float)win);
+                        sum += w * w * read_frac(o->sh, o->sh_len, o->sh_pos, d);
+                    }
+                    if (++o->sh_pos >= o->sh_len) o->sh_pos = 0;
+                    o->sh_fb = softclip(sum * shimmer * 0.022f);   /* il giro chiuso resta sotto 0,7: 4 comb danno circa 28 volte */
+                    out_l += sum * shimmer * reverb * 2.0f;
+                    out_r += sum * shimmer * reverb * 2.0f;
+                } else {
+                    o->sh_fb = 0.0f;
+                }
             }
             out_l = softclip(out_l * vol);
             out_r = softclip(out_r * vol);

@@ -740,6 +740,126 @@ static void test_stereo_engines(void)
     orc_destroy(o);
 }
 
+/* ------------------------------------------------------------------ coro, pompa, nastro, shimmer, risonanza */
+static double brightness(const float *lr, int frames)      /* energia delle differenze / energia: piu' alto = piu' chiaro */
+{
+    double e = 0.0, d = 0.0;
+    for (int i = 1; i < frames; i++) {
+        double x = lr[2 * i] + lr[2 * i + 1], y = lr[2 * i - 2] + lr[2 * i - 1];
+        e += x * x;
+        d += (x - y) * (x - y);
+    }
+    return e > 0.0 ? d / e : 0.0;
+}
+
+static void test_new_effects(void)
+{
+    static float audio[2 * SR * 2];
+    int C[3] = { 60, 64, 67 };
+
+    /* coro: la I e' piu' chiara della U, e la voce si sente */
+    double br[2];
+    for (int k = 0; k < 2; k++) {
+        Orc *o = orc_create(SR);
+        OrcSound s = plain_sound(ENG_VOICE, PERF_CHORD, 0.3f);
+        s.character = (float)k;
+        s.sustain = 1.0f;
+        orc_set_sound(o, &s);
+        orc_chord_on(o, C, 3, -1, 0.8f, 0);
+        render_seconds(o, 0.2f, NULL);
+        render_seconds(o, 0.5f, audio);
+        br[k] = brightness(audio, SR / 2);
+        CHECK(rms_of(audio, SR / 2) > 0.01, "coro %s: si sente (RMS %.4f)", k ? "I" : "U", rms_of(audio, SR / 2));
+        orc_destroy(o);
+    }
+    CHECK(br[1] > br[0] * 1.5, "coro: la I (%.4f) e' piu' chiara della U (%.4f)", br[1], br[0]);
+
+    /* pompa: subito dopo il battito il suono e' basso, a meta' battito e' tornato */
+    {
+        Orc *o = orc_create(SR);
+        OrcSound s = plain_sound(ENG_ORGAN, PERF_CHORD, 0.3f);
+        s.pump = 1.0f;
+        orc_set_sound(o, &s);
+        orc_set_tempo(o, 120.0f);
+        orc_transport(o, 1);
+        orc_chord_on(o, C, 3, -1, 0.8f, 0);
+        render_until(o, 4.0);
+        render_seconds(o, 0.03f, audio);          /* da 4,0 a 4,06 battiti */
+        double early = rms_of(audio, (int)(SR * 0.03f));
+        render_until(o, 4.6);
+        render_seconds(o, 0.03f, audio);
+        double late = rms_of(audio, (int)(SR * 0.03f));
+        CHECK(early < late * 0.5, "pompa: sul battito %.4f, a meta' %.4f", early, late);
+        orc_destroy(o);
+    }
+
+    /* nastro: cambia il suono, resta pulito (niente valori fuori scala) */
+    {
+        double r[2];
+        for (int k = 0; k < 2; k++) {
+            Orc *o = orc_create(SR);
+            OrcSound s = plain_sound(ENG_VA, PERF_CHORD, 0.3f);   /* denti di sega: tante armoniche */
+            s.sustain = 1.0f;
+            s.tone = 1.0f;
+            s.tape = (float)k;
+            orc_set_sound(o, &s);
+            orc_chord_on(o, C, 3, -1, 0.8f, 0);
+            render_seconds(o, 0.2f, NULL);
+            render_seconds(o, 1.0f, audio);
+            float peak = 0.0f;
+            int fin = 1;
+            for (int i = 0; i < 2 * SR; i++) { fin &= isfinite(audio[i]) != 0; peak = fmaxf(peak, fabsf(audio[i])); }
+            CHECK(fin && peak <= 1.0f, "nastro %d: picco %.3f", k, peak);
+            r[k] = goertzel(audio, SR, midi_hz(60) * 10.0f) / (goertzel(audio, SR, midi_hz(60)) + 1e-9);   /* decima armonica */
+            orc_destroy(o);
+        }
+        CHECK(r[1] < r[0] * 0.7, "nastro: le alte calano (%.4f contro %.4f)", r[1], r[0]);
+    }
+
+    /* shimmer: nella coda del riverbero compare l'ottava sopra */
+    {
+        double ratio[2];
+        for (int k = 0; k < 2; k++) {
+            Orc *o = orc_create(SR);
+            OrcSound s = plain_sound(ENG_ORGAN, PERF_CHORD, 0.3f);
+            s.reverb = 0.9f;
+            s.release = 0.05f;
+            s.shimmer = (float)k;
+            orc_set_sound(o, &s);
+            int A4[1] = { 69 };
+            orc_chord_on(o, A4, 1, -1, 0.9f, 0);
+            render_seconds(o, 0.8f, NULL);
+            orc_chord_off(o);
+            render_seconds(o, 0.3f, NULL);
+            render_seconds(o, 0.5f, audio);
+            double up = 0.0;                      /* l'ottava sopra arriva sgranata: banda 820-940 Hz */
+            for (float fr = 820.0f; fr <= 940.0f; fr += 10.0f) up += goertzel(audio, SR / 2, fr);
+            ratio[k] = up / (goertzel(audio, SR / 2, 440.0f) + 1e-9);
+            float peak = 0.0f;
+            for (int i = 0; i < SR; i++) peak = fmaxf(peak, fabsf(audio[i]));
+            CHECK(peak < 0.9f, "shimmer %d: coda sotto controllo (picco %.3f)", k, peak);
+            orc_destroy(o);
+        }
+        CHECK(ratio[1] > ratio[0] * 1.5, "shimmer: ottava sopra %.3f contro %.3f", ratio[1], ratio[0]);
+    }
+
+    /* risonanza al massimo con l'inviluppo del filtro: stabile */
+    {
+        Orc *o = orc_create(SR);
+        OrcSound s = plain_sound(ENG_VA, PERF_ARP, 0.8f);
+        s.resonance = 1.0f;
+        s.tone = 0.1f;
+        orc_set_sound(o, &s);
+        orc_chord_on(o, C, 3, 36, 1.0f, 0);
+        render_seconds(o, 2.0f, audio);
+        float peak = 0.0f;
+        int fin = 1;
+        for (int i = 0; i < 4 * SR; i++) { fin &= isfinite(audio[i]) != 0; peak = fmaxf(peak, fabsf(audio[i])); }
+        CHECK(fin && peak <= 1.0f && peak > 0.02f, "risonanza al massimo: picco %.3f", peak);
+        orc_destroy(o);
+    }
+}
+
 /* ------------------------------------------------------------------ suoni di fabbrica */
 static void test_presets(const char *outdir)
 {
@@ -750,7 +870,7 @@ static void test_presets(const char *outdir)
     for (int i = 0; i < n; i++)
         for (int j = 0; j < i; j++)
             CHECK(strcmp(orcapp_sound_name(a, i), orcapp_sound_name(a, j)), "nome doppio: %s", orcapp_sound_name(a, i));
-    const float per = 3.0f;
+    const float per = 4.5f;
     g_rec_cap = (int)(SR * per * n) + SR;
     g_rec = calloc((size_t)g_rec_cap * 2, sizeof(float));
     g_rec_pos = 0;
@@ -760,6 +880,7 @@ static void test_presets(const char *outdir)
     for (int i = 0; i < n; i++) {
         unsigned char pc[2] = { 0xC0, (unsigned char)i };
         orcapp_midi(a, 0, pc, 2);
+        run(a, 1.5f);                             /* le code del suono prima si spengono */
         int start = g_rec_pos;
         key(a, 60, 1); run(a, 1.2f); key(a, 60, 0);
         key(a, 67, 1); run(a, 1.2f); key(a, 67, 0);
@@ -925,7 +1046,7 @@ static void test_select(void)
     btn(a, PAD_DOWN, 1); btn(a, PAD_DOWN, 0);
     CHECK(orcapp_current_sound(a) == s0 + 1, "giu': suono successivo");
     btn(a, PAD_R1, 1); btn(a, PAD_R1, 0);
-    CHECK(!strcmp(orcapp_current_name(a), "Tramonto FM"), "R1: prima voce della categoria dopo (%s)", orcapp_current_name(a));
+    CHECK(!strcmp(orcapp_current_name(a), "Coro di montagna"), "R1: prima voce della categoria dopo (%s)", orcapp_current_name(a));
     btn(a, PAD_L1, 1); btn(a, PAD_L1, 0);
     CHECK(!strcmp(orcapp_current_name(a), "Lungolago"), "L1: categoria prima (%s)", orcapp_current_name(a));
     btn(a, PAD_RIGHT, 1); btn(a, PAD_RIGHT, 0);   /* tonalita' Re bemolle */
@@ -1560,6 +1681,8 @@ int main(int argc, char **argv)
     printf("preset della tastiera: %d controlli, %d errori\n", checks, fails);
     test_stereo_engines();
     printf("stereo e motori nuovi: %d controlli, %d errori\n", checks, fails);
+    test_new_effects();
+    printf("coro, pompa, nastro, shimmer, risonanza: %d controlli, %d errori\n", checks, fails);
     test_presets(outdir);
     printf("suoni di fabbrica: %d controlli, %d errori\n", checks, fails);
     test_user_sounds(outdir);

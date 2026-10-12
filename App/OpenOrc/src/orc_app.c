@@ -84,31 +84,35 @@ typedef struct { const char *name, *cat; OrcSound s; int spread; } Preset;
    chorus, delay, riverbero, esecuzione, quantita', volume, stereo. In ordine di categoria: e' l'ordine
    dell'elenco, dei pad Suono precedente/successivo e del program change. */
 static const Preset PRESETS[] = {
-    { "Lungolago",          "Atmosfere", { ENG_VA,    0.45f, 0.45f, 0.600f, 1.20f, 0.80f, 1.80f, 0.10f, 0.50f, 0.30f, 0.60f, 0.20f, 0.60f, PERF_CHORD,   0.30f, 0.80f, 0.00f }, SPREAD_OPEN },
-    { "Nebbia",             "Atmosfere", { ENG_VA,    0.25f, 0.70f, 1.200f, 2.00f, 0.90f, 2.50f, 0.20f, 0.30f, 0.20f, 0.70f, 0.30f, 0.80f, PERF_CHORD,   0.30f, 0.80f, 0.00f }, SPREAD_WIDE },
-    { "Psichedelia",        "Atmosfere", { ENG_VA,    0.50f, 0.85f, 0.010f, 0.80f, 0.60f, 0.60f, 0.30f, 0.50f, 0.50f, 0.80f, 0.50f, 0.50f, PERF_SLOP,    0.70f, 0.80f, 0.00f }, SPREAD_WIDE },
-    { "Aurora",             "Atmosfere", { ENG_SUPER, 0.40f, 0.45f, 0.900f, 2.00f, 0.85f, 2.20f, 0.08f, 0.35f, 0.25f, 0.35f, 0.20f, 0.75f, PERF_CHORD,   0.30f, 0.75f, 0.90f }, SPREAD_WIDE },
-    { "Archi d'inverno",    "Atmosfere", { ENG_SUPER, 0.32f, 0.30f, 0.350f, 1.00f, 0.90f, 1.30f, 0.18f, 0.40f, 0.30f, 0.25f, 0.10f, 0.55f, PERF_CHORD,   0.30f, 0.80f, 0.70f }, SPREAD_OPEN },
-    { "Respiro di vetro",   "Atmosfere", { ENG_FM,    0.28f, 0.00f, 0.700f, 2.50f, 0.50f, 2.00f, 0.12f, 0.20f, 0.30f, 0.40f, 0.25f, 0.55f, PERF_SLOP,    0.40f, 0.80f, 0.85f }, SPREAD_WIDE },
-    { "Tramonto FM",        "Tastiere",  { ENG_FM,    0.30f, 0.00f, 0.003f, 2.20f, 0.00f, 0.60f, 0.15f, 0.45f, 0.30f, 0.45f, 0.15f, 0.35f, PERF_CHORD,   0.30f, 0.80f, 0.00f }, SPREAD_CLOSE },
-    { "Wurli di notte",     "Tastiere",  { ENG_REED,  0.45f, 0.50f, 0.003f, 1.60f, 0.30f, 0.35f, 0.35f, 0.40f, 0.30f, 0.15f, 0.10f, 0.30f, PERF_SLOP,    0.35f, 0.80f, 0.00f }, SPREAD_CLOSE },
-    { "Valigia stereo",     "Tastiere",  { ENG_REED,  0.40f, 0.35f, 0.003f, 2.00f, 0.35f, 0.45f, 0.55f, 0.40f, 0.30f, 0.10f, 0.10f, 0.35f, PERF_CHORD,   0.30f, 0.80f, 1.00f }, SPREAD_CLOSE },
-    { "Organo della pieve", "Tastiere",  { ENG_ORGAN, 0.40f, 0.50f, 0.006f, 0.50f, 1.00f, 0.08f, 0.35f, 0.50f, 0.30f, 0.60f, 0.00f, 0.35f, PERF_CHORD,   0.30f, 0.75f, 0.00f }, SPREAD_CLOSE },
-    { "Organo rotante",     "Tastiere",  { ENG_ORGAN, 0.55f, 0.70f, 0.006f, 0.50f, 1.00f, 0.10f, 0.45f, 0.50f, 0.40f, 0.75f, 0.00f, 0.30f, PERF_CHORD,   0.30f, 0.72f, 0.80f }, SPREAD_CLOSE },
-    { "Chitarra di carta",  "Corde",     { ENG_VA,    0.35f, 0.10f, 0.002f, 0.70f, 0.00f, 0.30f, 0.00f, 0.40f, 0.30f, 0.20f, 0.10f, 0.30f, PERF_STRUM,   0.30f, 0.85f, 0.00f }, SPREAD_CLOSE },
-    { "Dodici corde",       "Corde",     { ENG_PLUCK, 0.65f, 0.65f, 0.002f, 1.00f, 1.00f, 0.60f, 0.00f, 0.40f, 0.35f, 0.50f, 0.10f, 0.35f, PERF_STRUM,   0.25f, 0.85f, 0.75f }, SPREAD_OPEN },
-    { "Koto del lago",      "Corde",     { ENG_PLUCK, 0.75f, 0.55f, 0.002f, 1.00f, 1.00f, 0.60f, 0.10f, 0.00f, 0.30f, 0.00f, 0.30f, 0.50f, PERF_SLOP,    0.50f, 0.85f, 0.60f }, SPREAD_CLOSE },
-    { "Arpa celtica",       "Corde",     { ENG_PLUCK, 0.55f, 0.80f, 0.002f, 1.00f, 1.00f, 1.50f, 0.00f, 0.00f, 0.30f, 0.15f, 0.15f, 0.60f, PERF_HARP,    0.30f, 0.85f, 1.00f }, SPREAD_CLOSE },
-    { "Arpa di vetro",      "Corde",     { ENG_FM,    0.50f, 0.30f, 0.002f, 1.80f, 0.00f, 1.20f, 0.05f, 0.00f, 0.30f, 0.30f, 0.35f, 0.55f, PERF_HARP,    0.35f, 0.80f, 0.00f }, SPREAD_CLOSE },
-    { "Pizzicato",          "Corde",     { ENG_PLUCK, 0.35f, 0.15f, 0.002f, 1.00f, 1.00f, 0.15f, 0.00f, 0.45f, 0.30f, 0.10f, 0.05f, 0.40f, PERF_CHORD,   0.30f, 0.85f, 0.70f }, SPREAD_OPEN },
-    { "Cascata",            "Arpeggi",   { ENG_VA,    0.60f, 0.20f, 0.002f, 0.40f, 0.40f, 0.25f, 0.00f, 0.35f, 0.40f, 0.30f, 0.45f, 0.40f, PERF_ARP,     0.65f, 0.80f, 0.00f }, SPREAD_CLOSE },
-    { "Pioggia",            "Arpeggi",   { ENG_PLUCK, 0.60f, 0.55f, 0.002f, 1.00f, 1.00f, 0.50f, 0.00f, 0.30f, 0.30f, 0.20f, 0.45f, 0.50f, PERF_ARP,     0.65f, 0.85f, 1.00f }, SPREAD_CLOSE },
-    { "Ritmo in levare",    "Arpeggi",   { ENG_VA,    0.55f, 0.40f, 0.002f, 0.30f, 0.50f, 0.12f, 0.00f, 0.60f, 0.50f, 0.30f, 0.25f, 0.25f, PERF_PATTERN, 0.30f, 0.80f, 0.00f }, SPREAD_CLOSE },
-    { "Treno notturno",     "Arpeggi",   { ENG_SUPER, 0.45f, 0.35f, 0.002f, 0.25f, 0.30f, 0.12f, 0.00f, 0.60f, 0.50f, 0.20f, 0.30f, 0.25f, PERF_PATTERN, 0.55f, 0.80f, 0.70f }, SPREAD_CLOSE },
-    { "Campane lunari",     "Campane",   { ENG_FM,    0.70f, 0.75f, 0.002f, 3.00f, 0.00f, 2.50f, 0.00f, 0.00f, 0.30f, 0.20f, 0.40f, 0.70f, PERF_STRUM,   0.40f, 0.75f, 0.00f }, SPREAD_WIDE },
-    { "Carillon",           "Campane",   { ENG_FM,    0.55f, 0.79f, 0.002f, 1.50f, 0.00f, 1.20f, 0.00f, 0.00f, 0.30f, 0.10f, 0.35f, 0.55f, PERF_ARP,     0.30f, 0.75f, 0.90f }, SPREAD_CLOSE },
-    { "Ottoni",             "Ottoni",    { ENG_VA,    0.30f, 0.30f, 0.050f, 0.60f, 0.75f, 0.25f, 0.12f, 0.50f, 0.40f, 0.20f, 0.10f, 0.35f, PERF_STRUM,   0.05f, 0.80f, 0.00f }, SPREAD_OPEN },
-    { "Fanfara",            "Ottoni",    { ENG_SUPER, 0.38f, 0.22f, 0.060f, 0.50f, 0.80f, 0.25f, 0.12f, 0.50f, 0.40f, 0.15f, 0.10f, 0.35f, PERF_STRUM,   0.05f, 0.78f, 0.50f }, SPREAD_OPEN },
+    /*                                     motore     tono   car.   att.    dec.   sost.  ril.   vib.   basso  t.b.   chor.  delay  river. esecuzione     q.     vol.   st.    ris.   shim.  nastro pompa */
+    { "Lungolago",          "Atmosfere", { ENG_VA,    0.45f, 0.45f, 0.600f, 1.20f, 0.80f, 1.80f, 0.10f, 0.50f, 0.30f, 0.60f, 0.20f, 0.60f, PERF_CHORD,   0.30f, 0.80f, 0.00f, 0.00f, 0.00f, 0.00f, 0.00f }, SPREAD_OPEN },
+    { "Nebbia",             "Atmosfere", { ENG_VA,    0.32f, 0.70f, 1.200f, 2.00f, 0.90f, 2.50f, 0.20f, 0.30f, 0.20f, 0.50f, 0.25f, 0.70f, PERF_CHORD,   0.30f, 0.80f, 0.60f, 0.00f, 0.35f, 0.45f, 0.00f }, SPREAD_WIDE },
+    { "Psichedelia",        "Atmosfere", { ENG_VA,    0.50f, 0.85f, 0.010f, 0.80f, 0.60f, 0.60f, 0.30f, 0.50f, 0.50f, 0.80f, 0.50f, 0.50f, PERF_SLOP,    0.70f, 0.80f, 0.00f, 0.00f, 0.00f, 0.00f, 0.00f }, SPREAD_WIDE },
+    { "Aurora",             "Atmosfere", { ENG_SUPER, 0.40f, 0.45f, 0.900f, 2.00f, 0.85f, 2.20f, 0.08f, 0.35f, 0.25f, 0.35f, 0.20f, 0.75f, PERF_CHORD,   0.30f, 0.75f, 0.90f, 0.00f, 0.00f, 0.00f, 0.00f }, SPREAD_WIDE },
+    { "Cattedrale",         "Atmosfere", { ENG_SUPER, 0.30f, 0.25f, 1.400f, 2.50f, 0.90f, 3.50f, 0.05f, 0.25f, 0.20f, 0.30f, 0.10f, 0.90f, PERF_CHORD,   0.30f, 0.75f, 0.90f, 0.00f, 0.85f, 0.00f, 0.00f }, SPREAD_WIDE },
+    { "Coro di montagna",   "Voci",      { ENG_VOICE, 0.45f, 0.50f, 0.450f, 1.50f, 0.90f, 1.60f, 0.25f, 0.20f, 0.20f, 0.35f, 0.10f, 0.70f, PERF_CHORD,   0.30f, 0.80f, 0.80f, 0.00f, 0.25f, 0.00f, 0.00f }, SPREAD_OPEN },
+    { "Voci dal nastro",    "Voci",      { ENG_VOICE, 0.30f, 0.18f, 0.250f, 1.20f, 0.80f, 1.00f, 0.15f, 0.00f, 0.20f, 0.20f, 0.30f, 0.50f, PERF_SLOP,    0.50f, 0.80f, 0.60f, 0.00f, 0.00f, 0.80f, 0.00f }, SPREAD_CLOSE },
+    { "Tramonto FM",        "Tastiere",  { ENG_FM,    0.30f, 0.00f, 0.003f, 2.20f, 0.00f, 0.60f, 0.15f, 0.45f, 0.30f, 0.45f, 0.15f, 0.35f, PERF_CHORD,   0.30f, 0.80f, 0.00f, 0.00f, 0.00f, 0.00f, 0.00f }, SPREAD_CLOSE },
+    { "Wurli di notte",     "Tastiere",  { ENG_REED,  0.45f, 0.50f, 0.003f, 1.60f, 0.30f, 0.35f, 0.35f, 0.40f, 0.30f, 0.15f, 0.10f, 0.30f, PERF_SLOP,    0.35f, 0.80f, 0.00f, 0.00f, 0.00f, 0.00f, 0.00f }, SPREAD_CLOSE },
+    { "Valigia stereo",     "Tastiere",  { ENG_REED,  0.40f, 0.35f, 0.003f, 2.00f, 0.35f, 0.45f, 0.55f, 0.40f, 0.30f, 0.10f, 0.10f, 0.35f, PERF_CHORD,   0.30f, 0.80f, 1.00f, 0.00f, 0.00f, 0.00f, 0.00f }, SPREAD_CLOSE },
+    { "Cassetta",           "Tastiere",  { ENG_REED,  0.38f, 0.55f, 0.003f, 1.80f, 0.30f, 0.50f, 0.25f, 0.35f, 0.30f, 0.15f, 0.20f, 0.35f, PERF_SLOP,    0.30f, 0.80f, 0.50f, 0.00f, 0.00f, 0.90f, 0.00f }, SPREAD_CLOSE },
+    { "Organo della pieve", "Tastiere",  { ENG_ORGAN, 0.40f, 0.50f, 0.006f, 0.50f, 1.00f, 0.08f, 0.35f, 0.50f, 0.30f, 0.60f, 0.00f, 0.35f, PERF_CHORD,   0.30f, 0.75f, 0.00f, 0.00f, 0.00f, 0.00f, 0.00f }, SPREAD_CLOSE },
+    { "Organo rotante",     "Tastiere",  { ENG_ORGAN, 0.55f, 0.70f, 0.006f, 0.50f, 1.00f, 0.10f, 0.45f, 0.50f, 0.40f, 0.75f, 0.00f, 0.30f, PERF_CHORD,   0.30f, 0.72f, 0.80f, 0.00f, 0.00f, 0.00f, 0.00f }, SPREAD_CLOSE },
+    { "Chitarra di carta",  "Corde",     { ENG_VA,    0.35f, 0.10f, 0.002f, 0.70f, 0.00f, 0.30f, 0.00f, 0.40f, 0.30f, 0.20f, 0.10f, 0.30f, PERF_STRUM,   0.30f, 0.85f, 0.00f, 0.00f, 0.00f, 0.00f, 0.00f }, SPREAD_CLOSE },
+    { "Dodici corde",       "Corde",     { ENG_PLUCK, 0.65f, 0.65f, 0.002f, 1.00f, 1.00f, 0.60f, 0.00f, 0.40f, 0.35f, 0.50f, 0.10f, 0.35f, PERF_STRUM,   0.25f, 0.85f, 0.75f, 0.00f, 0.00f, 0.00f, 0.00f }, SPREAD_OPEN },
+    { "Koto del lago",      "Corde",     { ENG_PLUCK, 0.75f, 0.55f, 0.002f, 1.00f, 1.00f, 0.60f, 0.10f, 0.00f, 0.30f, 0.00f, 0.30f, 0.50f, PERF_SLOP,    0.50f, 0.85f, 0.60f, 0.00f, 0.00f, 0.00f, 0.00f }, SPREAD_CLOSE },
+    { "Arpa celtica",       "Corde",     { ENG_PLUCK, 0.55f, 0.80f, 0.002f, 1.00f, 1.00f, 1.50f, 0.00f, 0.00f, 0.30f, 0.15f, 0.15f, 0.60f, PERF_HARP,    0.30f, 0.85f, 1.00f, 0.00f, 0.00f, 0.00f, 0.00f }, SPREAD_CLOSE },
+    { "Arpa di vetro",      "Corde",     { ENG_FM,    0.50f, 0.30f, 0.002f, 1.80f, 0.00f, 1.20f, 0.05f, 0.00f, 0.30f, 0.30f, 0.35f, 0.55f, PERF_HARP,    0.35f, 0.80f, 0.00f, 0.00f, 0.00f, 0.00f, 0.00f }, SPREAD_CLOSE },
+    { "Cascata",            "Arpeggi",   { ENG_VA,    0.60f, 0.20f, 0.002f, 0.40f, 0.40f, 0.25f, 0.00f, 0.35f, 0.40f, 0.30f, 0.45f, 0.40f, PERF_ARP,     0.65f, 0.80f, 0.00f, 0.00f, 0.00f, 0.00f, 0.00f }, SPREAD_CLOSE },
+    { "Pioggia",            "Arpeggi",   { ENG_PLUCK, 0.60f, 0.55f, 0.002f, 1.00f, 1.00f, 0.50f, 0.00f, 0.30f, 0.30f, 0.20f, 0.45f, 0.50f, PERF_ARP,     0.65f, 0.85f, 1.00f, 0.00f, 0.00f, 0.00f, 0.00f }, SPREAD_CLOSE },
+    { "Acido",              "Arpeggi",   { ENG_VA,    0.18f, 0.75f, 0.002f, 0.22f, 0.10f, 0.10f, 0.00f, 0.45f, 0.60f, 0.00f, 0.35f, 0.15f, PERF_ARP,     0.65f, 0.78f, 0.50f, 0.88f, 0.00f, 0.00f, 0.00f }, SPREAD_CLOSE },
+    { "Ritmo in levare",    "Arpeggi",   { ENG_VA,    0.55f, 0.40f, 0.002f, 0.30f, 0.50f, 0.12f, 0.00f, 0.60f, 0.50f, 0.30f, 0.25f, 0.25f, PERF_PATTERN, 0.30f, 0.80f, 0.00f, 0.00f, 0.00f, 0.00f, 0.00f }, SPREAD_CLOSE },
+    { "Treno notturno",     "Arpeggi",   { ENG_SUPER, 0.45f, 0.35f, 0.002f, 0.25f, 0.30f, 0.12f, 0.00f, 0.60f, 0.50f, 0.20f, 0.30f, 0.25f, PERF_PATTERN, 0.55f, 0.80f, 0.70f, 0.00f, 0.00f, 0.00f, 0.00f }, SPREAD_CLOSE },
+    { "Pompa francese",     "Arpeggi",   { ENG_SUPER, 0.55f, 0.30f, 0.010f, 0.50f, 0.85f, 0.20f, 0.00f, 0.60f, 0.50f, 0.30f, 0.20f, 0.30f, PERF_CHORD,   0.30f, 0.78f, 0.70f, 0.20f, 0.00f, 0.00f, 0.90f }, SPREAD_OPEN },
+    { "Campane lunari",     "Campane",   { ENG_FM,    0.70f, 0.75f, 0.002f, 3.00f, 0.00f, 2.50f, 0.00f, 0.00f, 0.30f, 0.20f, 0.40f, 0.70f, PERF_STRUM,   0.40f, 0.75f, 0.00f, 0.00f, 0.00f, 0.00f, 0.00f }, SPREAD_WIDE },
+    { "Cristalli",          "Campane",   { ENG_FM,    0.65f, 0.79f, 0.002f, 2.50f, 0.00f, 2.00f, 0.00f, 0.00f, 0.30f, 0.20f, 0.30f, 0.70f, PERF_HARP,    0.20f, 0.72f, 1.00f, 0.00f, 0.70f, 0.00f, 0.00f }, SPREAD_CLOSE },
+    { "Ottoni",             "Ottoni",    { ENG_VA,    0.30f, 0.30f, 0.050f, 0.60f, 0.75f, 0.25f, 0.12f, 0.50f, 0.40f, 0.20f, 0.10f, 0.35f, PERF_STRUM,   0.05f, 0.80f, 0.00f, 0.00f, 0.00f, 0.00f, 0.00f }, SPREAD_OPEN },
+    { "Ottanta",            "Ottoni",    { ENG_VA,    0.30f, 0.45f, 0.015f, 0.70f, 0.70f, 0.30f, 0.05f, 0.50f, 0.40f, 0.50f, 0.15f, 0.30f, PERF_CHORD,   0.30f, 0.78f, 0.60f, 0.45f, 0.00f, 0.00f, 0.00f }, SPREAD_OPEN },
 };
 #define PRESET_COUNT ((int)(sizeof(PRESETS) / sizeof(PRESETS[0])))
 #define USER_CAT "Tuoi"
@@ -118,7 +122,7 @@ static const char *OLD_ORDER[12] = {
     "Organo della pieve", "Ottoni", "Ritmo in levare", "Campane lunari", "Chitarra di carta", "Nebbia",
 };
 
-static const char *ENGINE_NAMES[ENG_COUNT] = { "Analogico", "FM", "Piano elettrico", "Organo", "Corda pizzicata", "Ensemble" };
+static const char *ENGINE_NAMES[ENG_COUNT] = { "Analogico", "FM", "Piano elettrico", "Organo", "Corda pizzicata", "Ensemble", "Coro" };
 static const char *PERFORM_NAMES[PERF_COUNT] = { "Accordo", "Strum", "Slop", "Arpeggio", "Pattern", "Arpa" };
 static const char *BEAT_NAMES[BEAT_COUNT] = { "Disco", "Psichedelico", "Trap", "Bossa nova" };
 static const char *SPREAD_NAMES[SPREAD_COUNT] = { "Stretta", "Aperta", "Ampia" };
@@ -200,12 +204,14 @@ enum { MOD_SWAP, MOD_SUS, MOD_SEVENTH, MOD_NINTH, MOD_COUNT };     /* L1, R1, L2
 enum { P_SOUND, P_SAVE_NEW, P_OVERWRITE, P_RESTORE, P_RANDOM, P_RENAME, P_DELETE,
        P_KEY, P_SCALE, P_KEYMODE, P_VOICING, P_SPREAD, P_PERFORM, P_AMOUNT, P_FOLLOW,
        P_ENGINE, P_TONE, P_CHAR, P_ATTACK, P_DECAY, P_SUSTAIN, P_RELEASE, P_VIBRATO,
-       P_BASS, P_BASS_TONE, P_STEREO, P_CHORUS, P_DELAY, P_REVERB, P_VOLUME, P_COUNT };
+       P_BASS, P_BASS_TONE, P_STEREO, P_CHORUS, P_DELAY, P_REVERB, P_VOLUME,
+       P_RESO, P_SHIMMER, P_TAPE, P_PUMP, P_COUNT };
 static const char *PARAM_NAMES[P_COUNT] = {
     "Suono", "Salva come nuovo suono", "Aggiorna il tuo suono", "Ripristina", "Variazione casuale", "Rinomina", "Elimina",
     "Tonalità", "Scala", "Modo tonalità", "Voicing", "Apertura", "Esecuzione", "Quantità", "Cambia con il suono",
     "Motore", "Tono", "Carattere", "Attacco", "Decadimento", "Sostegno", "Rilascio", "Vibrato",
     "Livello", "Tono", "Ampiezza stereo", "Chorus", "Delay", "Riverbero", "Volume",
+    "Risonanza", "Shimmer", "Nastro", "Pompa",
 };
 #define HDR(i) (-1 - (i))
 static const char *const CHORD_HEADERS[3] = { "Tonalità", "Voicing", "Esecuzione" };
@@ -217,9 +223,9 @@ static const int CHORD_ROWS[] = {
 static const char *const SOUND_HEADERS[4] = { "Suono", "Timbro", "Basso", "Effetti" };
 static const int SOUND_ROWS[] = {
     HDR(0), P_SOUND, P_SAVE_NEW, P_OVERWRITE, P_RESTORE, P_RANDOM, P_RENAME, P_DELETE,
-    HDR(1), P_ENGINE, P_TONE, P_CHAR, P_ATTACK, P_DECAY, P_SUSTAIN, P_RELEASE, P_VIBRATO,
+    HDR(1), P_ENGINE, P_TONE, P_CHAR, P_RESO, P_ATTACK, P_DECAY, P_SUSTAIN, P_RELEASE, P_VIBRATO,
     HDR(2), P_BASS, P_BASS_TONE,
-    HDR(3), P_STEREO, P_CHORUS, P_DELAY, P_REVERB, P_VOLUME,
+    HDR(3), P_STEREO, P_CHORUS, P_DELAY, P_REVERB, P_SHIMMER, P_TAPE, P_PUMP, P_VOLUME,
 };
 #define CHORD_ROW_COUNT ((int)(sizeof(CHORD_ROWS) / sizeof(CHORD_ROWS[0])))
 #define SOUND_ROW_COUNT ((int)(sizeof(SOUND_ROWS) / sizeof(SOUND_ROWS[0])))
@@ -625,7 +631,8 @@ static int sound_modified(const OrcApp *a)
     if (s->engine != b->engine || !feq(s->tone, b->tone) || !feq(s->character, b->character) || !feq(s->attack, b->attack) ||
         !feq(s->decay, b->decay) || !feq(s->sustain, b->sustain) || !feq(s->release, b->release) ||
         !feq(s->vibrato, b->vibrato) || !feq(s->bass_level, b->bass_level) || !feq(s->bass_tone, b->bass_tone) ||
-        !feq(s->chorus, b->chorus) || !feq(s->delay, b->delay) || !feq(s->reverb, b->reverb) || !feq(s->stereo, b->stereo))
+        !feq(s->chorus, b->chorus) || !feq(s->delay, b->delay) || !feq(s->reverb, b->reverb) || !feq(s->stereo, b->stereo) ||
+        !feq(s->resonance, b->resonance) || !feq(s->shimmer, b->shimmer) || !feq(s->tape, b->tape) || !feq(s->pump, b->pump))
         return 1;
     return a->set.follow && (s->perform != b->perform || !feq(s->perform_amount, b->perform_amount) || a->set.spread != a->base_spread);
 }
@@ -1237,9 +1244,11 @@ static void settings_default(Settings *s)
 static void sound_write(FILE *f, const OrcSound *d, int spread)
 {
     fprintf(f, "engine=%d\ntone=%g\ncharacter=%g\nattack=%g\ndecay=%g\nsustain=%g\nrelease=%g\nvibrato=%g\nbass=%g\n"
-               "bass_tone=%g\nchorus=%g\ndelay=%g\nreverb=%g\nperform=%d\namount=%g\nvolume=%g\nstereo=%g\nspread=%d\n",
+               "bass_tone=%g\nchorus=%g\ndelay=%g\nreverb=%g\nperform=%d\namount=%g\nvolume=%g\nstereo=%g\nspread=%d\n"
+               "resonance=%g\nshimmer=%g\ntape=%g\npump=%g\n",
             d->engine, d->tone, d->character, d->attack, d->decay, d->sustain, d->release, d->vibrato, d->bass_level,
-            d->bass_tone, d->chorus, d->delay, d->reverb, d->perform, d->perform_amount, d->volume, d->stereo, spread);
+            d->bass_tone, d->chorus, d->delay, d->reverb, d->perform, d->perform_amount, d->volume, d->stereo, spread,
+            d->resonance, d->shimmer, d->tape, d->pump);
 }
 
 static int sound_read(OrcSound *d, int *spread, const char *k, float v)
@@ -1261,6 +1270,10 @@ static int sound_read(OrcSound *d, int *spread, const char *k, float v)
     else if (!strcmp(k, "amount")) d->perform_amount = clamp01(v);
     else if (!strcmp(k, "volume")) d->volume = clamp01(v);
     else if (!strcmp(k, "stereo")) d->stereo = clamp01(v);
+    else if (!strcmp(k, "resonance")) d->resonance = clamp01(v);
+    else if (!strcmp(k, "shimmer")) d->shimmer = clamp01(v);
+    else if (!strcmp(k, "tape")) d->tape = clamp01(v);
+    else if (!strcmp(k, "pump")) d->pump = clamp01(v);
     else if (!strcmp(k, "spread")) *spread = (int)clampf(v, 0, SPREAD_COUNT - 1);
     else return 0;
     return 1;
@@ -1560,6 +1573,9 @@ static void sound_variation(OrcApp *a)
     s->delay = clamp01(s->delay + 0.12f * rnd(a));
     s->reverb = clamp01(s->reverb + 0.15f * rnd(a));
     s->stereo = clamp01(s->stereo + 0.25f * rnd(a));
+    if (s->engine == ENG_VA || s->engine == ENG_SUPER) s->resonance = clamp01(s->resonance + 0.15f * rnd(a));
+    if (s->shimmer > 0.0f) s->shimmer = clamp01(s->shimmer + 0.15f * rnd(a));
+    if (s->tape > 0.0f) s->tape = clamp01(s->tape + 0.15f * rnd(a));
     sound_changed(a);
     toast(a, "Variazione: A per un'altra, Ripristina per tornare");
 }
@@ -2106,6 +2122,10 @@ static float param_bar(const OrcApp *a, int p)
     case P_BASS: return s->bass_level;
     case P_BASS_TONE: return s->bass_tone;
     case P_STEREO: return s->stereo;
+    case P_RESO: return s->resonance;
+    case P_SHIMMER: return s->shimmer;
+    case P_TAPE: return s->tape;
+    case P_PUMP: return s->pump;
     case P_CHORUS: return s->chorus;
     case P_DELAY: return s->delay;
     case P_REVERB: return s->reverb;
@@ -2125,6 +2145,7 @@ static const char *param_label(const OrcApp *a, int p)
     if (p == P_CHAR && e == ENG_ORGAN) return "Registri";
     if (p == P_CHAR && e == ENG_PLUCK) return "Durata";
     if (p == P_CHAR && e == ENG_SUPER) return "Desintonia";
+    if (p == P_CHAR && e == ENG_VOICE) return "Vocale";
     if (p == P_OVERWRITE && sound_is_user(a, a->set.sound)) return "Aggiorna";
     return PARAM_NAMES[p];
 }
@@ -2172,6 +2193,9 @@ static void param_text(const OrcApp *a, int p, char *out, size_t n)
             snprintf(out, n, "%s", R[(int)(clamp01(s->character) * 6.99f)]);
         } else if (s->engine == ENG_PLUCK) {
             seconds(out, n, 0.25f * exp2f(clamp01(s->character) * 5.0f));
+        } else if (s->engine == ENG_VOICE) {
+            static const char *VOC[9] = { "U", "U-O", "O", "O-A", "A", "A-E", "E", "E-I", "I" };
+            snprintf(out, n, "%s", VOC[(int)lrintf(clamp01(s->character) * 8.0f)]);
         } else percent(out, n, s->character);
         break;
     case P_ATTACK: seconds(out, n, s->attack); break;
@@ -2223,6 +2247,10 @@ static void param_change(OrcApp *a, int p, int dir, int big)
     case P_BASS: s->bass_level = clamp01(s->bass_level + dir * step); break;
     case P_BASS_TONE: s->bass_tone = clamp01(s->bass_tone + dir * step); break;
     case P_STEREO: s->stereo = clamp01(s->stereo + dir * step); break;
+    case P_RESO: s->resonance = clamp01(s->resonance + dir * step); break;
+    case P_SHIMMER: s->shimmer = clamp01(s->shimmer + dir * step); break;
+    case P_TAPE: s->tape = clamp01(s->tape + dir * step); break;
+    case P_PUMP: s->pump = clamp01(s->pump + dir * step); break;
     case P_CHORUS: s->chorus = clamp01(s->chorus + dir * step); break;
     case P_DELAY: s->delay = clamp01(s->delay + dir * step); break;
     case P_REVERB: s->reverb = clamp01(s->reverb + dir * step); break;
@@ -2998,6 +3026,8 @@ static void draw_params(OrcApp *a, Canvas *c)
         r->bar = param_bar(a, p);
         if (p == P_KEYMODE && !a->set.keymode) r->color = C_MUTED;
         if (p == P_FOLLOW && !a->set.follow) r->color = C_MUTED;
+        if (p == P_RESO && a->set.snd.engine != ENG_VA && a->set.snd.engine != ENG_SUPER) r->color = C_DIM;   /* solo con il filtro */
+        if (p == P_SHIMMER && a->set.snd.reverb < 0.01f) r->color = C_DIM;   /* serve il riverbero */
         if (is_action(p) && !action_ok(a, p)) r->color = C_DIM;
         if (p == P_DELETE && a->del_armed) r->color = C_RED;
     }

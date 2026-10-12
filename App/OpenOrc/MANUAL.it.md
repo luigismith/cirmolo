@@ -5,7 +5,7 @@
 OpenOrc è un sintetizzatore di accordi per la Miyoo Flip, ispirato all'Orchid di Telepathic Instruments.
 Si suona con i tasti della Flip oppure con una tastiera MIDI USB: è pensato per la **Akai MPK mini IV**,
 ma impara i controlli di qualunque tastiera. Un tasto (o un pulsante) suona un accordo intero, con il
-basso, nel modo scelto: accordo pieno, strum, arpeggio, arpa e altri. Ha sei motori di suono, 25 suoni
+basso, nel modo scelto: accordo pieno, strum, arpeggio, arpa e altri. Ha sette motori di suono, 28 suoni
 di fabbrica in stereo, i tuoi suoni salvati, batteria e un looper a strati.
 
 Questo manuale descrive la versione del ramo `cirmolo` di ottobre 2026.
@@ -257,14 +257,18 @@ apertura. Il **volume** no: resta quello che hai scelto, da un suono all'altro.
 
 | Gruppo | Parametro | Cosa fa |
 |---|---|---|
-| **Timbro** | Motore | Analogico, FM, Piano elettrico, Organo, Corda pizzicata, Ensemble |
+| **Timbro** | Motore | Analogico, FM, Piano elettrico, Organo, Corda pizzicata, Ensemble, Coro |
 | | Tono | brillantezza: filtro, indice FM, armoniche o pizzico |
 | | Carattere | dipende dal motore (vedi sotto) |
 | | Attacco, Decadimento, Sostegno, Rilascio | l'inviluppo del volume |
+| | Risonanza | il picco del filtro (Analogico ed Ensemble): alzandola il suono «canta» e l'inviluppo del filtro si sente di più, fino all'acido |
 | | Vibrato | vibrato; nel piano elettrico diventa **Tremolo** |
 | **Basso** | Livello, Tono | il basso monofonico che suona la fondamentale (Do2–Si2); 0 lo spegne |
 | **Effetti** | Ampiezza stereo | quanto il suono si allarga a destra e a sinistra (vedi sotto) |
 | | Chorus, Delay, Riverbero | effetti; il delay è ping-pong a croma puntata, legato al tempo |
+| | Shimmer | il riverbero rimanda la sua coda un'ottava sopra: code luminose, da cattedrale (serve il riverbero) |
+| | Nastro | il suono passa da una cassetta: velocità che oscilla, saturazione calda, alte più scure, un filo di fruscio |
+| | Pompa | con il trasporto in moto (START) il suono si abbassa a ogni battito e risale, come con il sidechain della cassa |
 | | Volume | volume generale |
 
 | Motore | Com'è | Cosa cambia il Carattere |
@@ -275,6 +279,7 @@ apertura. Il **volume** no: resta quello che hai scelto, da un suono all'altro.
 | Organo | armoniche sommate, come i registri | si chiama **Registri**: quante armoniche entrano |
 | Corda pizzicata | una corda vera simulata (Karplus-Strong): chitarra, arpa, koto | si chiama **Durata**: quanto suona la corda, da 0,25 a 8 secondi |
 | Ensemble | cinque oscillatori desintonizzati, larghi in stereo: archi, pad, ottoni | si chiama **Desintonia**: quanto sono scostati gli oscillatori |
+| Coro | voci umane: una sorgente come le corde vocali, filtrata dalle formanti di una vocale | si chiama **Vocale**: U, O, A, E, I, dalla più scura alla più chiara |
 
 Con la corda pizzicata il **Tono** dice quanto è brillante il pizzico e quanto restano le armoniche
 alte. Per far suonare la corda finché vibra, tieni il **Sostegno** al massimo.
@@ -286,35 +291,38 @@ a sinistra alla più acuta a destra, e arpeggi, strum e arpa passano da un lato 
 - il basso resta sempre al centro.
 
 ### I suoni di fabbrica
-Il numero è quello del program change. I suoni nuovi di ottobre 2026 sono in stereo.
+Il numero è quello del program change. L'ultima colonna dice cosa distingue i suoni nati con gli effetti nuovi.
 
-| # | Suono | Categoria | Motore | Esecuzione |
-|---|---|---|---|---|
-| 0 | Lungolago | Atmosfere | Analogico | Accordo |
-| 1 | Nebbia | Atmosfere | Analogico | Accordo |
-| 2 | Psichedelia | Atmosfere | Analogico | Slop |
-| 3 | Aurora | Atmosfere | Ensemble | Accordo |
-| 4 | Archi d'inverno | Atmosfere | Ensemble | Accordo |
-| 5 | Respiro di vetro | Atmosfere | FM | Slop |
-| 6 | Tramonto FM | Tastiere | FM | Accordo |
-| 7 | Wurli di notte | Tastiere | Piano elettrico | Slop |
-| 8 | Valigia stereo | Tastiere | Piano elettrico | Accordo |
-| 9 | Organo della pieve | Tastiere | Organo | Accordo |
-| 10 | Organo rotante | Tastiere | Organo | Accordo |
-| 11 | Chitarra di carta | Corde | Analogico | Strum |
-| 12 | Dodici corde | Corde | Corda pizzicata | Strum |
-| 13 | Koto del lago | Corde | Corda pizzicata | Slop |
-| 14 | Arpa celtica | Corde | Corda pizzicata | Arpa |
-| 15 | Arpa di vetro | Corde | FM | Arpa |
-| 16 | Pizzicato | Corde | Corda pizzicata | Accordo |
-| 17 | Cascata | Arpeggi | Analogico | Arpeggio |
-| 18 | Pioggia | Arpeggi | Corda pizzicata | Arpeggio |
-| 19 | Ritmo in levare | Arpeggi | Analogico | Pattern |
-| 20 | Treno notturno | Arpeggi | Ensemble | Pattern |
-| 21 | Campane lunari | Campane | FM | Strum |
-| 22 | Carillon | Campane | FM | Arpeggio |
-| 23 | Ottoni | Ottoni | Analogico | Strum |
-| 24 | Fanfara | Ottoni | Ensemble | Strum |
+| # | Suono | Categoria | Motore | Esecuzione | Cosa ha di speciale |
+|---|---|---|---|---|---|
+| 0 | Lungolago | Atmosfere | Analogico | Accordo |  |
+| 1 | Nebbia | Atmosfere | Analogico | Accordo | nastro e shimmer |
+| 2 | Psichedelia | Atmosfere | Analogico | Slop |  |
+| 3 | Aurora | Atmosfere | Ensemble | Accordo |  |
+| 4 | Cattedrale | Atmosfere | Ensemble | Accordo | shimmer |
+| 5 | Coro di montagna | Voci | Coro | Accordo | vocale A |
+| 6 | Voci dal nastro | Voci | Coro | Slop | vocale O-U, nastro |
+| 7 | Tramonto FM | Tastiere | FM | Accordo |  |
+| 8 | Wurli di notte | Tastiere | Piano elettrico | Slop |  |
+| 9 | Valigia stereo | Tastiere | Piano elettrico | Accordo |  |
+| 10 | Cassetta | Tastiere | Piano elettrico | Slop | nastro |
+| 11 | Organo della pieve | Tastiere | Organo | Accordo |  |
+| 12 | Organo rotante | Tastiere | Organo | Accordo |  |
+| 13 | Chitarra di carta | Corde | Analogico | Strum |  |
+| 14 | Dodici corde | Corde | Corda pizzicata | Strum |  |
+| 15 | Koto del lago | Corde | Corda pizzicata | Slop |  |
+| 16 | Arpa celtica | Corde | Corda pizzicata | Arpa |  |
+| 17 | Arpa di vetro | Corde | FM | Arpa |  |
+| 18 | Cascata | Arpeggi | Analogico | Arpeggio |  |
+| 19 | Pioggia | Arpeggi | Corda pizzicata | Arpeggio |  |
+| 20 | Acido | Arpeggi | Analogico | Arpeggio | risonanza |
+| 21 | Ritmo in levare | Arpeggi | Analogico | Pattern |  |
+| 22 | Treno notturno | Arpeggi | Ensemble | Pattern |  |
+| 23 | Pompa francese | Arpeggi | Ensemble | Accordo | pompa (con START) |
+| 24 | Campane lunari | Campane | FM | Strum |  |
+| 25 | Cristalli | Campane | FM | Arpa | shimmer |
+| 26 | Ottoni | Ottoni | Analogico | Strum |  |
+| 27 | Ottanta | Ottoni | Analogico | Accordo | risonanza |
 
 ### I file dei tuoi suoni
 Ogni suono tuo è un file di testo in `Saves/openorc/suoni/`, per esempio `nebbia-2.txt`:

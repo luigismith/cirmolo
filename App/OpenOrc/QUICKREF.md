@@ -87,13 +87,13 @@ Wheels: pitch ±2 · modulation = vibrato · pedal = sustain · program change =
 
 ## Factory sounds (number = program change)
 
-| Atmosfere (pads) | Tastiere (keys) | Corde (strings) | Arpeggi | Campane, Ottoni (bells, brass) |
-|---|---|---|---|---|
-| 0 Lungolago | 6 Tramonto FM | 11 Chitarra di carta | 17 Cascata | 21 Campane lunari |
-| 1 Nebbia | 7 Wurli di notte | 12 Dodici corde | 18 Pioggia | 22 Carillon |
-| 2 Psichedelia | 8 Valigia stereo | 13 Koto del lago | 19 Ritmo in levare | 23 Ottoni |
-| 3 Aurora | 9 Organo della pieve | 14 Arpa celtica | 20 Treno notturno | 24 Fanfara |
-| 4 Archi d'inverno | 10 Organo rotante | 15 Arpa di vetro | | |
-| 5 Respiro di vetro | | 16 Pizzicato | | |
+| Atmosfere (pads) | Voci (choir) | Tastiere (keys) | Corde (strings) | Arpeggi | Campane, Ottoni (bells, brass) |
+|---|---|---|---|---|---|
+| 0 Lungolago | 5 Coro di montagna | 7 Tramonto FM | 13 Chitarra di carta | 18 Cascata | 24 Campane lunari |
+| 1 Nebbia | 6 Voci dal nastro | 8 Wurli di notte | 14 Dodici corde | 19 Pioggia | 25 Cristalli |
+| 2 Psichedelia |  | 9 Valigia stereo | 15 Koto del lago | 20 Acido | 26 Ottoni |
+| 3 Aurora |  | 10 Cassetta | 16 Arpa celtica | 21 Ritmo in levare | 27 Ottanta |
+| 4 Cattedrale |  | 11 Organo della pieve | 17 Arpa di vetro | 22 Treno notturno |  |
+|  |  | 12 Organo rotante |  | 23 Pompa francese |  |
 
-From 25 on: your own sounds. **\*** after the name = edited sound, not saved.
+From 28 on: your own sounds. **\*** after the name = edited sound, not saved.

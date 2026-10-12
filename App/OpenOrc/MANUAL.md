@@ -5,7 +5,7 @@
 OpenOrc is a chord synthesizer for the Miyoo Flip, inspired by the Orchid by Telepathic Instruments. You
 play it with the Flip's buttons or with a USB MIDI keyboard. It is designed for the **Akai MPK mini IV**,
 but it learns the controls of any keyboard. One key (or button) plays a whole chord, with a bass line, in
-the chosen style: block chord, strum, arpeggio, harp and more. It has six sound engines, 25 factory sounds
+the chosen style: block chord, strum, arpeggio, harp and more. It has seven sound engines, 28 factory sounds
 in stereo, your own saved sounds, drums and a layered looper.
 
 The app itself is in Italian; this manual gives the on-screen names in Italian with a translation. It
@@ -257,14 +257,18 @@ spread. The **volume** does not: it stays where you set it from one sound to the
 
 | Group | Setting | What it does |
 |---|---|---|
-| **Timbro** (timbre) | Motore (engine) | Analog, FM, Electric piano, Organ, Plucked string, Ensemble |
+| **Timbro** (timbre) | Motore (engine) | Analog, FM, Electric piano, Organ, Plucked string, Ensemble, Choir |
 | | Tono (tone) | brightness: filter, FM index, harmonics or pluck |
 | | Carattere (character) | depends on the engine (below) |
 | | Attack, Decay, Sustain, Release | volume envelope |
+| | Risonanza (resonance) | filter peak (Analog and Ensemble): turn it up and the sound sings, with more filter envelope, up to acid |
 | | Vibrato | vibrato; on the electric piano it becomes **Tremolo** |
 | **Basso** (bass) | Level, Tone | mono bass playing the root (C2–B2); 0 turns it off |
 | **Effetti** (effects) | Ampiezza stereo (stereo width) | how wide the sound spreads left and right (below) |
 | | Chorus, Delay, Riverbero | effects; the delay is ping-pong at a dotted eighth, synced to tempo |
+| | Shimmer | the reverb feeds its tail back an octave up: bright, cathedral-like tails (needs reverb) |
+| | Nastro (tape) | the sound goes through a cassette: wobbling speed, warm saturation, darker highs, a little hiss |
+| | Pompa (pump) | with the transport running (START) the sound dips on every beat and comes back, like kick sidechaining |
 | | Volume | master volume |
 
 | Engine | What it is | What Character changes |
@@ -275,6 +279,7 @@ spread. The **volume** does not: it stays where you set it from one sound to the
 | Organo (organ) | summed harmonics, like drawbars | shown as **Registri** (drawbars): how many harmonics come in |
 | Corda pizzicata (plucked string) | a simulated real string (Karplus-Strong): guitar, harp, koto | shown as **Durata** (length): how long the string rings, 0.25 to 8 seconds |
 | Ensemble | five detuned oscillators, wide in stereo: strings, pads, brass | shown as **Desintonia** (detune): how far apart the oscillators are |
+| Coro (choir) | human voices: a vocal-cord-like source filtered by the formants of a vowel | shown as **Vocale** (vowel): U, O, A, E, I, from darkest to brightest |
 
 With the plucked string, **Tone** sets how bright the pluck is and how long the high harmonics last. To
 let the string ring as long as it vibrates, keep **Sustain** at maximum.
@@ -286,35 +291,38 @@ on the left to the highest on the right, and arpeggios, strums and harp sweeps t
 - the bass always stays in the centre.
 
 ### Factory sounds
-The number is the program change number. The sounds added in October 2026 are in stereo.
+The number is the program change number. The last column says what sets apart the sounds built on the new effects.
 
-| # | Sound | Category | Engine | Play mode |
-|---|---|---|---|---|
-| 0 | Lungolago | Atmosfere | Analog | Chord |
-| 1 | Nebbia | Atmosfere | Analog | Chord |
-| 2 | Psichedelia | Atmosfere | Analog | Slop |
-| 3 | Aurora | Atmosfere | Ensemble | Chord |
-| 4 | Archi d'inverno | Atmosfere | Ensemble | Chord |
-| 5 | Respiro di vetro | Atmosfere | FM | Slop |
-| 6 | Tramonto FM | Tastiere | FM | Chord |
-| 7 | Wurli di notte | Tastiere | Electric piano | Slop |
-| 8 | Valigia stereo | Tastiere | Electric piano | Chord |
-| 9 | Organo della pieve | Tastiere | Organ | Chord |
-| 10 | Organo rotante | Tastiere | Organ | Chord |
-| 11 | Chitarra di carta | Corde | Analog | Strum |
-| 12 | Dodici corde | Corde | Plucked string | Strum |
-| 13 | Koto del lago | Corde | Plucked string | Slop |
-| 14 | Arpa celtica | Corde | Plucked string | Harp |
-| 15 | Arpa di vetro | Corde | FM | Harp |
-| 16 | Pizzicato | Corde | Plucked string | Chord |
-| 17 | Cascata | Arpeggi | Analog | Arpeggio |
-| 18 | Pioggia | Arpeggi | Plucked string | Arpeggio |
-| 19 | Ritmo in levare | Arpeggi | Analog | Pattern |
-| 20 | Treno notturno | Arpeggi | Ensemble | Pattern |
-| 21 | Campane lunari | Campane | FM | Strum |
-| 22 | Carillon | Campane | FM | Arpeggio |
-| 23 | Ottoni | Ottoni | Analog | Strum |
-| 24 | Fanfara | Ottoni | Ensemble | Strum |
+| # | Sound | Category | Engine | Play mode | What's special |
+|---|---|---|---|---|---|
+| 0 | Lungolago | Atmosfere | Analog | Chord |  |
+| 1 | Nebbia | Atmosfere | Analog | Chord | tape and shimmer |
+| 2 | Psichedelia | Atmosfere | Analog | Slop |  |
+| 3 | Aurora | Atmosfere | Ensemble | Chord |  |
+| 4 | Cattedrale | Atmosfere | Ensemble | Chord | shimmer |
+| 5 | Coro di montagna | Voci | Choir | Chord | vowel A |
+| 6 | Voci dal nastro | Voci | Choir | Slop | vowel O-U, tape |
+| 7 | Tramonto FM | Tastiere | FM | Chord |  |
+| 8 | Wurli di notte | Tastiere | Electric piano | Slop |  |
+| 9 | Valigia stereo | Tastiere | Electric piano | Chord |  |
+| 10 | Cassetta | Tastiere | Electric piano | Slop | tape |
+| 11 | Organo della pieve | Tastiere | Organ | Chord |  |
+| 12 | Organo rotante | Tastiere | Organ | Chord |  |
+| 13 | Chitarra di carta | Corde | Analog | Strum |  |
+| 14 | Dodici corde | Corde | Plucked string | Strum |  |
+| 15 | Koto del lago | Corde | Plucked string | Slop |  |
+| 16 | Arpa celtica | Corde | Plucked string | Harp |  |
+| 17 | Arpa di vetro | Corde | FM | Harp |  |
+| 18 | Cascata | Arpeggi | Analog | Arpeggio |  |
+| 19 | Pioggia | Arpeggi | Plucked string | Arpeggio |  |
+| 20 | Acido | Arpeggi | Analog | Arpeggio | resonance |
+| 21 | Ritmo in levare | Arpeggi | Analog | Pattern |  |
+| 22 | Treno notturno | Arpeggi | Ensemble | Pattern |  |
+| 23 | Pompa francese | Arpeggi | Ensemble | Chord | pump (with START) |
+| 24 | Campane lunari | Campane | FM | Strum |  |
+| 25 | Cristalli | Campane | FM | Harp | shimmer |
+| 26 | Ottoni | Ottoni | Analog | Strum |  |
+| 27 | Ottanta | Ottoni | Analog | Chord | resonance |
 
 ### Your sound files
 Each sound of yours is a text file in `Saves/openorc/suoni/`, for example `nebbia-2.txt`:

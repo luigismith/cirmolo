@@ -95,6 +95,10 @@ void ia_scan_counts(const IaScan *s, int *notes, int *knobs, int *buttons, int *
     if (bends) *bends = bd;
 }
 
+/* Un gruppo di note vicine e' la tastiera da pianoforte? Sul canale 10 (quello della batteria) di solito ci
+   sono i pad, anche 16 in fila (due banchi): li' servono piu' di 20 note. */
+static int keys_like(int cnt, int span, int ch) { return (cnt >= 13 && span >= 12 && ch != 9) || cnt > 20; }
+
 /* ------------------------------------------------------------------ descrizioni */
 typedef struct { char *p; size_t len, cap; } Out;
 static void out_printf(Out *o, const char *fmt, ...) __attribute__((format(printf, 2, 3)));
@@ -137,15 +141,20 @@ char *ia_scan_describe(const IaScan *s, int en)
     qsort(v, (size_t)n, sizeof(v[0]), cmp_ctl);
     /* note: gruppi di numeri vicini (salti di al massimo 2) sulla stessa porta e lo stesso canale */
     for (int i = 0; i < n && v[i]->kind == IA_NOTE;) {
-        int j = i, vmin = 128, vmax = -1;
+        int j = i, vmin = 128, vmax = -1, first = 1 << 30;
         while (j + 1 < n && v[j + 1]->kind == IA_NOTE && v[j + 1]->port == v[i]->port && v[j + 1]->ch == v[i]->ch &&
                v[j + 1]->num - v[j]->num <= 2)
             j++;
-        for (int k = i; k <= j; k++) { if (v[k]->vmin < vmin) vmin = v[k]->vmin; if (v[k]->vmax > vmax) vmax = v[k]->vmax; }
-        int cnt = j - i + 1, keys = cnt >= 13 && v[j]->num - v[i]->num >= 12;
+        for (int k = i; k <= j; k++) {
+            if (v[k]->vmin < vmin) vmin = v[k]->vmin;
+            if (v[k]->vmax > vmax) vmax = v[k]->vmax;
+            if (v[k]->order < first) first = v[k]->order;
+        }
+        int cnt = j - i + 1, keys = keys_like(cnt, v[j]->num - v[i]->num, v[i]->ch);
         if (en)
-            out_printf(&o, "- notes %d-%d (%d different), port %d, channel %d, velocity %d-%d%s\n", v[i]->num, v[j]->num, cnt,
-                       v[i]->port + 1, v[i]->ch + 1, vmin, vmax, keys ? ": probably the piano keys" : "");
+            out_printf(&o, "- notes %d-%d (%d different), port %d, channel %d, velocity %d-%d, first moved at step %d%s\n",
+                       v[i]->num, v[j]->num, cnt, v[i]->port + 1, v[i]->ch + 1, vmin, vmax, first + 1,
+                       keys ? ": probably the piano keys" : (v[i]->ch == 9 ? ": probably drum pads (channel 10 is the drum channel)" : ""));
         else if (cnt == 1)
             out_printf(&o, "Nota %d · porta %d · canale %d\n", v[i]->num, v[i]->port + 1, v[i]->ch + 1);
         else
@@ -185,8 +194,8 @@ char *ia_scan_describe(const IaScan *s, int en)
             static const char *T[4] = { "absolute (knob, fader or wheel)", "only 0 and 127 (button)",
                                         "relative (encoder: 1-63 up, 65-127 down)", "relative around 64 (encoder)" };
             const char *hint = c->num == 1 ? ", maybe the modulation wheel" : (c->num == 64 ? ", maybe the sustain pedal" : "");
-            out_printf(&o, "- cc %d, port %d, channel %d, %d messages, values %d-%d, %s%s\n", c->num, c->port + 1, c->ch + 1,
-                       c->count, c->vmin, c->vmax, T[t], hint);
+            out_printf(&o, "- cc %d, port %d, channel %d, %d messages, values %d-%d, first moved at step %d, %s%s\n", c->num,
+                       c->port + 1, c->ch + 1, c->count, c->vmin, c->vmax, c->order + 1, T[t], hint);
         } else {
             static const char *T[4] = { "manopola", "pulsante", "manopola relativa", "manopola relativa" };
             out_printf(&o, "CC %d · porta %d · canale %d: %s\n", c->num, c->port + 1, c->ch + 1, T[t]);
@@ -244,6 +253,11 @@ char *ia_system_prompt(void)
         "exploring it, then you assign OpenOrc functions to those controls.\n"
         "Use what you know about this controller model (its physical layout, banks and factory MIDI settings) "
         "to keep a natural order: pads top row left to right, then bottom row; knobs K1 to K8 left to right.\n"
+        "When you are not sure of the physical order, follow the order in which the user first moved the controls "
+        "(\"first moved at step\"): people explore left to right and top to bottom.\n"
+        "On MPC-style pads (notes 36-51, usually channel 10) note 36 is the bottom-left pad: bank A has 36-39 in the "
+        "bottom row and 40-43 in the top row, bank B has 44-47 in the bottom row and 48-51 in the top row. Use bank A "
+        "for the chord pads (top row: qualities, bottom row: extensions) and bank B for the function pads.\n"
         "Rules:\n"
         "1. Use only controls from the list, with their exact type, number, channel and port.\n"
         "2. Never assign the piano keys: they play chords and melody in OpenOrc.\n"
@@ -332,7 +346,7 @@ static int is_key_note(const IaScan *s, int port, int ch, int num)
     }
     int cnt = 0;
     for (int k = lo; k <= hi; k++) cnt += has[k];
-    return cnt >= 13 && hi - lo >= 12;
+    return keys_like(cnt, hi - lo, ch);
 }
 
 static int parse_one(const JNode *v, int *kind, int *num, int *ch, int *port)

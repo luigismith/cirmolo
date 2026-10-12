@@ -321,7 +321,7 @@ struct OrcApp {
     int ai;                                       /* AI_OFF, AI_ASK, AI_LISTEN, AI_WAIT, AI_SHOW, AI_ERROR */
     IaScan scan;
     IaMap ai_map[T_COUNT];
-    int ai_knob_mode, ai_sel, ai_scroll, ai_count;
+    int ai_knob_mode, ai_sel, ai_scroll, ai_count, ai_try;
     char ai_dev[64], ai_long[128], ai_name[64], ai_note[400], ai_err[300], ai_model[96], ai_last[96], ai_skip[64];
     char ai_dir[512];                             /* Saves/claude: fornitori e chiavi di Chiedi all'IA */
     char *ai_fake;                                /* risposta finta (prove) */
@@ -1756,16 +1756,18 @@ static void ai_listen(OrcApp *a)
 /* Il modello: il migliore gratuito tra quelli con una chiave salvata in Chiedi all'IA; altrimenti quello
    scelto per le funzioni IA della console. Groq con gpt-oss 120B: gratis senza carta, veloce, bravo a
    rispondere in JSON. */
-static int ai_pick(OrcApp *a, const Provider **pp, Model *mm, char *key, size_t keyn)
+static int ai_pick(OrcApp *a, int from, const Provider **pp, Model *mm, char *key, size_t keyn)
 {
     static const struct { const char *prov, *model; } FREE[] = {
         { "groq", "openai/gpt-oss-120b" },
+        { "groq", "qwen/qwen3.8-27b" },                /* limiti al minuto separati da gpt-oss */
+        { "groq", "llama-3.3-70b-versatile" },
         { "openrouter", "nvidia/nemotron-3-ultra-550b-a55b:free" },
         { "zai", "glm-4.7-flash" },
         { "mistral", "mistral-medium-latest" },
     };
     if (!a->reg_loaded) { registry_load(&a->reg, a->ai_dir); a->reg_loaded = 1; }
-    for (size_t i = 0; i < sizeof(FREE) / sizeof(FREE[0]); i++) {
+    for (size_t i = (size_t)from; i < sizeof(FREE) / sizeof(FREE[0]); i++) {
         int pi = registry_find(&a->reg, FREE[i].prov);
         if (pi < 0) continue;
         const Provider *p = &a->reg.p[pi];
@@ -1775,13 +1777,15 @@ static int ai_pick(OrcApp *a, const Provider **pp, Model *mm, char *key, size_t 
         if (mi >= 0) *mm = p->models[mi];
         else { memset(mm, 0, sizeof(*mm)); snprintf(mm->id, sizeof(mm->id), "%s", FREE[i].model); snprintf(mm->name, sizeof(mm->name), "%s", FREE[i].model); }
         *pp = p;
+        a->ai_try = (int)i;
         return 0;
     }
+    if (from > 0) return -1;
     IaSettings st;
     ia_settings_read(a->ai_dir, &st);
     const Model *m = NULL;
     char err[200];
-    if (!ia_console_model(&a->reg, &st, a->ai_dir, pp, &m, key, keyn, err, sizeof(err)) && m) { *mm = *m; return 0; }
+    if (!ia_console_model(&a->reg, &st, a->ai_dir, pp, &m, key, keyn, err, sizeof(err)) && m) { *mm = *m; a->ai_try = 99; return 0; }
     return -1;
 }
 
@@ -1801,6 +1805,8 @@ static void ai_finish(OrcApp *a, const char *text)
 
 static void reply_sink(void *ud, const char *d, size_t n) { reply_feed(ud, d, n); }
 
+static void ai_request(OrcApp *a, int from);
+
 static void ai_send(OrcApp *a)
 {
     int notes, knobs, buttons, bends;
@@ -1813,12 +1819,21 @@ static void ai_send(OrcApp *a)
         ai_finish(a, a->ai_fake);
         return;
     }
+    ai_request(a, 0);
+}
+
+/* Domanda al modello candidato numero from (o al primo con una chiave dopo di lui). */
+static void ai_request(OrcApp *a, int from)
+{
     const Provider *p = NULL;
     Model m;
     char key[256];
-    if (ai_pick(a, &p, &m, key, sizeof(key))) {
-        snprintf(a->ai_err, sizeof(a->ai_err), "Serve una chiave gratuita. Consigliata: Groq, gratis senza carta, su console.groq.com. "
-                 "Salvala in Chiedi all'IA, scheda Fornitori, oppure in Saves/claude/chiavi/groq.txt.");
+    if (ai_pick(a, from, &p, &m, key, sizeof(key))) {
+        if (from > 0)
+            snprintf(a->ai_err, sizeof(a->ai_err), "I modelli gratuiti hanno raggiunto il limite di richieste al minuto: riprova tra un minuto.");
+        else
+            snprintf(a->ai_err, sizeof(a->ai_err), "Serve una chiave gratuita. Consigliata: Groq, gratis senza carta, su console.groq.com. "
+                     "Salvala in Chiedi all'IA, scheda Fornitori, oppure in Saves/claude/chiavi/groq.txt.");
         a->ai = AI_ERROR;
         return;
     }
@@ -1857,6 +1872,11 @@ static void ai_poll(OrcApp *a)
     char err[200];
     if (!net_poll(&a->xfer, reply_sink, &a->reply, &code, err, sizeof(err))) return;
     reply_finish(&a->reply, code, err);
+    if (a->reply.state != RS_DONE && a->reply.http_status == 429 && a->ai_try < 90) {   /* limite: il prossimo modello */
+        reply_free(&a->reply);
+        ai_request(a, a->ai_try + 1);
+        return;
+    }
     char *t = reply_text(&a->reply);
     if (a->reply.state == RS_DONE) ai_finish(a, t);
     else {

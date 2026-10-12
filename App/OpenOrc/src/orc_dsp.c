@@ -10,9 +10,10 @@
 #define QUEUE_SIZE 512
 #define SUB        32                  /* campioni per passo di controllo: 0,67 ms a 48 kHz */
 #define SINE_N     2048
+#define KS_LEN     2048                /* corda pizzicata: fino a 23 Hz a 48 kHz */
 
 enum { EV_CHORD_ON, EV_CHORD_OFF, EV_NOTE_ON, EV_NOTE_OFF, EV_ALL_OFF, EV_TEMPO, EV_TRANSPORT, EV_BEAT,
-       EV_LOOP_REC, EV_LOOP_PLAY, EV_LOOP_CLEAR, EV_LOOP_CONFIG };
+       EV_LOOP_REC, EV_LOOP_PLAY, EV_LOOP_CLEAR, EV_LOOP_CONFIG, EV_LOOP_UNDO };
 
 /* a: nota del basso (accordi), nota (melodia) o valore intero; b: dinamica o valore reale. */
 typedef struct { int type, n, a, tag; float b; int notes[ORC_MAX_CHORD]; } Event;
@@ -21,6 +22,7 @@ typedef struct {
     float t;                 /* battiti dall'inizio del giro (letto anche dall'interfaccia) */
     int kind;                /* per il disegno: 0 accordo, 1 nota, 2 spegnimento */
     double armed_from;       /* non suona prima di questo battito: niente eco di quello appena suonato */
+    int pass;                /* 0 il primo giro, poi una per sovraincisione */
     Event e;
 } LoopEv;
 
@@ -31,7 +33,11 @@ enum { ST_ATTACK, ST_DECAY, ST_SUSTAIN, ST_RELEASE };
 typedef struct {
     int active, stage, note, layer, chord, released, delay;
     float vel, freq, level, ienv, rel_mul;
+    float pan;               /* -1 sinistra .. 1 destra, moltiplicato per OrcSound.stereo */
     float pc, pm, ph2, ic1, ic2;
+    float ph3, ph4, ph5, icr1, icr2;     /* ensemble: altri tre oscillatori e il filtro del canale destro */
+    int kpos, kready;                    /* corda: posizione nel buffer, pizzico gia' fatto */
+    float klast;
     uint32_t age;
 } Voice;
 
@@ -78,7 +84,7 @@ struct Orc {
     float clap_a1, clap_a2, clap_a3;
 
     LoopEv loop[ORC_LOOP_MAX];
-    int loop_n, loop_state, loop_bars, loop_full;
+    int loop_n, loop_state, loop_bars, loop_full, loop_pass;
     float loop_q;
     double loop_origin, loop_len, play_from;
     int rec_chord_open, rec_note_open[128];
@@ -89,7 +95,8 @@ struct Orc {
     Comb comb_l[4], comb_r[4];
     Allpass ap_l[2], ap_r[2];
 
-    float mix[SUB];
+    float mix_l[SUB], mix_r[SUB];
+    float ks[ORC_VOICES][KS_LEN];       /* corde pizzicate, una per voce */
     float scope[ORC_SCOPE];
     int scope_pos;
 };
@@ -147,7 +154,10 @@ static Voice *voice_alloc(Orc *o)
     return best;
 }
 
-static void voice_start(Orc *o, int layer, int note, float vel, int chord, int delay, float rel_mul)
+/* Posizione della nota i di n, da sinistra a destra. */
+static float spread_pan(int i, int n) { return n > 1 ? 2.0f * (float)i / (float)(n - 1) - 1.0f : 0.0f; }
+
+static void voice_start(Orc *o, int layer, int note, float vel, int chord, int delay, float rel_mul, float pan)
 {
     if (note < 0 || note > 127) return;
     Voice *v = voice_alloc(o);
@@ -162,10 +172,29 @@ static void voice_start(Orc *o, int layer, int note, float vel, int chord, int d
     v->ienv = 1.0f;
     v->delay = delay;
     v->rel_mul = rel_mul;
+    v->pan = clampf(pan, -1.0f, 1.0f);
     v->pc = (white(o) + 1.0f) * 0.5f;
     v->ph2 = (white(o) + 1.0f) * 0.5f;
+    v->ph3 = (white(o) + 1.0f) * 0.5f;
+    v->ph4 = (white(o) + 1.0f) * 0.5f;
+    v->ph5 = (white(o) + 1.0f) * 0.5f;
     v->age = ++o->age_counter;
     o->starts++;
+}
+
+/* Corda pizzicata: il buffer della voce si riempie di rumore filtrato, il pizzico; tono e dinamica lo
+   rendono piu' o meno brillante. Si fa al primo passo della voce, cosi' costa solo con questo motore. */
+static void pluck_excite(Orc *o, Voice *v)
+{
+    float *b = o->ks[v - o->v];
+    float c = clampf(0.12f + 0.6f * clamp01(o->ctl.snd.tone) + 0.25f * v->vel, 0.05f, 1.0f), lp = 0.0f, mean = 0.0f;
+    for (int i = 0; i < KS_LEN; i++) { lp += c * (white(o) - lp); b[i] = lp; mean += lp; }
+    mean /= (float)KS_LEN;
+    float gain = 0.8f / (0.577f * sqrtf(c / (2.0f - c)));
+    for (int i = 0; i < KS_LEN; i++) b[i] = (b[i] - mean) * gain;
+    v->kpos = 0;
+    v->klast = 0.0f;
+    v->kready = 1;
 }
 
 static void voice_release(Voice *v)
@@ -227,7 +256,8 @@ static void arp_step(Orc *o, int L)
     int k = p->step % period, pos = k < total ? k : period - k;
     p->step++;
     release_chord_voices(o, L);
-    voice_start(o, L, p->notes[pos % p->n] + 12 * (pos / p->n), p->vel * (pos == 0 ? 1.0f : 0.85f), 1, 0, 0.6f);
+    voice_start(o, L, p->notes[pos % p->n] + 12 * (pos / p->n), p->vel * (pos == 0 ? 1.0f : 0.85f), 1, 0, 0.6f,
+                spread_pan(pos, total));
 }
 
 static void pattern_step(Orc *o, int L, int st)
@@ -237,7 +267,7 @@ static void pattern_step(Orc *o, int L, int st)
     st &= 15;
     if (pat[st] == 'x') {
         release_chord_voices(o, L);
-        for (int i = 0; i < p->n; i++) voice_start(o, L, p->notes[i], p->vel * (st % 4 == 0 ? 1.0f : 0.8f), 1, 0, 0.5f);
+        for (int i = 0; i < p->n; i++) voice_start(o, L, p->notes[i], p->vel * (st % 4 == 0 ? 1.0f : 0.8f), 1, 0, 0.5f, spread_pan(i, p->n));
     } else if (st & 1) {
         release_chord_voices(o, L);               /* stacco: il pattern respira */
     }
@@ -257,7 +287,7 @@ static void perform_start(Orc *o, int L)
         int gap = (int)((0.008f + amt * 0.09f) * o->sr);
         for (int i = 0; i < n; i++) {
             int k = p->strum_down ? n - 1 - i : i;
-            voice_start(o, L, p->notes[k], p->vel * (1.0f - 0.04f * i), 1, gap * i, 1.0f);
+            voice_start(o, L, p->notes[k], p->vel * (1.0f - 0.04f * i), 1, gap * i, 1.0f, spread_pan(k, n));
         }
         p->strum_down = !p->strum_down;
         break;
@@ -265,24 +295,25 @@ static void perform_start(Orc *o, int L)
     case PERF_SLOP:
         for (int i = 0; i < n; i++) {
             int d = (int)((white(o) + 1.0f) * 0.5f * amt * 0.07f * o->sr);
-            voice_start(o, L, p->notes[i], p->vel * (0.82f + 0.09f * (white(o) + 1.0f)), 1, d, 1.0f);
+            voice_start(o, L, p->notes[i], p->vel * (0.82f + 0.09f * (white(o) + 1.0f)), 1, d, 1.0f, spread_pan(i, n));
         }
         break;
     case PERF_HARP: {
         int gap = (int)((0.025f + amt * 0.09f) * o->sr), k = 0, octs = n < 4 ? 3 : 2;
         for (int oc = 0; oc < octs; oc++)
-            for (int i = 0; i < n; i++, k++) voice_start(o, L, p->notes[i] + 12 * oc, p->vel * (0.95f - 0.02f * k), 1, gap * k, 2.5f);
+            for (int i = 0; i < n; i++, k++)
+                voice_start(o, L, p->notes[i] + 12 * oc, p->vel * (0.95f - 0.02f * k), 1, gap * k, 2.5f, spread_pan(k, octs * n));
         break;
     }
     case PERF_ARP:
         if (n) arp_step(o, L);
         break;
     case PERF_PATTERN:                            /* la prima botta subito, poi il pattern */
-        for (int i = 0; i < n; i++) voice_start(o, L, p->notes[i], p->vel, 1, 0, 0.5f);
+        for (int i = 0; i < n; i++) voice_start(o, L, p->notes[i], p->vel, 1, 0, 0.5f, spread_pan(i, n));
         p->step = 1;
         break;
     default:
-        for (int i = 0; i < n; i++) voice_start(o, L, p->notes[i], p->vel, 1, 0, 1.0f);
+        for (int i = 0; i < n; i++) voice_start(o, L, p->notes[i], p->vel, 1, 0, 1.0f, spread_pan(i, n));
     }
 }
 
@@ -413,6 +444,7 @@ static void loop_add(Orc *o, double t, const Event *e, double armed_from)
     LoopEv *le = &o->loop[o->loop_n];
     le->e = *e;
     le->armed_from = armed_from;
+    le->pass = o->loop_pass;
     set_f(&le->t, (float)loop_wrap(o, t));
     set_i(&le->kind, e->type == EV_CHORD_ON ? 0 : (e->type == EV_NOTE_ON ? 1 : 2));
     set_i(&o->loop_n, o->loop_n + 1);
@@ -526,11 +558,34 @@ static void loop_reset(Orc *o)
 {
     set_i(&o->loop_n, 0);
     set_i(&o->loop_full, 0);
+    set_i(&o->loop_pass, 0);
     set_d(&o->loop_len, o->loop_bars * 4.0);
     loop_forget_open(o);
 }
 
 static void transport_set(Orc *o, int on);
+
+static int loop_has_pass(const Orc *o, int p)
+{
+    for (int i = 0; i < o->loop_n; i++) if (o->loop[i].pass == p) return 1;
+    return 0;
+}
+
+static void overdub_begin(Orc *o)
+{
+    loop_forget_open(o);
+    set_i(&o->loop_pass, o->loop_pass + 1);
+    set_i(&o->loop_state, LOOP_OVERDUB);
+}
+
+/* Fine della sovraincisione: si chiude quello che e' rimasto aperto; se non si e' registrato nulla lo
+   strato non conta. */
+static void overdub_end(Orc *o, int state)
+{
+    loop_close(o, loop_quant(o, o->beats - o->loop_origin), 0);
+    if (o->loop_pass > 0 && !loop_has_pass(o, o->loop_pass)) set_i(&o->loop_pass, o->loop_pass - 1);
+    set_i(&o->loop_state, state);
+}
 
 static void loop_rec(Orc *o)
 {
@@ -562,18 +617,15 @@ static void loop_rec(Orc *o)
         loop_finish(o, b, 1);
         break;
     case LOOP_PLAYING:
-        loop_forget_open(o);
-        set_i(&o->loop_state, LOOP_OVERDUB);
+        overdub_begin(o);
         break;
     case LOOP_OVERDUB:
-        loop_close(o, loop_quant(o, b - o->loop_origin), 0);
-        set_i(&o->loop_state, LOOP_PLAYING);
+        overdub_end(o, LOOP_PLAYING);
         break;
     case LOOP_STOPPED:
         if (!o->transport) transport_set(o, 1);
         o->play_from = o->beats;
-        loop_forget_open(o);
-        set_i(&o->loop_state, LOOP_OVERDUB);
+        overdub_begin(o);
         break;
     }
 }
@@ -586,8 +638,7 @@ static void loop_play(Orc *o)
         layer_off(o, ORC_LOOP);
         break;
     case LOOP_OVERDUB:
-        loop_close(o, loop_quant(o, o->beats - o->loop_origin), 0);
-        set_i(&o->loop_state, LOOP_STOPPED);
+        overdub_end(o, LOOP_STOPPED);
         layer_off(o, ORC_LOOP);
         break;
     case LOOP_STOPPED:
@@ -611,6 +662,35 @@ static void loop_clear(Orc *o)
     loop_reset(o);
     set_i(&o->loop_state, LOOP_EMPTY);
     layer_off(o, ORC_LOOP);
+}
+
+static void loop_remove_pass(Orc *o, int p)
+{
+    int w = 0;
+    for (int i = 0; i < o->loop_n; i++)
+        if (o->loop[i].pass != p) { if (w != i) o->loop[w] = o->loop[i]; w++; }
+    set_i(&o->loop_n, w);
+    set_i(&o->loop_full, 0);
+    layer_off(o, ORC_LOOP);                       /* niente note rimaste appese: ripartono al loro evento */
+}
+
+/* Annulla, come nei looper a pedale: la sovraincisione in corso, poi le precedenti, infine tutto. */
+static void loop_undo(Orc *o)
+{
+    int st = o->loop_state;
+    if (st == LOOP_OVERDUB) {
+        loop_forget_open(o);
+        loop_remove_pass(o, o->loop_pass);
+        set_i(&o->loop_pass, o->loop_pass > 0 ? o->loop_pass - 1 : 0);
+        set_i(&o->loop_state, LOOP_PLAYING);
+        return;
+    }
+    if (st == LOOP_PLAYING || st == LOOP_STOPPED) {
+        int p = o->loop_pass;
+        while (p > 0 && !loop_has_pass(o, p)) p--;
+        if (p > 0) { loop_remove_pass(o, p); set_i(&o->loop_pass, p - 1); return; }
+    }
+    loop_clear(o);
 }
 
 static void apply(Orc *o, const Event *e, int L);
@@ -657,7 +737,7 @@ static void transport_set(Orc *o, int on)
         int st = o->loop_state;
         if (st == LOOP_RECORDING) loop_finish(o, o->beats, 1);
         else if (st == LOOP_ARMED) set_i(&o->loop_state, LOOP_EMPTY);
-        else if (st == LOOP_OVERDUB) { loop_close(o, loop_quant(o, o->beats - o->loop_origin), 0); set_i(&o->loop_state, LOOP_PLAYING); }
+        else if (st == LOOP_OVERDUB) overdub_end(o, LOOP_PLAYING);
         layer_off(o, ORC_LOOP);
         set_i(&o->transport, 0);
         set_i(&o->beat_step_pub, -1);
@@ -688,7 +768,7 @@ static void apply(Orc *o, const Event *e, int L)
         publish_layer(o, L);
         break;
     case EV_NOTE_ON:
-        voice_start(o, L, e->a, e->b, 0, 0, 1.0f);
+        voice_start(o, L, e->a, e->b, 0, 0, 1.0f, clampf((float)(e->a - 60) / 30.0f, -0.6f, 0.6f));   /* melodia */
         break;
     case EV_NOTE_OFF:
         for (int i = 0; i < ORC_VOICES; i++) {
@@ -735,6 +815,9 @@ static void handle(Orc *o, const Event *e)
         break;
     case EV_LOOP_CLEAR:
         loop_clear(o);
+        break;
+    case EV_LOOP_UNDO:
+        loop_undo(o);
         break;
     case EV_LOOP_CONFIG:
         o->loop_bars = e->a < 1 ? 1 : (e->a > 16 ? 16 : e->a);
@@ -797,8 +880,18 @@ static int render_voices(Orc *o, int n, float pitch)
     /* organo: registri */
     const float w2 = 0.55f + 0.25f * chr, w3 = 0.15f + 0.45f * chr, w4 = 0.5f * chr, w6 = 0.35f * chr * chr, w8 = 0.4f * tone;
     const float wnorm = 1.0f / (1.0f + w2 + w3 + w4 + w6 + w8);
-    float *mix = o->mix;
-    memset(mix, 0, sizeof(float) * (size_t)n);
+    /* stereo */
+    const float width = clamp01(s->stereo);
+    /* ensemble: cinque denti di sega; i quattro desintonizzati si aprono a sinistra e a destra */
+    const float sdet = 4.0f + chr * 40.0f;                                   /* centesimi */
+    const float rt1 = exp2f(-sdet / 1200.0f), rt2 = exp2f(sdet / 1200.0f);
+    const float rt3 = exp2f(-0.47f * sdet / 1200.0f), rt4 = exp2f(0.47f * sdet / 1200.0f);
+    const float aw = 0.5f + 0.5f * width, bw = 0.5f - 0.5f * width;
+    /* corda: durata (T60) dal carattere, armoniche smorzate dal tono */
+    const float t60 = 0.25f * exp2f(chr * 5.0f), blend = 1.0f - 0.85f * tone;
+    float *ml = o->mix_l, *mr = o->mix_r;
+    memset(ml, 0, sizeof(float) * (size_t)n);
+    memset(mr, 0, sizeof(float) * (size_t)n);
     int count = 0;
     for (int vi = 0; vi < ORC_VOICES; vi++) {
         Voice *v = &o->v[vi];
@@ -809,8 +902,23 @@ static int render_voices(Orc *o, int n, float pitch)
         float dt = v->freq * pitch * inv;
         if (dt > 0.45f) dt = 0.45f;
         const float dt2 = dt * detune;
+        /* posizione nello stereo: a 0 i due guadagni valgono 1, come il mono */
+        const float th = (1.0f + v->pan * width) * 0.125f;
+        const float gl = 1.41421356f * sin_t(th + 0.25f), gr = 1.41421356f * sin_t(th);
+        float d1 = 0.0f, d2 = 0.0f, d3 = 0.0f, d4 = 0.0f, kd = 0.0f, kg = 0.0f;
+        float *kb = NULL;
+        if (eng == ENG_SUPER) {
+            d1 = fminf(dt * rt1, 0.45f); d2 = fminf(dt * rt2, 0.45f);
+            d3 = fminf(dt * rt3, 0.45f); d4 = fminf(dt * rt4, 0.45f);
+        } else if (eng == ENG_PLUCK) {
+            if (!v->kready) pluck_excite(o, v);
+            kb = o->ks[vi];
+            float f = fmaxf(v->freq * pitch, 20.0f);
+            kd = clampf(sr / f, 2.0f, (float)(KS_LEN - 2)) - 0.5f * blend;     /* il filtro ritarda di blend/2 */
+            kg = powf(0.001f, 1.0f / (t60 * f));
+        }
         float a1 = 0.0f, a2 = 0.0f, a3 = 0.0f;
-        if (eng == ENG_VA) {
+        if (eng == ENG_VA || eng == ENG_SUPER) {
             float env = (v->stage == ST_ATTACK || v->stage == ST_DECAY) ? v->level : 0.0f;
             float oct = 6.6f + tone * 6.8f + env * 0.9f + (float)(v->note - 60) / 24.0f + v->vel * 0.5f;
             float fc = fminf(exp2f(oct), 0.42f * sr);
@@ -839,7 +947,7 @@ static int render_voices(Orc *o, int n, float pitch)
                 break;
             }
             if ((v->stage == ST_SUSTAIN && sus < 1e-4f) || (v->stage == ST_RELEASE && v->level < 1e-4f)) { v->active = 0; break; }
-            float x;
+            float x, xr = 0.0f;
             if (eng == ENG_VA) {
                 v->pc += dt; if (v->pc >= 1.0f) v->pc -= 1.0f;
                 v->ph2 += dt2; if (v->ph2 >= 1.0f) v->ph2 -= 1.0f;
@@ -856,6 +964,41 @@ static int render_voices(Orc *o, int n, float pitch)
                 v->ic1 = 2.0f * v1 - v->ic1;
                 v->ic2 = 2.0f * v2 - v->ic2;
                 x = v2;
+            } else if (eng == ENG_SUPER) {
+                v->pc += dt; if (v->pc >= 1.0f) v->pc -= 1.0f;
+                v->ph2 += d1; if (v->ph2 >= 1.0f) v->ph2 -= 1.0f;
+                v->ph3 += d2; if (v->ph3 >= 1.0f) v->ph3 -= 1.0f;
+                v->ph4 += d3; if (v->ph4 >= 1.0f) v->ph4 -= 1.0f;
+                v->ph5 += d4; if (v->ph5 >= 1.0f) v->ph5 -= 1.0f;
+                float s0 = 2.0f * v->pc - 1.0f - polyblep(v->pc, dt);
+                float s1 = 2.0f * v->ph2 - 1.0f - polyblep(v->ph2, d1);
+                float s2 = 2.0f * v->ph3 - 1.0f - polyblep(v->ph3, d2);
+                float s3 = 2.0f * v->ph4 - 1.0f - polyblep(v->ph4, d3);
+                float s4 = 2.0f * v->ph5 - 1.0f - polyblep(v->ph5, d4);
+                float sl = s1 + 0.8f * s3, sr_ = s2 + 0.8f * s4;
+                float inl = 0.52f * (s0 + aw * sl + bw * sr_), inr = 0.52f * (s0 + aw * sr_ + bw * sl);
+                float l3 = inl - v->ic2, l1 = a1 * v->ic1 + a2 * l3, l2 = v->ic2 + a2 * v->ic1 + a3 * l3;
+                v->ic1 = 2.0f * l1 - v->ic1;
+                v->ic2 = 2.0f * l2 - v->ic2;
+                float r3 = inr - v->icr2, r1 = a1 * v->icr1 + a2 * r3, r2 = v->icr2 + a2 * v->icr1 + a3 * r3;
+                v->icr1 = 2.0f * r1 - v->icr1;
+                v->icr2 = 2.0f * r2 - v->icr2;
+                x = l2;
+                xr = r2;
+            } else if (eng == ENG_PLUCK) {
+                /* Karplus-Strong: il buffer ricircola, filtrato e smorzato, a ogni periodo della nota */
+                float rp = (float)v->kpos - kd;
+                if (rp < 0.0f) rp += (float)KS_LEN;
+                int i0 = (int)rp;
+                float fr = rp - (float)i0;
+                i0 &= KS_LEN - 1;
+                int i1 = (i0 + 1) & (KS_LEN - 1);
+                float y = kb[i0] + (kb[i1] - kb[i0]) * fr;
+                float f = y + 0.5f * blend * (v->klast - y);
+                v->klast = y;
+                kb[v->kpos] = f * kg;
+                v->kpos = (v->kpos + 1) & (KS_LEN - 1);
+                x = y;
             } else if (eng == ENG_ORGAN) {
                 v->pc += dt; if (v->pc >= 1.0f) v->pc -= 1.0f;
                 float p = v->pc;
@@ -868,7 +1011,9 @@ static int render_voices(Orc *o, int n, float pitch)
                 x = sin_t(v->pc + idx_base * v->ienv * 0.15915494f * sin_t(v->pm));
                 if (eng == ENG_REED) x = softclip(x * drive + bias) - bias_out;
             }
-            mix[i] += x * v->level * amp;
+            float e = v->level * amp;
+            if (eng == ENG_SUPER) { ml[i] += x * e * gl; mr[i] += xr * e * gr; }
+            else { ml[i] += x * e * gl; mr[i] += x * e * gr; }
         }
     }
     return count;
@@ -893,7 +1038,7 @@ Orc *orc_create(float sr)
     o->loop_q = 0.5f;
     o->loop_len = 16.0;
 
-    Control c = { { ENG_VA, 0.5f, 0.4f, 0.01f, 0.8f, 0.7f, 0.5f, 0.1f, 0.5f, 0.3f, 0.3f, 0.2f, 0.3f, PERF_CHORD, 0.3f, 0.8f },
+    Control c = { { ENG_VA, 0.5f, 0.4f, 0.01f, 0.8f, 0.7f, 0.5f, 0.1f, 0.5f, 0.3f, 0.3f, 0.2f, 0.3f, PERF_CHORD, 0.3f, 0.8f, 0.0f },
                   0.0f, 0.0f, 0.0f };
     o->ctl_stage = o->ctl = c;
     for (int i = 0; i < 3; i++) o->ctl_buf[i] = c;
@@ -981,6 +1126,7 @@ void orc_set_beat(Orc *o, int on, int style, float level)
 void orc_loop_record(Orc *o) { push_simple(o, EV_LOOP_REC, 0, 0.0f); }
 void orc_loop_play(Orc *o) { push_simple(o, EV_LOOP_PLAY, 0, 0.0f); }
 void orc_loop_clear(Orc *o) { push_simple(o, EV_LOOP_CLEAR, 0, 0.0f); }
+void orc_loop_undo(Orc *o) { push_simple(o, EV_LOOP_UNDO, 0, 0.0f); }
 void orc_loop_config(Orc *o, int max_bars, float quantize) { push_simple(o, EV_LOOP_CONFIG, max_bars, quantize); }
 
 int orc_transport_on(const Orc *o) { return get_i(&o->transport); }
@@ -999,6 +1145,7 @@ void orc_loop_info(const Orc *o, OrcLoopInfo *info)
     info->state = get_i(&o->loop_state);
     info->events = get_i(&o->loop_n);
     info->full = get_i(&o->loop_full);
+    info->layers = get_i(&o->loop_pass);
     info->length = get_d(&o->loop_len);
     info->position = 0.0;
     if (!get_i(&o->transport) || info->length <= 0.0) return;
@@ -1028,6 +1175,69 @@ int orc_layer_notes(const Orc *o, int layer, int *notes, int *tag)
     for (int i = 0; i < n; i++) notes[i] = get_i(&o->pub_notes[layer][i]);
     if (tag) *tag = get_i(&o->pub_tag[layer]);
     return n;
+}
+
+int orc_loop_export(const Orc *o, OrcLoopEvent *ev, int max, double *length, int *layers)
+{
+    int st = o->loop_state, skip = st == LOOP_OVERDUB ? o->loop_pass : -1, n = 0, top = 0;
+    if (length) *length = o->loop_len;
+    if (st != LOOP_PLAYING && st != LOOP_STOPPED && st != LOOP_OVERDUB) { if (layers) *layers = 0; return 0; }
+    for (int i = 0; i < o->loop_n && n < max; i++) {
+        const LoopEv *le = &o->loop[i];
+        if (le->pass == skip) continue;           /* la sovraincisione in corso non e' finita: non si tiene */
+        OrcLoopEvent *e = &ev[n];
+        switch (le->e.type) {
+        case EV_CHORD_ON: e->type = 0; break;
+        case EV_CHORD_OFF: e->type = 1; break;
+        case EV_NOTE_ON: e->type = 2; break;
+        case EV_NOTE_OFF: e->type = 3; break;
+        default: continue;
+        }
+        e->t = le->t;
+        e->pass = le->pass;
+        e->n = le->e.n;
+        e->a = le->e.a;
+        e->tag = le->e.tag;
+        e->b = le->e.b;
+        memcpy(e->notes, le->e.notes, sizeof(e->notes));
+        if (e->pass > top) top = e->pass;
+        n++;
+    }
+    if (layers) *layers = top;
+    return n;
+}
+
+void orc_loop_import(Orc *o, const OrcLoopEvent *ev, int n, double length, int layers)
+{
+    static const int TYPES[4] = { EV_CHORD_ON, EV_CHORD_OFF, EV_NOTE_ON, EV_NOTE_OFF };
+    loop_reset(o);
+    layer_off(o, ORC_LOOP);
+    if (n > ORC_LOOP_MAX) n = ORC_LOOP_MAX;
+    if (!(length >= 1.0 && length <= 64.0)) length = 4.0;
+    int m = 0;
+    for (int i = 0; i < n; i++) {
+        const OrcLoopEvent *e = &ev[i];
+        if (e->type < 0 || e->type > 3 || !(e->t >= 0.0f && e->t < length)) continue;
+        LoopEv *le = &o->loop[m];
+        memset(le, 0, sizeof(*le));
+        le->e.type = TYPES[e->type];
+        le->e.n = e->n < 0 ? 0 : (e->n > ORC_MAX_CHORD ? ORC_MAX_CHORD : e->n);
+        le->e.a = e->a;
+        le->e.tag = e->tag;
+        le->e.b = clampf(e->b, 0.05f, 1.0f);
+        for (int k = 0; k < le->e.n; k++) le->e.notes[k] = e->notes[k] & 127;
+        if (e->type >= 2) le->e.a &= 127;
+        le->t = e->t;
+        le->kind = e->type == 0 ? 0 : (e->type == 2 ? 1 : 2);
+        le->pass = e->pass < 0 ? 0 : e->pass;
+        m++;
+    }
+    o->loop_n = m;
+    o->loop_len = length;
+    o->loop_pass = layers < 0 ? 0 : layers;
+    o->loop_origin = 0.0;
+    o->play_from = 0.0;
+    o->loop_state = m ? LOOP_STOPPED : LOOP_EMPTY;
 }
 
 void orc_scope(const Orc *o, float *dst, int n)
@@ -1062,6 +1272,7 @@ void orc_render(Orc *o, float *out, int frames)
     const int eng = s->engine;
     const float vib = (eng == ENG_REED ? 0.0f : clamp01(s->vibrato) * 0.25f) + clamp01(o->ctl.mod) * 0.45f;
     const float trem_depth = eng == ENG_REED ? clamp01(s->vibrato) * 0.45f : 0.0f;
+    const float width = clamp01(s->stereo);       /* nel piano elettrico il tremolo va da un lato all'altro */
     const float chorus = clamp01(s->chorus), delay = clamp01(s->delay), reverb = clamp01(s->reverb);
     const float vol = clamp01(s->volume);
     const float bass_lvl = clamp01(s->bass_level) * 0.8f, bass_cut = 0.04f + clamp01(s->bass_tone) * 0.12f;
@@ -1082,10 +1293,11 @@ void orc_render(Orc *o, float *out, int frames)
         if (o->lfo >= 1.0f) o->lfo -= 1.0f;
         float pitch = exp2f((o->ctl.bend + lfo * vib) / 12.0f);
         float trem = 1.0f - trem_depth * (0.5f + 0.5f * lfo);
+        float trem_r = 1.0f - trem_depth * (0.5f + 0.5f * lfo * (1.0f - 2.0f * width));
         voices = render_voices(o, n, pitch);
 
         for (int i = 0; i < n; i++) {
-            float vo = softclip(o->mix[i] * 0.25f) * trem;
+            float vl = softclip(o->mix_l[i] * 0.25f) * trem, vr = softclip(o->mix_r[i] * 0.25f) * trem_r;
 
             float bass = 0.0f;
             if (o->bass_active) {
@@ -1110,17 +1322,17 @@ void orc_render(Orc *o, float *out, int frames)
             drums *= 0.8f;
 
             /* chorus stereo sulle voci */
-            float cl = vo, cr = vo;
+            float cl = vl, cr = vr;
             if (chorus > 0.001f) {
-                o->ch_l[o->ch_pos] = vo;
-                o->ch_r[o->ch_pos] = vo;
+                o->ch_l[o->ch_pos] = vl;
+                o->ch_r[o->ch_pos] = vr;
                 o->ch_phase += 0.33f * inv;
                 if (o->ch_phase >= 1.0f) o->ch_phase -= 1.0f;
                 float dl_ = (0.012f + 0.003f * sin_t(o->ch_phase)) * sr, dr2 = (0.012f + 0.003f * sin_t(o->ch_phase + 0.25f)) * sr;
                 float wl = read_frac(o->ch_l, o->ch_len, o->ch_pos, dl_), wr = read_frac(o->ch_r, o->ch_len, o->ch_pos, dr2);
                 if (++o->ch_pos >= o->ch_len) o->ch_pos = 0;
-                cl = vo * (1.0f - 0.35f * chorus) + wl * 0.7f * chorus;
-                cr = vo * (1.0f - 0.35f * chorus) + wr * 0.7f * chorus;
+                cl = vl * (1.0f - 0.35f * chorus) + wl * 0.7f * chorus;
+                cr = vr * (1.0f - 0.35f * chorus) + wr * 0.7f * chorus;
             }
             /* delay ping-pong a croma puntata */
             int rp = o->dpos - dtime;
@@ -1134,8 +1346,8 @@ void orc_render(Orc *o, float *out, int frames)
             float out_l = cl + bass + drums + rl * delay;
             float out_r = cr + bass + drums + rr * delay;
             if (reverb > 0.001f) {
-                float in = (0.5f * (cl + cr) + drums * 0.2f) * 0.03f, wl = 0.0f, wr = 0.0f;
-                for (int c = 0; c < 4; c++) { wl += comb_run(&o->comb_l[c], in, 0.86f, 0.25f); wr += comb_run(&o->comb_r[c], in, 0.86f, 0.25f); }
+                float in_l = (cl + drums * 0.2f) * 0.03f, in_r = (cr + drums * 0.2f) * 0.03f, wl = 0.0f, wr = 0.0f;
+                for (int c = 0; c < 4; c++) { wl += comb_run(&o->comb_l[c], in_l, 0.86f, 0.25f); wr += comb_run(&o->comb_r[c], in_r, 0.86f, 0.25f); }
                 for (int a = 0; a < 2; a++) { wl = allpass_run(&o->ap_l[a], wl); wr = allpass_run(&o->ap_r[a], wr); }
                 out_l += wl * reverb * 3.0f;
                 out_r += wr * reverb * 3.0f;

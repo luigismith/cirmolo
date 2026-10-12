@@ -7,7 +7,7 @@
 #include "gfx.h"
 #include "orc_dsp.h"
 
-enum { PAGE_PLAY, PAGE_SOUND, PAGE_RHYTHM, PAGE_MIDI, PAGE_COUNT };
+enum { PAGE_PLAY, PAGE_CHORDS, PAGE_SOUND, PAGE_RHYTHM, PAGE_MIDI, PAGE_COUNT };
 
 typedef struct OrcApp OrcApp;
 
@@ -21,6 +21,8 @@ void orcapp_axes(OrcApp *a, float lx, float ly, float rx, float ry, float l2, fl
 void orcapp_update(OrcApp *a, float dt);
 void orcapp_draw(OrcApp *a, Canvas *c);
 int  orcapp_needs_draw(OrcApp *a);                    /* 0 se lo schermo resterebbe uguale */
+/* Testo da una tastiera USB (text_input del kit): il nome di un suono nella Rinomina. */
+void orcapp_text(OrcApp *a, const char *utf8, int special);
 int  orcapp_wants_quit(const OrcApp *a);
 
 /* Preset della tastiera MIDI (file di testo, vedi tastiere/ nell'app): 0 se riuscito. */
@@ -36,6 +38,18 @@ int  orcapp_chord_notes(const OrcApp *a, int *notes, int *bass);
 int  orcapp_chord_live(const OrcApp *a);
 const OrcSound *orcapp_sound(const OrcApp *a);
 int  orcapp_keymode(const OrcApp *a);
+int  orcapp_page(const OrcApp *a);
+int  orcapp_sound_count(const OrcApp *a);            /* quelli di fabbrica, poi quelli dell'utente */
+const char *orcapp_sound_name(const OrcApp *a, int i);
+int  orcapp_sound_find(const OrcApp *a, const char *name);
+int  orcapp_current_sound(const OrcApp *a);
+const char *orcapp_current_name(const OrcApp *a);
+int  orcapp_sound_modified(const OrcApp *a);
+int  orcapp_overlay(const OrcApp *a);                /* 1 elenco dei suoni aperto (SELECT tenuto), 2 solo in vista */
+int  orcapp_editing(const OrcApp *a);
+const char *orcapp_toast(const OrcApp *a);
+void orcapp_set_sound(OrcApp *a, const OrcSound *s);
+void orcapp_set_follow(OrcApp *a, int on);
 void orcapp_set_knob_mode(OrcApp *a, int mode);        /* 0 assolute, 1 relative, 2 relative (64) */
 void orcapp_save(OrcApp *a);
 

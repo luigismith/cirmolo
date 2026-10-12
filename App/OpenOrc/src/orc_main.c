@@ -13,6 +13,7 @@ static void k_update(void *p, float dt) { orcapp_update(p, dt); }
 static void k_draw(void *p, Canvas *c) { orcapp_draw(p, c); }
 static int k_quit(void *p) { return orcapp_wants_quit(p); }
 static int k_needs_draw(void *p) { return orcapp_needs_draw(p); }
+static void k_text(void *p, const char *t, int special) { orcapp_text(p, t, special); }
 
 const CirmoloApp *cirmolo_app(void)
 {
@@ -22,7 +23,7 @@ const CirmoloApp *cirmolo_app(void)
         .create = k_create, .destroy = k_destroy, .audio = k_audio,
         .midi_status = k_midi_status, .midi_port = k_midi_port,
         .button = k_button, .axes = k_axes, .update = k_update, .draw = k_draw, .wants_quit = k_quit,
-        .needs_draw = k_needs_draw,
+        .needs_draw = k_needs_draw, .text_input = k_text,
     };
     return &desc;
 }

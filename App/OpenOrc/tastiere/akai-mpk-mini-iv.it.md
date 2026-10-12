@@ -44,7 +44,7 @@ Per i pad: MidiCh **10**. Il banco si cambia con **BANK A/B**.
 | **Banco A, fila in alto** | 40 Dim | 41 Min | 42 Maj | 43 Sus |
 | **Banco A, fila in basso** | 36 6 | 37 m7 | 38 M7 | 39 9 |
 | **Banco B, fila in alto** | 48 Modo tonalità | 49 Esecuzione | 50 Suono prec. | 51 Suono succ. |
-| **Banco B, fila in basso** | 44 Batteria | 45 Loop: registra | 46 Loop: suona/ferma | 47 Loop: cancella |
+| **Banco B, fila in basso** | 44 Batteria | 45 Loop: registra | 46 Loop: suona/ferma | 47 Loop: annulla |
 
 È lo schema MPC: la nota è 35 + il numero del pad, contando da quello in basso a sinistra.
 

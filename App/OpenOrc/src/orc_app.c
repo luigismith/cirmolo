@@ -9,7 +9,7 @@
  * MPK mini IV (i valori di fabbrica dei suoi preset utente, cosi' non va configurata; tutti riassegnabili
  * nella pagina MIDI o con un preset in tastiere/):
  *   pad banco A, canale 10: 40-43 Dim Min Maj Sus (fila in alto), 36-39 6 m7 M7 9 (fila in basso);
- *   pad banco B: 44-47 batteria, loop registra, loop suona/ferma, loop cancella (fila in basso),
+ *   pad banco B: 44-47 batteria, loop registra, loop suona/ferma, loop annulla (fila in basso),
  *                48-51 modo tonalita', esecuzione successiva, suono precedente, suono successivo;
  *   manopole CC 24-31: voicing, basso, quantita' dell'esecuzione, tono, chorus, delay, riverbero, volume
  *   (da qualunque porta e in modo relativo: la MPK mini IV le manda solo sulla porta 2, 1-63 a destra e
@@ -18,6 +18,14 @@
  *   program change: suono. Trasporto sulla porta 2 (DAW): Play CC 76, Rec 77, Loop 74, Undo 73.
  * Sulla Flip, nella pagina Suona, croce e A B X Y suonano gli accordi della tonalita' (I IV V vi sulla
  * croce) e i dorsali li cambiano (L1 maggiore/minore, R1 sus4, L2 settima, R2 nona).
+ *
+ * SELECT toccato cambia pagina. SELECT tenuto apre l'elenco dei suoni e fa da tasto delle funzioni, in
+ * tutte le pagine: su/giu' suono, L1/R1 categoria, sinistra/destra tonalita', L2 maggiore/minore, R2 modo
+ * tonalita', A registra il loop, B lo suona o lo ferma, Y annulla, X batteria.
+ *
+ * Suoni: quelli di fabbrica (PRESETS) e quelli dell'utente, un file di testo ciascuno in
+ * Saves/openorc/suoni. Il suono corrente si puo' cambiare: un asterisco lo segnala finche' non lo si
+ * salva o ripristina. Il loop si salva all'uscita in Saves/openorc/loop.txt e si riprende fermo.
  */
 #include "orc_app.h"
 
@@ -62,26 +70,46 @@ static float clampf(float x, float lo, float hi) { return x < lo ? lo : (x > hi 
 static float clamp01(float x) { return clampf(x, 0.0f, 1.0f); }
 
 /* ------------------------------------------------------------------ suoni */
-typedef struct { const char *name; OrcSound s; int spread; } Preset;
+typedef struct { const char *name, *cat; OrcSound s; int spread; } Preset;
 /* motore, tono, carattere, attacco, decadimento, sostegno, rilascio, vibrato, basso, tono del basso,
-   chorus, delay, riverbero, esecuzione, quantita', volume */
+   chorus, delay, riverbero, esecuzione, quantita', volume, stereo. In ordine di categoria: e' l'ordine
+   dell'elenco, dei pad Suono precedente/successivo e del program change. */
 static const Preset PRESETS[] = {
-    { "Lungolago",          { ENG_VA,    0.45f, 0.45f, 0.600f, 1.2f, 0.80f, 1.80f, 0.10f, 0.50f, 0.30f, 0.60f, 0.20f, 0.60f, PERF_CHORD,   0.30f, 0.80f }, SPREAD_OPEN },
-    { "Tramonto FM",        { ENG_FM,    0.30f, 0.00f, 0.003f, 2.2f, 0.00f, 0.60f, 0.15f, 0.45f, 0.30f, 0.45f, 0.15f, 0.35f, PERF_CHORD,   0.30f, 0.80f }, SPREAD_CLOSE },
-    { "Wurli di notte",     { ENG_REED,  0.45f, 0.50f, 0.003f, 1.6f, 0.30f, 0.35f, 0.35f, 0.40f, 0.30f, 0.15f, 0.10f, 0.30f, PERF_SLOP,    0.35f, 0.80f }, SPREAD_CLOSE },
-    { "Arpa di vetro",      { ENG_FM,    0.50f, 0.30f, 0.002f, 1.8f, 0.00f, 1.20f, 0.05f, 0.00f, 0.30f, 0.30f, 0.35f, 0.55f, PERF_HARP,    0.35f, 0.80f }, SPREAD_CLOSE },
-    { "Cascata",            { ENG_VA,    0.60f, 0.20f, 0.002f, 0.4f, 0.40f, 0.25f, 0.00f, 0.35f, 0.40f, 0.30f, 0.45f, 0.40f, PERF_ARP,     0.65f, 0.80f }, SPREAD_CLOSE },
-    { "Psichedelia",        { ENG_VA,    0.50f, 0.85f, 0.010f, 0.8f, 0.60f, 0.60f, 0.30f, 0.50f, 0.50f, 0.80f, 0.50f, 0.50f, PERF_SLOP,    0.70f, 0.80f }, SPREAD_WIDE },
-    { "Organo della pieve", { ENG_ORGAN, 0.40f, 0.50f, 0.006f, 0.5f, 1.00f, 0.08f, 0.35f, 0.50f, 0.30f, 0.60f, 0.00f, 0.35f, PERF_CHORD,   0.30f, 0.75f }, SPREAD_CLOSE },
-    { "Ottoni",             { ENG_VA,    0.30f, 0.30f, 0.050f, 0.6f, 0.75f, 0.25f, 0.12f, 0.50f, 0.40f, 0.20f, 0.10f, 0.35f, PERF_STRUM,   0.05f, 0.80f }, SPREAD_OPEN },
-    { "Ritmo in levare",    { ENG_VA,    0.55f, 0.40f, 0.002f, 0.3f, 0.50f, 0.12f, 0.00f, 0.60f, 0.50f, 0.30f, 0.25f, 0.25f, PERF_PATTERN, 0.30f, 0.80f }, SPREAD_CLOSE },
-    { "Campane lunari",     { ENG_FM,    0.70f, 0.75f, 0.002f, 3.0f, 0.00f, 2.50f, 0.00f, 0.00f, 0.30f, 0.20f, 0.40f, 0.70f, PERF_STRUM,   0.40f, 0.75f }, SPREAD_WIDE },
-    { "Chitarra di carta",  { ENG_VA,    0.35f, 0.10f, 0.002f, 0.7f, 0.00f, 0.30f, 0.00f, 0.40f, 0.30f, 0.20f, 0.10f, 0.30f, PERF_STRUM,   0.30f, 0.85f }, SPREAD_CLOSE },
-    { "Nebbia",             { ENG_VA,    0.25f, 0.70f, 1.200f, 2.0f, 0.90f, 2.50f, 0.20f, 0.30f, 0.20f, 0.70f, 0.30f, 0.80f, PERF_CHORD,   0.30f, 0.80f }, SPREAD_WIDE },
+    { "Lungolago",          "Atmosfere", { ENG_VA,    0.45f, 0.45f, 0.600f, 1.20f, 0.80f, 1.80f, 0.10f, 0.50f, 0.30f, 0.60f, 0.20f, 0.60f, PERF_CHORD,   0.30f, 0.80f, 0.00f }, SPREAD_OPEN },
+    { "Nebbia",             "Atmosfere", { ENG_VA,    0.25f, 0.70f, 1.200f, 2.00f, 0.90f, 2.50f, 0.20f, 0.30f, 0.20f, 0.70f, 0.30f, 0.80f, PERF_CHORD,   0.30f, 0.80f, 0.00f }, SPREAD_WIDE },
+    { "Psichedelia",        "Atmosfere", { ENG_VA,    0.50f, 0.85f, 0.010f, 0.80f, 0.60f, 0.60f, 0.30f, 0.50f, 0.50f, 0.80f, 0.50f, 0.50f, PERF_SLOP,    0.70f, 0.80f, 0.00f }, SPREAD_WIDE },
+    { "Aurora",             "Atmosfere", { ENG_SUPER, 0.40f, 0.45f, 0.900f, 2.00f, 0.85f, 2.20f, 0.08f, 0.35f, 0.25f, 0.35f, 0.20f, 0.75f, PERF_CHORD,   0.30f, 0.75f, 0.90f }, SPREAD_WIDE },
+    { "Archi d'inverno",    "Atmosfere", { ENG_SUPER, 0.32f, 0.30f, 0.350f, 1.00f, 0.90f, 1.30f, 0.18f, 0.40f, 0.30f, 0.25f, 0.10f, 0.55f, PERF_CHORD,   0.30f, 0.80f, 0.70f }, SPREAD_OPEN },
+    { "Respiro di vetro",   "Atmosfere", { ENG_FM,    0.28f, 0.00f, 0.700f, 2.50f, 0.50f, 2.00f, 0.12f, 0.20f, 0.30f, 0.40f, 0.25f, 0.55f, PERF_SLOP,    0.40f, 0.80f, 0.85f }, SPREAD_WIDE },
+    { "Tramonto FM",        "Tastiere",  { ENG_FM,    0.30f, 0.00f, 0.003f, 2.20f, 0.00f, 0.60f, 0.15f, 0.45f, 0.30f, 0.45f, 0.15f, 0.35f, PERF_CHORD,   0.30f, 0.80f, 0.00f }, SPREAD_CLOSE },
+    { "Wurli di notte",     "Tastiere",  { ENG_REED,  0.45f, 0.50f, 0.003f, 1.60f, 0.30f, 0.35f, 0.35f, 0.40f, 0.30f, 0.15f, 0.10f, 0.30f, PERF_SLOP,    0.35f, 0.80f, 0.00f }, SPREAD_CLOSE },
+    { "Valigia stereo",     "Tastiere",  { ENG_REED,  0.40f, 0.35f, 0.003f, 2.00f, 0.35f, 0.45f, 0.55f, 0.40f, 0.30f, 0.10f, 0.10f, 0.35f, PERF_CHORD,   0.30f, 0.80f, 1.00f }, SPREAD_CLOSE },
+    { "Organo della pieve", "Tastiere",  { ENG_ORGAN, 0.40f, 0.50f, 0.006f, 0.50f, 1.00f, 0.08f, 0.35f, 0.50f, 0.30f, 0.60f, 0.00f, 0.35f, PERF_CHORD,   0.30f, 0.75f, 0.00f }, SPREAD_CLOSE },
+    { "Organo rotante",     "Tastiere",  { ENG_ORGAN, 0.55f, 0.70f, 0.006f, 0.50f, 1.00f, 0.10f, 0.45f, 0.50f, 0.40f, 0.75f, 0.00f, 0.30f, PERF_CHORD,   0.30f, 0.72f, 0.80f }, SPREAD_CLOSE },
+    { "Chitarra di carta",  "Corde",     { ENG_VA,    0.35f, 0.10f, 0.002f, 0.70f, 0.00f, 0.30f, 0.00f, 0.40f, 0.30f, 0.20f, 0.10f, 0.30f, PERF_STRUM,   0.30f, 0.85f, 0.00f }, SPREAD_CLOSE },
+    { "Dodici corde",       "Corde",     { ENG_PLUCK, 0.65f, 0.65f, 0.002f, 1.00f, 1.00f, 0.60f, 0.00f, 0.40f, 0.35f, 0.50f, 0.10f, 0.35f, PERF_STRUM,   0.25f, 0.85f, 0.75f }, SPREAD_OPEN },
+    { "Koto del lago",      "Corde",     { ENG_PLUCK, 0.75f, 0.55f, 0.002f, 1.00f, 1.00f, 0.60f, 0.10f, 0.00f, 0.30f, 0.00f, 0.30f, 0.50f, PERF_SLOP,    0.50f, 0.85f, 0.60f }, SPREAD_CLOSE },
+    { "Arpa celtica",       "Corde",     { ENG_PLUCK, 0.55f, 0.80f, 0.002f, 1.00f, 1.00f, 1.50f, 0.00f, 0.00f, 0.30f, 0.15f, 0.15f, 0.60f, PERF_HARP,    0.30f, 0.85f, 1.00f }, SPREAD_CLOSE },
+    { "Arpa di vetro",      "Corde",     { ENG_FM,    0.50f, 0.30f, 0.002f, 1.80f, 0.00f, 1.20f, 0.05f, 0.00f, 0.30f, 0.30f, 0.35f, 0.55f, PERF_HARP,    0.35f, 0.80f, 0.00f }, SPREAD_CLOSE },
+    { "Pizzicato",          "Corde",     { ENG_PLUCK, 0.35f, 0.15f, 0.002f, 1.00f, 1.00f, 0.15f, 0.00f, 0.45f, 0.30f, 0.10f, 0.05f, 0.40f, PERF_CHORD,   0.30f, 0.85f, 0.70f }, SPREAD_OPEN },
+    { "Cascata",            "Arpeggi",   { ENG_VA,    0.60f, 0.20f, 0.002f, 0.40f, 0.40f, 0.25f, 0.00f, 0.35f, 0.40f, 0.30f, 0.45f, 0.40f, PERF_ARP,     0.65f, 0.80f, 0.00f }, SPREAD_CLOSE },
+    { "Pioggia",            "Arpeggi",   { ENG_PLUCK, 0.60f, 0.55f, 0.002f, 1.00f, 1.00f, 0.50f, 0.00f, 0.30f, 0.30f, 0.20f, 0.45f, 0.50f, PERF_ARP,     0.65f, 0.85f, 1.00f }, SPREAD_CLOSE },
+    { "Ritmo in levare",    "Arpeggi",   { ENG_VA,    0.55f, 0.40f, 0.002f, 0.30f, 0.50f, 0.12f, 0.00f, 0.60f, 0.50f, 0.30f, 0.25f, 0.25f, PERF_PATTERN, 0.30f, 0.80f, 0.00f }, SPREAD_CLOSE },
+    { "Treno notturno",     "Arpeggi",   { ENG_SUPER, 0.45f, 0.35f, 0.002f, 0.25f, 0.30f, 0.12f, 0.00f, 0.60f, 0.50f, 0.20f, 0.30f, 0.25f, PERF_PATTERN, 0.55f, 0.80f, 0.70f }, SPREAD_CLOSE },
+    { "Campane lunari",     "Campane",   { ENG_FM,    0.70f, 0.75f, 0.002f, 3.00f, 0.00f, 2.50f, 0.00f, 0.00f, 0.30f, 0.20f, 0.40f, 0.70f, PERF_STRUM,   0.40f, 0.75f, 0.00f }, SPREAD_WIDE },
+    { "Carillon",           "Campane",   { ENG_FM,    0.55f, 0.79f, 0.002f, 1.50f, 0.00f, 1.20f, 0.00f, 0.00f, 0.30f, 0.10f, 0.35f, 0.55f, PERF_ARP,     0.30f, 0.75f, 0.90f }, SPREAD_CLOSE },
+    { "Ottoni",             "Ottoni",    { ENG_VA,    0.30f, 0.30f, 0.050f, 0.60f, 0.75f, 0.25f, 0.12f, 0.50f, 0.40f, 0.20f, 0.10f, 0.35f, PERF_STRUM,   0.05f, 0.80f, 0.00f }, SPREAD_OPEN },
+    { "Fanfara",            "Ottoni",    { ENG_SUPER, 0.38f, 0.22f, 0.060f, 0.50f, 0.80f, 0.25f, 0.12f, 0.50f, 0.40f, 0.15f, 0.10f, 0.35f, PERF_STRUM,   0.05f, 0.78f, 0.50f }, SPREAD_OPEN },
 };
 #define PRESET_COUNT ((int)(sizeof(PRESETS) / sizeof(PRESETS[0])))
+#define USER_CAT "Tuoi"
+/* L'ordine delle versioni fino all'11/10/2026: gli stati salvati allora hanno solo il numero del suono. */
+static const char *OLD_ORDER[12] = {
+    "Lungolago", "Tramonto FM", "Wurli di notte", "Arpa di vetro", "Cascata", "Psichedelia",
+    "Organo della pieve", "Ottoni", "Ritmo in levare", "Campane lunari", "Chitarra di carta", "Nebbia",
+};
 
-static const char *ENGINE_NAMES[ENG_COUNT] = { "Analogico", "FM", "Piano elettrico", "Organo" };
+static const char *ENGINE_NAMES[ENG_COUNT] = { "Analogico", "FM", "Piano elettrico", "Organo", "Corda pizzicata", "Ensemble" };
 static const char *PERFORM_NAMES[PERF_COUNT] = { "Accordo", "Strum", "Slop", "Arpeggio", "Pattern", "Arpa" };
 static const char *BEAT_NAMES[BEAT_COUNT] = { "Disco", "Psichedelico", "Trap", "Bossa nova" };
 static const char *SPREAD_NAMES[SPREAD_COUNT] = { "Stretta", "Aperta", "Ampia" };
@@ -91,6 +119,9 @@ static const char *ARP_SHORT[5] = { "1/4", "1/8", "1/8T", "1/16", "1/32" };
 static const int LOOP_BARS[4] = { 1, 2, 4, 8 };
 static const float QUANT_BEATS[4] = { 0.0f, 0.25f, 0.5f, 1.0f };
 static const char *QUANT_NAMES[4] = { "No", "1/16", "1/8", "1/4" };
+
+static int ieq(const char *x, const char *y);
+static char *trim(char *s);
 
 /* ------------------------------------------------------------------ MIDI */
 enum { MAP_NONE, MAP_NOTE, MAP_CC };
@@ -103,7 +134,7 @@ enum { X_PLAY, X_RECORD, X_OVERDUB, X_LOOP, X_UNDO };
 
 static const char *TARGET_NAMES[T_COUNT] = {
     "Dim", "Min", "Maj", "Sus", "6", "m7", "M7", "9",
-    "Batteria", "Loop: registra", "Loop: suona o ferma", "Loop: cancella",
+    "Batteria", "Loop: registra", "Loop: suona o ferma", "Loop: annulla",
     "Modo tonalità", "Esecuzione successiva", "Suono precedente", "Suono successivo",
     "K1 Voicing", "K2 Basso", "K3 Esecuzione", "K4 Tono", "K5 Chorus", "K6 Delay", "K7 Riverbero", "K8 Volume",
     "Play/Stop", "Record", "Overdub", "Loop", "Undo",
@@ -142,24 +173,33 @@ static const int FLIP_DEGREE[FLIP_SLOTS + 1] = { 0, 3, 4, 5, 1, 2, 6, -1, 0 };
 enum { MOD_SWAP, MOD_SUS, MOD_SEVENTH, MOD_NINTH, MOD_COUNT };     /* L1, R1, L2, R2 */
 
 /* ------------------------------------------------------------------ elenchi delle pagine */
-enum { P_SOUND, P_KEY, P_SCALE, P_KEYMODE, P_VOICING, P_SPREAD, P_PERFORM, P_AMOUNT,
+enum { P_SOUND, P_SAVE_NEW, P_OVERWRITE, P_RESTORE, P_RANDOM, P_RENAME, P_DELETE,
+       P_KEY, P_SCALE, P_KEYMODE, P_VOICING, P_SPREAD, P_PERFORM, P_AMOUNT, P_FOLLOW,
        P_ENGINE, P_TONE, P_CHAR, P_ATTACK, P_DECAY, P_SUSTAIN, P_RELEASE, P_VIBRATO,
-       P_BASS, P_BASS_TONE, P_CHORUS, P_DELAY, P_REVERB, P_VOLUME, P_COUNT };
+       P_BASS, P_BASS_TONE, P_STEREO, P_CHORUS, P_DELAY, P_REVERB, P_VOLUME, P_COUNT };
 static const char *PARAM_NAMES[P_COUNT] = {
-    "Suono", "Tonalità", "Scala", "Modo tonalità", "Voicing", "Apertura", "Esecuzione", "Quantità",
+    "Suono", "Salva come nuovo suono", "Aggiorna il tuo suono", "Ripristina", "Variazione casuale", "Rinomina", "Elimina",
+    "Tonalità", "Scala", "Modo tonalità", "Voicing", "Apertura", "Esecuzione", "Quantità", "Cambia con il suono",
     "Motore", "Tono", "Carattere", "Attacco", "Decadimento", "Sostegno", "Rilascio", "Vibrato",
-    "Livello", "Tono", "Chorus", "Delay", "Riverbero", "Volume",
+    "Livello", "Tono", "Ampiezza stereo", "Chorus", "Delay", "Riverbero", "Volume",
 };
 #define HDR(i) (-1 - (i))
-static const char *SOUND_HEADERS[4] = { "Accordi", "Timbro", "Basso", "Effetti" };
+static const char *const CHORD_HEADERS[3] = { "Tonalità", "Voicing", "Esecuzione" };
+static const int CHORD_ROWS[] = {
+    HDR(0), P_KEY, P_SCALE, P_KEYMODE,
+    HDR(1), P_VOICING, P_SPREAD,
+    HDR(2), P_PERFORM, P_AMOUNT, P_FOLLOW,
+};
+static const char *const SOUND_HEADERS[4] = { "Suono", "Timbro", "Basso", "Effetti" };
 static const int SOUND_ROWS[] = {
-    P_SOUND,
-    HDR(0), P_KEY, P_SCALE, P_KEYMODE, P_VOICING, P_SPREAD, P_PERFORM, P_AMOUNT,
+    HDR(0), P_SOUND, P_SAVE_NEW, P_OVERWRITE, P_RESTORE, P_RANDOM, P_RENAME, P_DELETE,
     HDR(1), P_ENGINE, P_TONE, P_CHAR, P_ATTACK, P_DECAY, P_SUSTAIN, P_RELEASE, P_VIBRATO,
     HDR(2), P_BASS, P_BASS_TONE,
-    HDR(3), P_CHORUS, P_DELAY, P_REVERB, P_VOLUME,
+    HDR(3), P_STEREO, P_CHORUS, P_DELAY, P_REVERB, P_VOLUME,
 };
+#define CHORD_ROW_COUNT ((int)(sizeof(CHORD_ROWS) / sizeof(CHORD_ROWS[0])))
 #define SOUND_ROW_COUNT ((int)(sizeof(SOUND_ROWS) / sizeof(SOUND_ROWS[0])))
+static int is_action(int p) { return p >= P_SAVE_NEW && p <= P_DELETE; }
 
 enum { R_BEAT, R_STYLE, R_LEVEL, R_TEMPO, R_CLOCK, R_BARS, R_QUANT, R_COUNT };
 static const char *RHYTHM_NAMES[R_COUNT] = {
@@ -170,6 +210,8 @@ static const char *RHYTHM_NAMES[R_COUNT] = {
 typedef struct {
     OrcSound snd;
     int sound, key, minor, keymode, spread;
+    int follow;                                   /* 1: esecuzione, quantita' e apertura cambiano con il suono */
+    char sound_name[40];
     float voicing;
     float bpm;
     int beat_on, beat_style;
@@ -177,6 +219,9 @@ typedef struct {
     int clock_follow, loop_bars, loop_quant, knob_mode;
     MidiMap map[T_COUNT];
 } Settings;
+
+#define USER_MAX 64
+typedef struct { char name[40]; char path[600]; OrcSound s; int spread; } UserSound;
 
 typedef struct { int src; float vel; } Held;      /* src: tasto 0..127 o SRC_FLIP(pulsante) */
 
@@ -214,9 +259,10 @@ struct OrcApp {
     char last_msg[96];
     int clock_ticks;
     float clock_start, clock_seen, clock_bpm;
+    float knob_t[8];                              /* manopola appena girata: si accende nella pagina Suona */
 
     /* pagine a elenco */
-    int sound_sel, sound_scroll, rhythm_sel, rhythm_scroll;
+    int sound_sel, sound_scroll, chords_sel, chords_scroll, rhythm_sel, rhythm_scroll;
     char toast[112];
     float toast_t;
     char flash[48];
@@ -230,6 +276,21 @@ struct OrcApp {
     float drawn_time;
     float scope[1200];
     int kbd_next;                                 /* prossimo preset della tastiera (Y nella pagina MIDI) */
+
+    /* suoni */
+    UserSound user[USER_MAX];
+    int user_n;
+    OrcSound base;                                /* il suono com'e' salvato: per l'asterisco e Ripristina */
+    int base_spread, base_ok;
+    uint32_t rng;
+    int del_armed;                                /* Elimina premuto una volta */
+    float del_t;
+    int editing;                                  /* Rinomina: si scrive con una tastiera USB */
+    char edit[40];
+
+    /* SELECT tenuto: elenco dei suoni e funzioni; peek: l'elenco in vista per un attimo */
+    int sel_down, sel_used, overlay;
+    float sel_time, peek_t;
 };
 
 static void toast(OrcApp *a, const char *msg)
@@ -486,20 +547,100 @@ static void chord_pad(OrcApp *a, int i, int pressed)
     modifiers_changed(a);
 }
 
-/* ------------------------------------------------------------------ funzioni */
-static void load_preset(OrcApp *a, int i)
+/* ------------------------------------------------------------------ suoni: elenco */
+static int sound_count(const OrcApp *a) { return PRESET_COUNT + a->user_n; }
+static int sound_is_user(const OrcApp *a, int i) { return i >= PRESET_COUNT && i < sound_count(a); }
+
+static const char *sound_name(const OrcApp *a, int i)
 {
-    i = ((i % PRESET_COUNT) + PRESET_COUNT) % PRESET_COUNT;
-    float vol = a->set.snd.volume;                /* il volume resta quello scelto */
-    a->set.sound = i;
-    a->set.snd = PRESETS[i].s;
-    a->set.snd.volume = vol;
-    a->set.spread = PRESETS[i].spread;
-    sound_changed(a);
-    modifiers_changed(a);
-    toast(a, PRESETS[i].name);
+    if (i >= 0 && i < PRESET_COUNT) return PRESETS[i].name;
+    if (sound_is_user(a, i)) return a->user[i - PRESET_COUNT].name;
+    return "";
 }
 
+static const char *sound_cat(const OrcApp *a, int i) { return i >= 0 && i < PRESET_COUNT ? PRESETS[i].cat : USER_CAT; }
+
+static void sound_values(const OrcApp *a, int i, OrcSound *s, int *spread)
+{
+    if (sound_is_user(a, i)) { *s = a->user[i - PRESET_COUNT].s; *spread = a->user[i - PRESET_COUNT].spread; return; }
+    if (i < 0 || i >= PRESET_COUNT) i = 0;
+    *s = PRESETS[i].s;
+    *spread = PRESETS[i].spread;
+}
+
+static int sound_find(const OrcApp *a, const char *name)
+{
+    for (int i = 0; i < sound_count(a); i++) if (ieq(sound_name(a, i), name)) return i;
+    return -1;
+}
+
+static int feq(float x, float y) { return fabsf(x - y) < 1e-4f; }
+
+/* Cambiato rispetto a com'e' salvato? Il volume non conta: resta quello scelto da un suono all'altro. */
+static int sound_modified(const OrcApp *a)
+{
+    if (!a->base_ok) return 1;
+    const OrcSound *s = &a->set.snd, *b = &a->base;
+    if (s->engine != b->engine || !feq(s->tone, b->tone) || !feq(s->character, b->character) || !feq(s->attack, b->attack) ||
+        !feq(s->decay, b->decay) || !feq(s->sustain, b->sustain) || !feq(s->release, b->release) ||
+        !feq(s->vibrato, b->vibrato) || !feq(s->bass_level, b->bass_level) || !feq(s->bass_tone, b->bass_tone) ||
+        !feq(s->chorus, b->chorus) || !feq(s->delay, b->delay) || !feq(s->reverb, b->reverb) || !feq(s->stereo, b->stereo))
+        return 1;
+    return a->set.follow && (s->perform != b->perform || !feq(s->perform_amount, b->perform_amount) || a->set.spread != a->base_spread);
+}
+
+/* Nome del suono corrente, con l'asterisco se e' stato cambiato. */
+static void sound_label(const OrcApp *a, char *out, size_t n)
+{
+    snprintf(out, n, "%.39s%s", a->set.sound_name, sound_modified(a) ? "*" : "");
+}
+
+static void load_sound(OrcApp *a, int i)
+{
+    int n = sound_count(a), spread;
+    i = ((i % n) + n) % n;
+    OrcSound s, cur = a->set.snd;
+    sound_values(a, i, &s, &spread);
+    a->base = s;
+    a->base_spread = spread;
+    a->base_ok = 1;
+    s.volume = cur.volume;                        /* il volume resta quello scelto */
+    if (!a->set.follow) { s.perform = cur.perform; s.perform_amount = cur.perform_amount; spread = a->set.spread; }
+    a->set.snd = s;
+    a->set.spread = spread;
+    a->set.sound = i;
+    snprintf(a->set.sound_name, sizeof(a->set.sound_name), "%s", sound_name(a, i));
+    a->del_armed = 0;
+    sound_changed(a);
+    modifiers_changed(a);
+}
+
+/* Suono precedente o successivo; peek = l'elenco si fa vedere per un attimo (MPK, program change). */
+static void sound_step(OrcApp *a, int dir, int peek)
+{
+    load_sound(a, a->set.sound + dir);
+    if (peek) a->peek_t = 1.6f;
+}
+
+/* Primo suono della categoria successiva, o di quella corrente (precedente se ci si e' gia'). */
+static void sound_category_step(OrcApp *a, int dir)
+{
+    int n = sound_count(a), i = a->set.sound, j = i;
+    const char *cat = sound_cat(a, i);
+    if (dir > 0) {
+        do { j = (j + 1) % n; } while (j != i && !strcmp(sound_cat(a, j), cat));
+    } else {
+        while (j > 0 && !strcmp(sound_cat(a, j - 1), cat)) j--;
+        if (j == i) {
+            j = (i - 1 + n) % n;
+            const char *pc = sound_cat(a, j);
+            while (j > 0 && !strcmp(sound_cat(a, j - 1), pc)) j--;
+        }
+    }
+    load_sound(a, j);
+}
+
+/* ------------------------------------------------------------------ funzioni */
 static void transport_set(OrcApp *a, int on)
 {
     orc_transport(a->orc, on);
@@ -556,10 +697,16 @@ static void loop_play(OrcApp *a)
     }
 }
 
-static void loop_clear(OrcApp *a)
+/* Annulla: la sovraincisione in corso, poi le precedenti, infine tutto il giro. */
+static void loop_undo(OrcApp *a)
 {
-    orc_loop_clear(a->orc);
-    toast(a, "Loop cancellato");
+    OrcLoopInfo li;
+    orc_loop_info(a->orc, &li);
+    orc_loop_undo(a->orc);
+    if (li.state == LOOP_OVERDUB) toast(a, "Sovraincisione annullata");
+    else if ((li.state == LOOP_PLAYING || li.state == LOOP_STOPPED) && li.layers > 0) toast(a, "Tolta l'ultima sovraincisione");
+    else if (li.state == LOOP_EMPTY) toast(a, "Il loop è già vuoto");
+    else toast(a, "Loop cancellato");
 }
 
 static void keymode_toggle(OrcApp *a)
@@ -588,11 +735,11 @@ static void function(OrcApp *a, int f)
     case F_BEAT: beat_toggle(a); break;
     case F_LOOP_REC: loop_record(a); break;
     case F_LOOP_PLAY: loop_play(a); break;
-    case F_LOOP_CLEAR: loop_clear(a); break;
+    case F_LOOP_CLEAR: loop_undo(a); break;
     case F_KEYMODE: keymode_toggle(a); break;
     case F_PERFORM: perform_next(a); break;
-    case F_SOUND_PREV: load_preset(a, a->set.sound - 1); break;
-    case F_SOUND_NEXT: load_preset(a, a->set.sound + 1); break;
+    case F_SOUND_PREV: sound_step(a, -1, 1); break;
+    case F_SOUND_NEXT: sound_step(a, 1, 1); break;
     }
 }
 
@@ -621,6 +768,7 @@ static void knob(OrcApp *a, int k, int v)
         x = clamp01(*ref + d / 100.0f);
     }
     *ref = x;
+    a->knob_t[k] = 1.2f;
     char t[32];
     if (k == K_VOICING) { a->dirty = 1; modifiers_changed(a); percent(t, sizeof(t), x); }
     else {
@@ -640,7 +788,7 @@ static void control(OrcApp *a, int t, int pressed)
     case X_PLAY: transport_toggle(a); break;
     case X_RECORD: case X_OVERDUB: loop_record(a); break;
     case X_LOOP: loop_play(a); break;
-    case X_UNDO: loop_clear(a); break;
+    case X_UNDO: loop_undo(a); break;
     }
 }
 
@@ -800,7 +948,8 @@ void orcapp_midi(OrcApp *a, int port, const unsigned char *m, int len)
         expression(a);
         break;
     case MIDI_PROGRAM:
-        load_preset(a, d1 % PRESET_COUNT);
+        load_sound(a, d1 % sound_count(a));
+        a->peek_t = 1.6f;
         break;
     }
 }
@@ -939,6 +1088,7 @@ int orcapp_load_keyboard(OrcApp *a, const char *path, char *name, size_t name_n)
             int t = 0;                            /* prima il nome esatto: m7 e M7 sono diversi */
             while (t < T_COUNT && strcmp(k, TARGET_NAMES[t])) t++;
             if (t == T_COUNT) for (t = 0; t < T_COUNT && !ieq(k, TARGET_NAMES[t]); t++) {}
+            if (t == T_COUNT && ieq(k, "Loop: cancella")) t = T_FUNC + F_LOOP_CLEAR;     /* nome fino all'11/10/2026 */
             if (t < T_COUNT) found += parse_map(v, &m[t]);
         }
     }
@@ -1015,6 +1165,8 @@ static void settings_default(Settings *s)
     s->sound = 0;
     s->snd = PRESETS[0].s;
     s->spread = PRESETS[0].spread;
+    snprintf(s->sound_name, sizeof(s->sound_name), "%s", PRESETS[0].name);
+    s->follow = 1;
     s->key = 0;
     s->voicing = 0.5f;
     s->bpm = 96.0f;
@@ -1027,6 +1179,39 @@ static void settings_default(Settings *s)
     default_map(s->map);
 }
 
+/* I parametri di un suono come righe chiave=valore: li usano il file di stato e i suoni dell'utente. */
+static void sound_write(FILE *f, const OrcSound *d, int spread)
+{
+    fprintf(f, "engine=%d\ntone=%g\ncharacter=%g\nattack=%g\ndecay=%g\nsustain=%g\nrelease=%g\nvibrato=%g\nbass=%g\n"
+               "bass_tone=%g\nchorus=%g\ndelay=%g\nreverb=%g\nperform=%d\namount=%g\nvolume=%g\nstereo=%g\nspread=%d\n",
+            d->engine, d->tone, d->character, d->attack, d->decay, d->sustain, d->release, d->vibrato, d->bass_level,
+            d->bass_tone, d->chorus, d->delay, d->reverb, d->perform, d->perform_amount, d->volume, d->stereo, spread);
+}
+
+static int sound_read(OrcSound *d, int *spread, const char *k, float v)
+{
+    if (!strcmp(k, "engine")) d->engine = (int)clampf(v, 0, ENG_COUNT - 1);
+    else if (!strcmp(k, "tone")) d->tone = clamp01(v);
+    else if (!strcmp(k, "character")) d->character = clamp01(v);
+    else if (!strcmp(k, "attack")) d->attack = clampf(v, 0.002f, 8.0f);
+    else if (!strcmp(k, "decay")) d->decay = clampf(v, 0.01f, 8.0f);
+    else if (!strcmp(k, "sustain")) d->sustain = clamp01(v);
+    else if (!strcmp(k, "release")) d->release = clampf(v, 0.01f, 8.0f);
+    else if (!strcmp(k, "vibrato")) d->vibrato = clamp01(v);
+    else if (!strcmp(k, "bass")) d->bass_level = clamp01(v);
+    else if (!strcmp(k, "bass_tone")) d->bass_tone = clamp01(v);
+    else if (!strcmp(k, "chorus")) d->chorus = clamp01(v);
+    else if (!strcmp(k, "delay")) d->delay = clamp01(v);
+    else if (!strcmp(k, "reverb")) d->reverb = clamp01(v);
+    else if (!strcmp(k, "perform")) d->perform = (int)clampf(v, 0, PERF_COUNT - 1);
+    else if (!strcmp(k, "amount")) d->perform_amount = clamp01(v);
+    else if (!strcmp(k, "volume")) d->volume = clamp01(v);
+    else if (!strcmp(k, "stereo")) d->stereo = clamp01(v);
+    else if (!strcmp(k, "spread")) *spread = (int)clampf(v, 0, SPREAD_COUNT - 1);
+    else return 0;
+    return 1;
+}
+
 static void save(OrcApp *a)
 {
     if (!a->path[0]) return;
@@ -1035,14 +1220,11 @@ static void save(OrcApp *a)
     FILE *f = fopen(tmp, "w");
     if (!f) return;
     const Settings *s = &a->set;
-    const OrcSound *d = &s->snd;
-    fprintf(f, "# OpenOrc\nsound=%d\nengine=%d\ntone=%g\ncharacter=%g\nattack=%g\ndecay=%g\nsustain=%g\nrelease=%g\n"
-               "vibrato=%g\nbass=%g\nbass_tone=%g\nchorus=%g\ndelay=%g\nreverb=%g\nperform=%d\namount=%g\nvolume=%g\n",
-            s->sound, d->engine, d->tone, d->character, d->attack, d->decay, d->sustain, d->release, d->vibrato,
-            d->bass_level, d->bass_tone, d->chorus, d->delay, d->reverb, d->perform, d->perform_amount, d->volume);
-    fprintf(f, "key=%d\nminor=%d\nkeymode=%d\nvoicing=%g\nspread=%d\nbpm=%g\nbeat=%d\nbeat_style=%d\nbeat_level=%g\n"
+    fprintf(f, "# OpenOrc\nsound=%d\nsound_name=%s\n", s->sound, s->sound_name);
+    sound_write(f, &s->snd, s->spread);
+    fprintf(f, "key=%d\nminor=%d\nkeymode=%d\nvoicing=%g\nfollow=%d\nbpm=%g\nbeat=%d\nbeat_style=%d\nbeat_level=%g\n"
                "clock=%d\nloop_bars=%d\nquant=%d\nknob_mode=%d\n",
-            s->key, s->minor, s->keymode, s->voicing, s->spread, s->bpm, s->beat_on, s->beat_style, s->beat_level,
+            s->key, s->minor, s->keymode, s->voicing, s->follow, s->bpm, s->beat_on, s->beat_style, s->beat_level,
             s->clock_follow, s->loop_bars, s->loop_quant, s->knob_mode);
     for (int t = 0; t < T_COUNT; t++)
         fprintf(f, "map%d=%d,%d,%d,%d\n", t, s->map[t].kind, s->map[t].port, s->map[t].ch, s->map[t].num);
@@ -1054,13 +1236,15 @@ static void save(OrcApp *a)
     a->dirty = 0;
 }
 
-static void load(OrcApp *a)
+/* Restituisce 1 se il file aveva il nome del suono (dal 12/10/2026); prima c'era solo il numero. */
+static int load(OrcApp *a)
 {
     FILE *f = fopen(a->path, "r");
-    if (!f) return;
+    if (!f) return 0;
     Settings *s = &a->set;
     OrcSound *d = &s->snd;
     char line[160];
+    int named = 0;
     while (fgets(line, sizeof(line), f)) {
         char *eq = strchr(line, '=');
         if (!eq || line[0] == '#') continue;
@@ -1072,28 +1256,19 @@ static void load(OrcApp *a)
             if (sscanf(val, "%d,%d,%d,%d", &kind, &port, &ch, &num) == 4 && kind >= MAP_NONE && kind <= MAP_CC)
                 s->map[t] = (MidiMap){ kind, port < -1 || port > 7 ? -1 : port, ch < -1 || ch > 15 ? -1 : ch, num & 127 };
         }
-        else if (!strcmp(k, "sound")) s->sound = (int)clampf(v, 0, PRESET_COUNT - 1);
-        else if (!strcmp(k, "engine")) d->engine = (int)clampf(v, 0, ENG_COUNT - 1);
-        else if (!strcmp(k, "tone")) d->tone = clamp01(v);
-        else if (!strcmp(k, "character")) d->character = clamp01(v);
-        else if (!strcmp(k, "attack")) d->attack = clampf(v, 0.002f, 8.0f);
-        else if (!strcmp(k, "decay")) d->decay = clampf(v, 0.01f, 8.0f);
-        else if (!strcmp(k, "sustain")) d->sustain = clamp01(v);
-        else if (!strcmp(k, "release")) d->release = clampf(v, 0.01f, 8.0f);
-        else if (!strcmp(k, "vibrato")) d->vibrato = clamp01(v);
-        else if (!strcmp(k, "bass")) d->bass_level = clamp01(v);
-        else if (!strcmp(k, "bass_tone")) d->bass_tone = clamp01(v);
-        else if (!strcmp(k, "chorus")) d->chorus = clamp01(v);
-        else if (!strcmp(k, "delay")) d->delay = clamp01(v);
-        else if (!strcmp(k, "reverb")) d->reverb = clamp01(v);
-        else if (!strcmp(k, "perform")) d->perform = (int)clampf(v, 0, PERF_COUNT - 1);
-        else if (!strcmp(k, "amount")) d->perform_amount = clamp01(v);
-        else if (!strcmp(k, "volume")) d->volume = clamp01(v);
+        else if (!strcmp(k, "sound")) s->sound = (int)v;
+        else if (!strcmp(k, "sound_name")) {
+            char nm[64];
+            snprintf(nm, sizeof(nm), "%s", val);
+            snprintf(s->sound_name, sizeof(s->sound_name), "%s", trim(nm));
+            named = s->sound_name[0] != 0;
+        }
+        else if (sound_read(d, &s->spread, k, v)) {}
         else if (!strcmp(k, "key")) s->key = (int)clampf(v, 0, 11);
         else if (!strcmp(k, "minor")) s->minor = v != 0;
         else if (!strcmp(k, "keymode")) s->keymode = v != 0;
         else if (!strcmp(k, "voicing")) s->voicing = clamp01(v);
-        else if (!strcmp(k, "spread")) s->spread = (int)clampf(v, 0, SPREAD_COUNT - 1);
+        else if (!strcmp(k, "follow")) s->follow = v != 0;
         else if (!strcmp(k, "bpm")) s->bpm = clampf(v, 30, 300);
         else if (!strcmp(k, "beat")) s->beat_on = v != 0;
         else if (!strcmp(k, "beat_style")) s->beat_style = (int)clampf(v, 0, BEAT_COUNT - 1);
@@ -1104,6 +1279,361 @@ static void load(OrcApp *a)
         else if (!strcmp(k, "knob_mode")) s->knob_mode = (int)clampf(v, 0, 2);
     }
     fclose(f);
+    return named;
+}
+
+/* ------------------------------------------------------------------ suoni dell'utente */
+/* Un file di testo per suono in Saves/openorc/suoni: «nome=...» e poi i parametri come nel file di
+ * stato. Si possono copiare, condividere e ritoccare con un editor di testo. */
+static int user_dir(const OrcApp *a, char *out, size_t n)
+{
+    const char *slash = strrchr(a->path, '/');
+    if (!slash) return 0;
+    snprintf(out, n, "%.*s/suoni", (int)(slash - a->path), a->path);
+    return 1;
+}
+
+static void name_from_file(const char *path, char *out, size_t n)
+{
+    const char *b = strrchr(path, '/');
+    snprintf(out, n, "%.39s", b ? b + 1 : path);
+    char *dot = strrchr(out, '.');
+    if (dot) *dot = 0;
+}
+
+static int user_read(const char *path, UserSound *u)
+{
+    FILE *f = fopen(path, "r");
+    if (!f) return -1;
+    u->s = PRESETS[0].s;
+    u->spread = PRESETS[0].spread;
+    u->name[0] = 0;
+    char line[256];
+    int found = 0;
+    while (fgets(line, sizeof(line), f)) {
+        char *s = line;
+        if (!strncmp(s, "\xEF\xBB\xBF", 3)) s += 3;           /* file salvati con il Blocco note */
+        s = trim(s);
+        char *eq = strchr(s, '=');
+        if (!*s || *s == '#' || !eq) continue;
+        *eq = 0;
+        char *k = trim(s), *v = trim(eq + 1);
+        if (ieq(k, "nome") || ieq(k, "name")) snprintf(u->name, sizeof(u->name), "%.39s", v);
+        else found += sound_read(&u->s, &u->spread, k, (float)atof(v));
+    }
+    fclose(f);
+    if (!found) return -1;
+    if (!u->name[0]) name_from_file(path, u->name, sizeof(u->name));
+    snprintf(u->path, sizeof(u->path), "%s", path);
+    return 0;
+}
+
+static int user_cmp(const void *p, const void *q)
+{
+    const char *x = ((const UserSound *)p)->name, *y = ((const UserSound *)q)->name;
+    while (*x && lower((unsigned char)*x) == lower((unsigned char)*y)) { x++; y++; }
+    return lower((unsigned char)*x) - lower((unsigned char)*y);
+}
+
+static void users_scan(OrcApp *a)
+{
+    char dir[512];
+    a->user_n = 0;
+    if (!user_dir(a, dir, sizeof(dir))) return;
+    DIR *dp = opendir(dir);
+    if (!dp) return;
+    struct dirent *e;
+    while ((e = readdir(dp)) && a->user_n < USER_MAX) {
+        size_t l = strlen(e->d_name);
+        if (l < 5 || !ieq(e->d_name + l - 4, ".txt")) continue;
+        char path[600];
+        snprintf(path, sizeof(path), "%.511s/%.80s", dir, e->d_name);
+        UserSound *u = &a->user[a->user_n];
+        if (user_read(path, u)) continue;
+        if (sound_find(a, u->name) >= 0) {        /* nome doppio (un file copiato a mano): vale il nome del file */
+            name_from_file(path, u->name, sizeof(u->name));
+            if (sound_find(a, u->name) >= 0) continue;
+        }
+        a->user_n++;
+    }
+    closedir(dp);
+    qsort(a->user, (size_t)a->user_n, sizeof(UserSound), user_cmp);
+}
+
+/* Nome di file dal nome del suono: «Nebbia 2» -> nebbia-2 */
+static void slug(const char *name, char *out, size_t n)
+{
+    size_t j = 0;
+    int dash = 0;
+    for (const unsigned char *p = (const unsigned char *)name; *p && j + 2 < n; p++) {
+        int c = *p;
+        if (c >= 'A' && c <= 'Z') c += 32;
+        if ((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9')) { out[j++] = (char)c; dash = 0; }
+        else if (!dash && j) { out[j++] = '-'; dash = 1; }
+    }
+    while (j && out[j - 1] == '-') j--;
+    out[j] = 0;
+    if (!j) snprintf(out, n, "suono");
+}
+
+/* Scrive un suono; old_path: il file che sostituisce (aggiorna, rinomina), che non conta come occupato. */
+static int user_write(OrcApp *a, const char *name, const OrcSound *snd, int spread, const char *old_path)
+{
+    char dir[512], sl[48], path[600], tmp[620];
+    if (!user_dir(a, dir, sizeof(dir))) return -1;
+    make_dir(dir);
+    slug(name, sl, sizeof(sl));
+    snprintf(path, sizeof(path), "%s/%s.txt", dir, sl);
+    for (int k = 2; k < 1000; k++) {              /* mai sopra il file di un altro suono */
+        if (old_path && !strcmp(path, old_path)) break;
+        FILE *t = fopen(path, "r");
+        if (!t) break;
+        fclose(t);
+        snprintf(path, sizeof(path), "%s/%s-%d.txt", dir, sl, k);
+    }
+    snprintf(tmp, sizeof(tmp), "%s.tmp", path);
+    FILE *f = fopen(tmp, "w");
+    if (!f) return -1;
+    fprintf(f, "# OpenOrc - un suono (Saves/openorc/suoni): si puo' copiare e ritoccare\nnome=%s\n", name);
+    sound_write(f, snd, spread);
+    if (fclose(f)) return -1;
+#ifdef _WIN32
+    remove(path);
+#endif
+    if (rename(tmp, path)) return -1;
+    if (old_path && old_path[0] && strcmp(old_path, path)) remove(old_path);
+    return 0;
+}
+
+/* Dopo un salvataggio: si rilegge la cartella e il suono corrente diventa quello salvato. */
+static void sound_adopt(OrcApp *a, const char *name)
+{
+    users_scan(a);
+    int i = sound_find(a, name);
+    a->set.sound = i >= 0 ? i : 0;
+    snprintf(a->set.sound_name, sizeof(a->set.sound_name), "%s", name);
+    a->base = a->set.snd;
+    a->base_spread = a->set.spread;
+    a->base_ok = 1;
+    a->del_armed = 0;
+    a->dirty = 1;
+}
+
+/* Il primo nome libero: «Nebbia» e «Nebbia 2» diventano «Nebbia 2», «Nebbia 3»... */
+static void name_next(const OrcApp *a, char *out, size_t n)
+{
+    char base[40];
+    snprintf(base, sizeof(base), "%s", a->set.sound_name[0] ? a->set.sound_name : "Suono");
+    size_t l = strlen(base), e = l;
+    while (e > 0 && base[e - 1] >= '0' && base[e - 1] <= '9') e--;
+    if (e < l && e > 1 && base[e - 1] == ' ') base[e - 1] = 0;
+    for (int k = 2; k < 1000; k++) {
+        snprintf(out, n, "%.30s %d", base, k);
+        if (sound_find(a, out) < 0) return;
+    }
+}
+
+static void sound_save_new(OrcApp *a)
+{
+    char name[40], t[112];
+    if (!a->path[0]) return;
+    if (a->user_n >= USER_MAX) { toast(a, "Troppi suoni tuoi: eliminane uno"); return; }
+    name_next(a, name, sizeof(name));
+    if (user_write(a, name, &a->set.snd, a->set.spread, NULL)) { toast(a, "Non riesco a salvare il suono"); return; }
+    sound_adopt(a, name);
+    snprintf(t, sizeof(t), "Salvato come «%s»", name);
+    toast(a, t);
+}
+
+static void sound_overwrite(OrcApp *a)
+{
+    char name[40], old[600], t[112];
+    if (!sound_is_user(a, a->set.sound)) { toast(a, "Si aggiornano solo i tuoi: usa «Salva come nuovo suono»"); return; }
+    const UserSound *u = &a->user[a->set.sound - PRESET_COUNT];
+    snprintf(name, sizeof(name), "%s", u->name);
+    snprintf(old, sizeof(old), "%s", u->path);
+    if (user_write(a, name, &a->set.snd, a->set.spread, old)) { toast(a, "Non riesco a salvare il suono"); return; }
+    sound_adopt(a, name);
+    snprintf(t, sizeof(t), "«%s» aggiornato", name);
+    toast(a, t);
+}
+
+static void sound_restore(OrcApp *a)
+{
+    char t[112];
+    if (!a->base_ok) { toast(a, "Non c'è un suono salvato a cui tornare"); return; }
+    if (!sound_modified(a)) { toast(a, "Nessuna modifica da togliere"); return; }
+    OrcSound s = a->base, cur = a->set.snd;
+    s.volume = cur.volume;
+    if (!a->set.follow) { s.perform = cur.perform; s.perform_amount = cur.perform_amount; }
+    else a->set.spread = a->base_spread;
+    a->set.snd = s;
+    sound_changed(a);
+    modifiers_changed(a);
+    snprintf(t, sizeof(t), "Tornato a «%s»", a->set.sound_name);
+    toast(a, t);
+}
+
+static float rnd(OrcApp *a)                      /* -1..1 */
+{
+    a->rng ^= a->rng << 13; a->rng ^= a->rng >> 17; a->rng ^= a->rng << 5;
+    return (float)(int32_t)a->rng / 2147483648.0f;
+}
+
+/* Variazione casuale: piccoli spostamenti di timbro, inviluppo ed effetti; motore ed esecuzione restano. */
+static void sound_variation(OrcApp *a)
+{
+    OrcSound *s = &a->set.snd;
+    s->tone = clamp01(s->tone + 0.15f * rnd(a));
+    if (s->engine == ENG_FM) {
+        if (rnd(a) > -0.2f) s->character = clamp01((floorf(s->character * 6.99f) + (rnd(a) > 0.0f ? 1.0f : -1.0f)) / 6.99f + 0.01f);
+    } else {
+        s->character = clamp01(s->character + 0.2f * rnd(a));
+    }
+    s->attack = clampf(s->attack * exp2f(rnd(a)), 0.002f, 8.0f);
+    s->decay = clampf(s->decay * exp2f(0.8f * rnd(a)), 0.01f, 8.0f);
+    s->release = clampf(s->release * exp2f(0.8f * rnd(a)), 0.01f, 8.0f);
+    if (s->engine != ENG_PLUCK) s->sustain = clamp01(s->sustain + 0.15f * rnd(a));
+    s->vibrato = clamp01(s->vibrato + 0.1f * rnd(a));
+    s->bass_tone = clamp01(s->bass_tone + 0.15f * rnd(a));
+    s->chorus = clamp01(s->chorus + 0.15f * rnd(a));
+    s->delay = clamp01(s->delay + 0.12f * rnd(a));
+    s->reverb = clamp01(s->reverb + 0.15f * rnd(a));
+    s->stereo = clamp01(s->stereo + 0.25f * rnd(a));
+    sound_changed(a);
+    toast(a, "Variazione: A per un'altra, Ripristina per tornare");
+}
+
+static void sound_delete(OrcApp *a)
+{
+    char name[40], t[112];
+    if (!sound_is_user(a, a->set.sound)) { toast(a, "Si possono eliminare solo i tuoi suoni"); return; }
+    if (!a->del_armed) { a->del_armed = 1; a->del_t = 3.0f; toast(a, "Premi ancora A per eliminarlo"); return; }
+    const UserSound *u = &a->user[a->set.sound - PRESET_COUNT];
+    snprintf(name, sizeof(name), "%s", u->name);
+    a->del_armed = 0;
+    if (remove(u->path)) { toast(a, "Non riesco a eliminare il file"); return; }
+    int i = a->set.sound;
+    users_scan(a);
+    load_sound(a, i < sound_count(a) ? i : sound_count(a) - 1);
+    snprintf(t, sizeof(t), "«%s» eliminato", name);
+    toast(a, t);
+}
+
+static void rename_start(OrcApp *a)
+{
+    if (!sound_is_user(a, a->set.sound)) { toast(a, "Si possono rinominare solo i tuoi suoni"); return; }
+    a->editing = 1;
+    snprintf(a->edit, sizeof(a->edit), "%s", a->user[a->set.sound - PRESET_COUNT].name);
+}
+
+static void rename_finish(OrcApp *a, int ok)
+{
+    char name[40], old[600], t[112];
+    a->editing = 0;
+    if (!ok) { toast(a, "Nome lasciato com'era"); return; }
+    if (!sound_is_user(a, a->set.sound)) return;
+    snprintf(old, sizeof(old), "%s", a->edit);
+    snprintf(name, sizeof(name), "%s", trim(old));
+    const UserSound *u = &a->user[a->set.sound - PRESET_COUNT];
+    if (!name[0]) { toast(a, "Il nome è vuoto: lasciato com'era"); return; }
+    if (!strcmp(name, u->name)) return;
+    int other = sound_find(a, name);
+    if (other >= 0 && other != a->set.sound) { toast(a, "C'è già un suono con questo nome"); return; }
+    OrcSound s = u->s;
+    int spread = u->spread;
+    snprintf(old, sizeof(old), "%s", u->path);
+    if (user_write(a, name, &s, spread, old)) { toast(a, "Non riesco a rinominare il suono"); return; }
+    users_scan(a);
+    int i = sound_find(a, name);
+    a->set.sound = i >= 0 ? i : 0;
+    snprintf(a->set.sound_name, sizeof(a->set.sound_name), "%s", name);
+    a->dirty = 1;
+    snprintf(t, sizeof(t), "Ora si chiama «%s»", name);
+    toast(a, t);
+}
+
+/* Dopo il file di stato: il suono si ritrova per nome (prima c'era solo il numero nell'ordine vecchio).
+   Se non c'e' piu' (un suono tuo eliminato a mano) restano i valori, con l'asterisco. */
+static void resolve_sound(OrcApp *a, int named)
+{
+    int i = -1;
+    if (named) i = sound_find(a, a->set.sound_name);
+    else if (a->set.sound >= 0 && a->set.sound < 12) i = sound_find(a, OLD_ORDER[a->set.sound]);
+    if (i >= 0) {
+        a->set.sound = i;
+        snprintf(a->set.sound_name, sizeof(a->set.sound_name), "%s", sound_name(a, i));
+        sound_values(a, i, &a->base, &a->base_spread);
+        a->base_ok = 1;
+    } else {
+        a->set.sound = 0;
+        a->base_ok = 0;
+    }
+}
+
+/* ------------------------------------------------------------------ loop salvato */
+static int loop_file(const OrcApp *a, char *out, size_t n)
+{
+    const char *slash = strrchr(a->path, '/');
+    if (!slash) return 0;
+    snprintf(out, n, "%.*s/loop.txt", (int)(slash - a->path), a->path);
+    return 1;
+}
+
+static OrcLoopEvent loop_buf[ORC_LOOP_MAX];
+
+/* Solo ad audio fermo: all'uscita (il kit chiude l'audio prima di destroy). */
+static void loop_save(OrcApp *a)
+{
+    char path[600], tmp[620];
+    if (!loop_file(a, path, sizeof(path))) return;
+    double len;
+    int layers, n = orc_loop_export(a->orc, loop_buf, ORC_LOOP_MAX, &len, &layers);
+    if (!n) { remove(path); return; }
+    snprintf(tmp, sizeof(tmp), "%s.tmp", path);
+    FILE *f = fopen(tmp, "w");
+    if (!f) return;
+    fprintf(f, "# OpenOrc - il loop dell'ultima sessione: si riprende all'avvio, fermo\n"
+               "# ev = battito tipo strato basso/nota tag dinamica note...\nlength=%g\nlayers=%d\n", len, layers);
+    for (int i = 0; i < n; i++) {
+        const OrcLoopEvent *e = &loop_buf[i];
+        fprintf(f, "ev=%g %d %d %d %d %g %d", e->t, e->type, e->pass, e->a, e->tag, e->b, e->n);
+        for (int k = 0; k < e->n; k++) fprintf(f, " %d", e->notes[k]);
+        fputc('\n', f);
+    }
+    if (fclose(f)) return;
+#ifdef _WIN32
+    remove(path);
+#endif
+    rename(tmp, path);
+}
+
+/* Prima che parta l'audio. */
+static void loop_load(OrcApp *a)
+{
+    char path[600], line[256];
+    if (!loop_file(a, path, sizeof(path))) return;
+    FILE *f = fopen(path, "r");
+    if (!f) return;
+    double len = 0.0;
+    int layers = 0, n = 0;
+    while (fgets(line, sizeof(line), f) && n < ORC_LOOP_MAX) {
+        if (!strncmp(line, "length=", 7)) len = atof(line + 7);
+        else if (!strncmp(line, "layers=", 7)) layers = atoi(line + 7);
+        else if (!strncmp(line, "ev=", 3)) {
+            OrcLoopEvent *e = &loop_buf[n];
+            memset(e, 0, sizeof(*e));
+            int used = 0;
+            if (sscanf(line + 3, "%f %d %d %d %d %f %d%n", &e->t, &e->type, &e->pass, &e->a, &e->tag, &e->b, &e->n, &used) != 7) continue;
+            if (e->n < 0 || e->n > ORC_MAX_CHORD) continue;
+            const char *p = line + 3 + used;
+            int ok = 1;
+            for (int k = 0; k < e->n && ok; k++) ok = sscanf(p, "%d%n", &e->notes[k], &used) == 1, p += used;
+            if (ok) n++;
+        }
+    }
+    fclose(f);
+    if (n) orc_loop_import(a->orc, loop_buf, n, len, layers);
 }
 
 /* ------------------------------------------------------------------ API */
@@ -1117,7 +1647,9 @@ OrcApp *orcapp_create(float sample_rate, const char *state_path)
     a->sr = sample_rate;
     if (state_path) snprintf(a->path, sizeof(a->path), "%s", state_path);
     settings_default(&a->set);
-    load(a);
+    int named = load(a);
+    users_scan(a);
+    resolve_sound(a, named);
     /* stato salvato dalle versioni con le manopole sui CC 70-77: si passa ai valori di fabbrica della MPK */
     int old = 1;
     for (int i = 0; i < 8; i++) {
@@ -1145,12 +1677,15 @@ OrcApp *orcapp_create(float sample_rate, const char *state_path)
     a->set.beat_on = 0;                           /* si parte sempre in silenzio */
     a->learn = -1;
     a->degree = -1;
-    a->sound_sel = 0;
+    a->sound_sel = 1;
+    a->chords_sel = 1;
     a->midi_sel = 1;
+    a->rng = 0x9E3779B9u;
     orc_set_sound(a->orc, &a->set.snd);
     orc_set_tempo(a->orc, a->set.bpm);
     orc_set_beat(a->orc, 0, a->set.beat_style, a->set.beat_level);
     orc_loop_config(a->orc, LOOP_BARS[a->set.loop_bars], QUANT_BEATS[a->set.loop_quant]);
+    loop_load(a);
     a->dirty = 0;
     return a;
 }
@@ -1159,6 +1694,7 @@ void orcapp_destroy(OrcApp *a)
 {
     if (!a) return;
     save(a);
+    loop_save(a);
     orc_destroy(a->orc);
     free(a);
 }
@@ -1186,14 +1722,28 @@ int orcapp_chord_notes(const OrcApp *a, int *notes, int *bass)
     return a->notes_n;
 }
 
+int orcapp_page(const OrcApp *a) { return a->page; }
+int orcapp_sound_count(const OrcApp *a) { return sound_count(a); }
+const char *orcapp_sound_name(const OrcApp *a, int i) { return sound_name(a, i); }
+int orcapp_sound_find(const OrcApp *a, const char *name) { return sound_find(a, name); }
+int orcapp_current_sound(const OrcApp *a) { return a->set.sound; }
+const char *orcapp_current_name(const OrcApp *a) { return a->set.sound_name; }
+int orcapp_sound_modified(const OrcApp *a) { return sound_modified(a); }
+int orcapp_overlay(const OrcApp *a) { return a->overlay ? 1 : (a->peek_t > 0.0f ? 2 : 0); }
+int orcapp_editing(const OrcApp *a) { return a->editing; }
+const char *orcapp_toast(const OrcApp *a) { return a->toast_t > 0.0f ? a->toast : ""; }
+void orcapp_set_sound(OrcApp *a, const OrcSound *s) { a->set.snd = *s; sound_changed(a); }
+void orcapp_set_follow(OrcApp *a, int on) { a->set.follow = on != 0; a->dirty = 1; }
+
 void orcapp_select(OrcApp *a, int row)
 {
     if (a->page == PAGE_SOUND) a->sound_sel = row;
+    else if (a->page == PAGE_CHORDS) a->chords_sel = row;
     else if (a->page == PAGE_RHYTHM) a->rhythm_sel = row;
     else if (a->page == PAGE_MIDI) a->midi_sel = row;
 }
 
-/* ------------------------------------------------------------------ pagina Suono: parametri */
+/* ------------------------------------------------------------------ pagine Accordi e Suono: parametri */
 static void amount_text(const OrcApp *a, char *out, size_t n)
 {
     float v = clamp01(a->set.snd.perform_amount);
@@ -1218,6 +1768,7 @@ static float param_bar(const OrcApp *a, int p)
     case P_VIBRATO: return s->vibrato;
     case P_BASS: return s->bass_level;
     case P_BASS_TONE: return s->bass_tone;
+    case P_STEREO: return s->stereo;
     case P_CHORUS: return s->chorus;
     case P_DELAY: return s->delay;
     case P_REVERB: return s->reverb;
@@ -1231,28 +1782,59 @@ static float param_bar(const OrcApp *a, int p)
 
 static const char *param_label(const OrcApp *a, int p)
 {
-    if (p == P_VIBRATO && a->set.snd.engine == ENG_REED) return "Tremolo";
-    if (p == P_CHAR && a->set.snd.engine == ENG_FM) return "Rapporto";
-    if (p == P_CHAR && a->set.snd.engine == ENG_ORGAN) return "Registri";
+    int e = a->set.snd.engine;
+    if (p == P_VIBRATO && e == ENG_REED) return "Tremolo";
+    if (p == P_CHAR && e == ENG_FM) return "Rapporto";
+    if (p == P_CHAR && e == ENG_ORGAN) return "Registri";
+    if (p == P_CHAR && e == ENG_PLUCK) return "Durata";
+    if (p == P_CHAR && e == ENG_SUPER) return "Desintonia";
+    if (p == P_OVERWRITE && sound_is_user(a, a->set.sound)) return "Aggiorna";
     return PARAM_NAMES[p];
+}
+
+/* Le azioni che hanno senso adesso (le altre si vedono spente). */
+static int action_ok(const OrcApp *a, int p)
+{
+    switch (p) {
+    case P_OVERWRITE: case P_RENAME: case P_DELETE: return sound_is_user(a, a->set.sound);
+    case P_RESTORE: return a->base_ok && sound_modified(a);
+    case P_SAVE_NEW: return a->path[0] != 0;
+    }
+    return 1;
 }
 
 static void param_text(const OrcApp *a, int p, char *out, size_t n)
 {
     const OrcSound *s = &a->set.snd;
+    char nm[48];
     switch (p) {
-    case P_SOUND: snprintf(out, n, "%s", PRESETS[a->set.sound].name); break;
+    case P_SOUND: sound_label(a, out, n); break;
+    case P_SAVE_NEW: name_next(a, nm, sizeof(nm)); snprintf(out, n, "«%s»", nm); break;
+    case P_OVERWRITE: snprintf(out, n, "%s", sound_is_user(a, a->set.sound) ? "salva le modifiche" : "solo per i tuoi suoni"); break;
+    case P_RESTORE:
+        if (action_ok(a, p)) snprintf(out, n, "torna a «%.30s»", a->set.sound_name);
+        else snprintf(out, n, "nessuna modifica");
+        break;
+    case P_RANDOM: snprintf(out, n, "premi A"); break;
+    case P_RENAME: snprintf(out, n, "%s", sound_is_user(a, a->set.sound) ? "con una tastiera USB" : "solo per i tuoi suoni"); break;
+    case P_DELETE:
+        if (!sound_is_user(a, a->set.sound)) snprintf(out, n, "solo per i tuoi suoni");
+        else snprintf(out, n, "%s", a->del_armed ? "premi ancora A" : "A due volte");
+        break;
     case P_KEY: snprintf(out, n, "%s", note_it(a->set.key, key_spelling(a->set.key, a->set.minor))); break;
     case P_SCALE: snprintf(out, n, "%s", a->set.minor ? "Minore" : "Maggiore"); break;
     case P_KEYMODE: snprintf(out, n, "%s", a->set.keymode ? "Attivo" : "Spento"); break;
     case P_SPREAD: snprintf(out, n, "%s", SPREAD_NAMES[a->set.spread]); break;
     case P_PERFORM: snprintf(out, n, "%s", PERFORM_NAMES[s->perform]); break;
     case P_AMOUNT: amount_text(a, out, n); break;
+    case P_FOLLOW: snprintf(out, n, "%s", a->set.follow ? "Sì" : "No, restano"); break;
     case P_ENGINE: snprintf(out, n, "%s", ENGINE_NAMES[s->engine]); break;
     case P_CHAR:
         if (s->engine == ENG_FM) {
             static const char *R[7] = { "1", "2", "3", "4", "1/2", "3,5", "7" };
             snprintf(out, n, "%s", R[(int)(clamp01(s->character) * 6.99f)]);
+        } else if (s->engine == ENG_PLUCK) {
+            seconds(out, n, 0.25f * exp2f(clamp01(s->character) * 5.0f));
         } else percent(out, n, s->character);
         break;
     case P_ATTACK: seconds(out, n, s->attack); break;
@@ -1266,8 +1848,14 @@ static void param_change(OrcApp *a, int p, int dir, int big)
 {
     OrcSound *s = &a->set.snd;
     float step = big ? 0.2f : 0.05f, mul = big ? 2.0f : 1.25f;
+    if (p != P_DELETE) a->del_armed = 0;
     switch (p) {
-    case P_SOUND: load_preset(a, a->set.sound + dir); return;
+    case P_SOUND:                                 /* L1/R1: di categoria in categoria */
+        if (big) sound_category_step(a, dir);
+        else load_sound(a, a->set.sound + dir);
+        return;
+    case P_SAVE_NEW: case P_OVERWRITE: case P_RESTORE: case P_RANDOM: case P_RENAME: case P_DELETE:
+        return;                                   /* azioni: si fanno con A */
     case P_KEY:
         a->set.key = (a->set.key + dir * (big ? 7 : 1) + 120) % 12;     /* con L1/R1 per quinte */
         a->dirty = 1;
@@ -1277,6 +1865,7 @@ static void param_change(OrcApp *a, int p, int dir, int big)
     case P_KEYMODE: a->set.keymode = !a->set.keymode; a->dirty = 1; return;
     case P_VOICING: a->set.voicing = clamp01(a->set.voicing + dir * step); a->dirty = 1; modifiers_changed(a); return;
     case P_SPREAD: a->set.spread = (a->set.spread + dir + SPREAD_COUNT) % SPREAD_COUNT; a->dirty = 1; modifiers_changed(a); return;
+    case P_FOLLOW: a->set.follow = !a->set.follow; a->dirty = 1; return;
     case P_PERFORM: s->perform = (s->perform + dir + PERF_COUNT) % PERF_COUNT; break;
     case P_ENGINE: s->engine = (s->engine + dir + ENG_COUNT) % ENG_COUNT; break;
     case P_AMOUNT:
@@ -1296,12 +1885,26 @@ static void param_change(OrcApp *a, int p, int dir, int big)
     case P_VIBRATO: s->vibrato = clamp01(s->vibrato + dir * step); break;
     case P_BASS: s->bass_level = clamp01(s->bass_level + dir * step); break;
     case P_BASS_TONE: s->bass_tone = clamp01(s->bass_tone + dir * step); break;
+    case P_STEREO: s->stereo = clamp01(s->stereo + dir * step); break;
     case P_CHORUS: s->chorus = clamp01(s->chorus + dir * step); break;
     case P_DELAY: s->delay = clamp01(s->delay + dir * step); break;
     case P_REVERB: s->reverb = clamp01(s->reverb + dir * step); break;
     case P_VOLUME: s->volume = clamp01(s->volume + dir * step); break;
     }
     sound_changed(a);
+}
+
+static void param_action(OrcApp *a, int p)
+{
+    if (p != P_DELETE) a->del_armed = 0;
+    switch (p) {
+    case P_SAVE_NEW: sound_save_new(a); break;
+    case P_OVERWRITE: sound_overwrite(a); break;
+    case P_RESTORE: sound_restore(a); break;
+    case P_RANDOM: sound_variation(a); break;
+    case P_RENAME: rename_start(a); break;
+    case P_DELETE: sound_delete(a); break;
+    }
 }
 
 /* ------------------------------------------------------------------ pagina Ritmo: parametri */
@@ -1357,13 +1960,24 @@ static void tap_tempo(OrcApp *a)
 }
 
 /* ------------------------------------------------------------------ tasti della Flip */
-static int sound_row_param(int row) { return row >= 0 && row < SOUND_ROW_COUNT ? SOUND_ROWS[row] : -1; }
-
-static void move_sound_sel(OrcApp *a, int dir)
+static const int *page_rows(int page, int *n, const char *const **headers)
 {
-    int r = a->sound_sel;
-    do { r = (r + dir + SOUND_ROW_COUNT) % SOUND_ROW_COUNT; } while (SOUND_ROWS[r] < 0);
-    a->sound_sel = r;
+    if (page == PAGE_CHORDS) { *n = CHORD_ROW_COUNT; if (headers) *headers = CHORD_HEADERS; return CHORD_ROWS; }
+    *n = SOUND_ROW_COUNT;
+    if (headers) *headers = SOUND_HEADERS;
+    return SOUND_ROWS;
+}
+
+static int *page_sel(OrcApp *a) { return a->page == PAGE_CHORDS ? &a->chords_sel : &a->sound_sel; }
+
+static void move_list_sel(OrcApp *a, int dir)
+{
+    int n, *sel = page_sel(a);
+    const int *rows = page_rows(a->page, &n, NULL);
+    int r = *sel;
+    do { r = (r + dir + n) % n; } while (rows[r] < 0);
+    *sel = r;
+    a->del_armed = 0;
 }
 
 static void move_midi_sel(OrcApp *a, int dir)
@@ -1403,9 +2017,45 @@ static void release_flip(OrcApp *a)
 
 static int repeats(const OrcApp *a, int b)
 {
+    int dpad = b == PAD_UP || b == PAD_DOWN || b == PAD_LEFT || b == PAD_RIGHT;
+    if (a->overlay) return dpad;
     if (a->page == PAGE_PLAY) return 0;
-    if (b == PAD_UP || b == PAD_DOWN || b == PAD_LEFT || b == PAD_RIGHT) return 1;
+    if (dpad) return 1;
     return a->page != PAGE_MIDI && (b == PAD_L1 || b == PAD_R1);
+}
+
+/* SELECT tenuto: l'elenco dei suoni si apre e i tasti fanno da funzioni. */
+static void overlay_open(OrcApp *a)
+{
+    if (a->overlay) return;
+    a->overlay = 1;
+    a->peek_t = 0.0f;
+    release_flip(a);
+    a->learn = -1;
+}
+
+static void overlay_press(OrcApp *a, int b)
+{
+    switch (b) {
+    case PAD_UP: sound_step(a, -1, 0); break;
+    case PAD_DOWN: sound_step(a, 1, 0); break;
+    case PAD_L1: sound_category_step(a, -1); break;
+    case PAD_R1: sound_category_step(a, 1); break;
+    case PAD_LEFT:
+    case PAD_RIGHT:
+        a->set.key = (a->set.key + (b == PAD_RIGHT ? 1 : 11)) % 12;
+        a->dirty = 1;
+        modifiers_changed(a);
+        break;
+    case PAD_L2: a->set.minor = !a->set.minor; a->dirty = 1; modifiers_changed(a); break;
+    case PAD_R2: keymode_toggle(a); break;
+    case PAD_A: loop_record(a); break;
+    case PAD_B: loop_play(a); break;
+    case PAD_Y: loop_undo(a); break;
+    case PAD_X: beat_toggle(a); break;
+    case PAD_START: transport_toggle(a); break;
+    case PAD_L3: panic(a); toast(a, "Tutte le note spente"); break;
+    }
 }
 
 static void press(OrcApp *a, int b)
@@ -1415,13 +2065,14 @@ static void press(OrcApp *a, int b)
         else if (b == PAD_B || b == PAD_UP || b == PAD_MENU) a->quit_dialog = 0;
         return;
     }
-    if (b == PAD_MENU) { release_flip(a); a->learn = -1; a->quit_dialog = 1; return; }
-    if (b == PAD_SELECT) {
-        release_flip(a);
-        a->learn = -1;
-        a->page = (a->page + 1) % PAGE_COUNT;
+    if (a->editing) {
+        if (b == PAD_A) rename_finish(a, 1);
+        else if (b == PAD_B || b == PAD_MENU) rename_finish(a, 0);
         return;
     }
+    if (b == PAD_SELECT) { a->sel_down = 1; a->sel_used = 0; a->sel_time = 0.0f; return; }
+    if (b == PAD_MENU) { release_flip(a); a->learn = -1; a->overlay = 0; a->sel_down = 0; a->quit_dialog = 1; return; }
+    if (a->sel_down) { overlay_open(a); a->sel_used = 1; overlay_press(a, b); return; }
     if (b == PAD_START) { transport_toggle(a); return; }
     if (b == PAD_L3) { panic(a); toast(a, "Tutte le note spente"); return; }
 
@@ -1439,16 +2090,22 @@ static void press(OrcApp *a, int b)
         }
         modifiers_changed(a);
         break;
+    case PAGE_CHORDS:
     case PAGE_SOUND: {
-        int p = sound_row_param(a->sound_sel);
+        int n;
+        const int *rows = page_rows(a->page, &n, NULL);
+        int p = rows[*page_sel(a)];
         switch (b) {
-        case PAD_UP: move_sound_sel(a, -1); break;
-        case PAD_DOWN: move_sound_sel(a, 1); break;
+        case PAD_UP: move_list_sel(a, -1); break;
+        case PAD_DOWN: move_list_sel(a, 1); break;
         case PAD_LEFT: param_change(a, p, -1, 0); break;
         case PAD_RIGHT: param_change(a, p, 1, 0); break;
         case PAD_L1: param_change(a, p, -1, 1); break;
         case PAD_R1: param_change(a, p, 1, 1); break;
-        case PAD_A: chord_press(a, SRC_FLIP(AUDITION_SLOT), 0.8f); break;
+        case PAD_A:
+            if (is_action(p)) param_action(a, p);
+            else chord_press(a, SRC_FLIP(AUDITION_SLOT), 0.8f);
+            break;
         }
         break;
     }
@@ -1462,7 +2119,7 @@ static void press(OrcApp *a, int b)
         case PAD_R1: rhythm_change(a, R_TEMPO, 1, 1); break;
         case PAD_A: loop_record(a); break;
         case PAD_B: loop_play(a); break;
-        case PAD_Y: loop_clear(a); break;
+        case PAD_Y: loop_undo(a); break;
         case PAD_X: tap_tempo(a); break;
         }
         break;
@@ -1497,11 +2154,51 @@ static void press(OrcApp *a, int b)
 
 static void release(OrcApp *a, int b)
 {
+    if (b == PAD_SELECT) {
+        int tap = a->sel_down && !a->sel_used && !a->overlay;
+        a->sel_down = 0;
+        a->overlay = 0;
+        if (tap && !a->quit_dialog && !a->editing) {      /* toccato: pagina successiva */
+            release_flip(a);
+            a->learn = -1;
+            a->del_armed = 0;
+            a->page = (a->page + 1) % PAGE_COUNT;
+        }
+        return;
+    }
     for (int i = 0; i < FLIP_SLOTS; i++)
         if (FLIP_PADS[i] == b) chord_unpress(a, SRC_FLIP(i));
     if (b == PAD_A) chord_unpress(a, SRC_FLIP(AUDITION_SLOT));
     int m = b == PAD_L1 ? MOD_SWAP : b == PAD_R1 ? MOD_SUS : b == PAD_L2 ? MOD_SEVENTH : b == PAD_R2 ? MOD_NINTH : -1;
     if (m >= 0 && a->mods[m]) { a->mods[m] = 0; modifiers_changed(a); }
+}
+
+/* Testo da una tastiera USB: il nome nella Rinomina; altrimenti frecce e Invio fanno da croce e da A. */
+void orcapp_text(OrcApp *a, const char *utf8, int special)
+{
+    if (!a->editing) {
+        int b = special == TEXT_UP ? PAD_UP : special == TEXT_DOWN ? PAD_DOWN : special == TEXT_LEFT ? PAD_LEFT :
+                special == TEXT_RIGHT ? PAD_RIGHT : special == TEXT_ENTER ? PAD_A : -1;
+        if (b >= 0) { orcapp_button(a, b, 1); orcapp_button(a, b, 0); }
+        return;
+    }
+    size_t l = strlen(a->edit);
+    switch (special) {
+    case TEXT_CHARS: {
+        size_t add = strlen(utf8);
+        int ok = add > 0;
+        for (size_t i = 0; i < add; i++) ok &= (unsigned char)utf8[i] >= 32;
+        if (ok && l + add < 32) memcpy(a->edit + l, utf8, add + 1);
+        break;
+    }
+    case TEXT_BACKSPACE:
+        while (l > 0) { l--; if (((unsigned char)a->edit[l] & 0xC0) != 0x80) break; }
+        a->edit[l] = 0;
+        break;
+    case TEXT_ENTER:
+        rename_finish(a, 1);
+        break;
+    }
 }
 
 void orcapp_button(OrcApp *a, int b, int pressed)
@@ -1536,6 +2233,13 @@ void orcapp_axes(OrcApp *a, float lx, float ly, float rx, float ry, float l2, fl
 void orcapp_update(OrcApp *a, float dt)
 {
     a->time += dt;
+    if (a->sel_down && !a->overlay) {
+        a->sel_time += dt;
+        if (a->sel_time >= 0.3f) overlay_open(a);
+    }
+    a->peek_t = fmaxf(0.0f, a->peek_t - dt);
+    for (int k = 0; k < 8; k++) a->knob_t[k] = fmaxf(0.0f, a->knob_t[k] - dt);
+    if (a->del_armed) { a->del_t -= dt; if (a->del_t <= 0.0f) a->del_armed = 0; }
     for (int b = 0; b < PAD_COUNT; b++) {
         if (!a->down[b] || a->quit_dialog || !repeats(a, b)) continue;
         a->rep[b] += dt;
@@ -1569,15 +2273,18 @@ static float scope_peak(OrcApp *a, int n);
    cambia lo stato mostrato; comunque una volta al secondo. */
 int orcapp_needs_draw(OrcApp *a)
 {
+    int knobs = 0;
+    for (int k = 0; k < 8; k++) knobs |= a->knob_t[k] > 0.0f;
     if (a->glow > 0.0f || a->toast_t > 0.0f || a->flash_t > 0.0f || a->midi_flash > 0.0f || a->learn >= 0 ||
-        a->quit_dialog || orc_transport_on(a->orc))
+        a->quit_dialog || orc_transport_on(a->orc) || a->peek_t > 0.0f || a->editing || knobs)
         return 1;
     if (a->page == PAGE_PLAY && scope_peak(a, 256) > 0.002f) return 1;      /* l'oscilloscopio si muove */
     OrcLoopInfo li;
     orc_loop_info(a->orc, &li);
     int ln[ORC_MAX_CHORD], tag = 0, lnn = orc_layer_notes(a->orc, ORC_LOOP, ln, &tag);
-    int v[] = { a->page, a->sound_sel, a->rhythm_sel, a->midi_sel, a->chord_live, a->notes_n, a->bass, a->stack_n,
-                li.state, li.events, li.full, lnn, tag, a->clock_ticks > 0 && a->clock_seen < 0.5f };
+    int v[] = { a->page, a->sound_sel, a->chords_sel, a->rhythm_sel, a->midi_sel, a->chord_live, a->notes_n, a->bass, a->stack_n,
+                li.state, li.events, li.full, li.layers, lnn, tag, a->clock_ticks > 0 && a->clock_seen < 0.5f,
+                a->overlay, a->user_n, a->del_armed, a->base_ok };
     uint32_t h = fnv(2166136261u, v, sizeof(v));
     h = fnv(h, &a->set, sizeof(a->set));
     h = fnv(h, a->notes, sizeof(a->notes));
@@ -1618,10 +2325,12 @@ static void draw_header(OrcApp *a, Canvas *c)
     gfx_rect(c, 0, 46, c->w, 1, C_LINE);
     draw_logo(c, 24, 23, 1.0f);
     gfx_text(c, FONT_TITLE, 44, 31, "OpenOrc", C_TEXT);
-    static const char *tabs[PAGE_COUNT] = { "Suona", "Suono", "Ritmo", "MIDI" };
-    int x = 186;
+    static const char *tabs[PAGE_COUNT] = { "Suona", "Accordi", "Suono", "Ritmo", "MIDI" };
+    int x = 44 + gfx_text_width(FONT_TITLE, "OpenOrc") + 14, padw = 20, total = 0;
+    for (int i = 0; i < PAGE_COUNT; i++) total += gfx_text_width(FONT_BOLD, tabs[i]) + 4;
+    while (padw > 8 && x + total + padw * PAGE_COUNT > 504) padw -= 2;      /* le schede stanno prima della spia MIDI */
     for (int i = 0; i < PAGE_COUNT; i++) {
-        int w = gfx_text_width(FONT_BOLD, tabs[i]) + 22;
+        int w = gfx_text_width(FONT_BOLD, tabs[i]) + padw;
         if (i == a->page) gfx_round_rect(c, x, 10, w, 27, 13.5f, C_GOLD_D, 1.0f);
         gfx_text_center(c, FONT_BOLD, x + w / 2, 29, tabs[i], i == a->page ? C_TEXT : C_MUTED);
         x += w + 4;
@@ -1654,13 +2363,15 @@ static void draw_hints(Canvas *c, const char *text)
 static void loop_state_text(const OrcLoopInfo *li, char *out, size_t n)
 {
     int bars = (int)lrint(li->length / 4.0), bar = (int)(li->position / 4.0) + 1;
+    char more[16] = "";
+    if (li->layers > 0) snprintf(more, sizeof(more), " +%d", li->layers);    /* sovraincisioni */
     switch (li->state) {
     case LOOP_EMPTY: snprintf(out, n, "vuoto"); break;
     case LOOP_ARMED: snprintf(out, n, "attende la battuta"); break;
     case LOOP_RECORDING: snprintf(out, n, "registra %d/%d", bar, bars); break;
-    case LOOP_PLAYING: snprintf(out, n, "suona %d/%d", bar, bars); break;
-    case LOOP_OVERDUB: snprintf(out, n, "sovraincide %d/%d", bar, bars); break;
-    default: snprintf(out, n, "fermo"); break;
+    case LOOP_PLAYING: snprintf(out, n, "suona %d/%d%s", bar, bars, more); break;
+    case LOOP_OVERDUB: snprintf(out, n, "sovraincide %d/%d%s", bar, bars, more); break;
+    default: snprintf(out, n, "fermo%s", more); break;
     }
 }
 
@@ -1718,7 +2429,7 @@ static void draw_status_line(OrcApp *a, Canvas *c, int y)
 {
     char vals[5][48];
     uint32_t cols[5] = { C_TEXT, C_TEXT, C_TEXT, C_TEXT, C_TEXT };
-    snprintf(vals[0], sizeof(vals[0]), "%s", PRESETS[a->set.sound].name);
+    sound_label(a, vals[0], sizeof(vals[0]));
     if (a->set.snd.perform == PERF_ARP) snprintf(vals[1], sizeof(vals[1]), "Arpeggio %s", ARP_SHORT[(int)(clamp01(a->set.snd.perform_amount) * 4.99f)]);
     else snprintf(vals[1], sizeof(vals[1]), "%s", PERFORM_NAMES[a->set.snd.perform]);
     key_name(vals[2], sizeof(vals[2]), a->set.key, a->set.minor);
@@ -1773,6 +2484,19 @@ static void draw_mod_chip(OrcApp *a, Canvas *c, int m, const char *label, float 
 {
     gfx_round_rect(c, x, y, w, 24, 12, a->mods[m] ? C_GOLD : C_PANEL, 1.0f);
     gfx_text_center(c, FONT_SMALL, (int)(x + w / 2), (int)(y + 17), label, a->mods[m] ? C_BAR : C_MUTED);
+}
+
+/* Le manopole della MPK in piccolo, sotto i pad: quella appena girata si accende. */
+static void draw_knob_strip(OrcApp *a, Canvas *c, int x, int y)
+{
+    static const char *KN[8] = { "Voi", "Bas", "Ese", "Ton", "Cho", "Del", "Riv", "Vol" };
+    for (int k = 0; k < 8; k++) {
+        float cx = x + k * 36 + 16, v = clamp01(*knob_ref(a, k));
+        int hot = a->knob_t[k] > 0.0f;
+        gfx_text_center(c, FONT_SMALL, (int)cx, y + 12, KN[k], hot ? C_GOLD : C_DIM);
+        gfx_round_rect(c, cx - 14, y + 19, 28, 4, 2, C_LINE, 1.0f);
+        gfx_round_rect(c, cx - 14, y + 19, 4 + 24 * v, 4, 2, hot ? C_GOLD : C_MUTED, 1.0f);
+    }
 }
 
 /* Pagina Suona: una riga di stato, la fascia dell'accordo con l'oscilloscopio come fondale, e sotto i
@@ -1849,7 +2573,7 @@ static void draw_play(OrcApp *a, Canvas *c)
             gfx_round_rect(c, x, y, 64, 50, 10, held ? C_GOLD : C_PANEL_HI, 1.0f);
             gfx_text_center(c, FONT_BOLD, (int)(x + 32), (int)(y + 31), CHORD_PAD_NAMES[i], held ? C_BAR : (row == 0 ? C_TEXT : C_MUTED));
         }
-        gfx_text_center(c, FONT_SMALL, 158, 428, a->midi_name, C_MUTED);
+        draw_knob_strip(a, c, 16, 404);
         draw_mod_chip(a, c, MOD_SEVENTH, MODS[2], 318, 276, 70);
         draw_mod_chip(a, c, MOD_SWAP, MODS[0], 392, 276, 70);
         draw_mod_chip(a, c, MOD_SUS, MODS[1], 480, 276, 70);
@@ -1873,7 +2597,7 @@ static void draw_play(OrcApp *a, Canvas *c)
         gfx_round_frame(c, 320 - w / 2.0f, 236, w, 30, 15, 1.5f, C_GOLD, al);
         gfx_text_center(c, FONT_BOLD, 320, 257, a->flash, gfx_mix(C_BAR, C_TEXT, al));
     }
-    draw_hints(c, "Croce e A B X Y: accordi · L1 L2 R1 R2: varianti · R3 esecuzione · START ritmo");
+    draw_hints(c, "Croce e ABXY: accordi · dorsali: varianti · START ritmo · SELECT tenuto: suoni e loop");
 }
 
 typedef struct { int header; const char *label; char value[48]; float bar; uint32_t color; } ListRow;
@@ -1914,21 +2638,101 @@ static void draw_list(Canvas *c, const ListRow *rows, int n, int sel, int *scrol
     }
 }
 
-static void draw_sound(OrcApp *a, Canvas *c)
+/* Pagine Accordi e Suono: elenchi di parametri a gruppi. */
+static void draw_params(OrcApp *a, Canvas *c)
 {
-    ListRow rows[SOUND_ROW_COUNT];
-    for (int i = 0; i < SOUND_ROW_COUNT; i++) {
-        int p = SOUND_ROWS[i];
-        ListRow *r = &rows[i];
+    int n, *sel = page_sel(a);
+    const char *const *hdr;
+    const int *rows = page_rows(a->page, &n, &hdr);
+    ListRow lr[SOUND_ROW_COUNT > CHORD_ROW_COUNT ? SOUND_ROW_COUNT : CHORD_ROW_COUNT];
+    for (int i = 0; i < n; i++) {
+        int p = rows[i];
+        ListRow *r = &lr[i];
         memset(r, 0, sizeof(*r));
-        if (p < 0) { r->header = 1; r->label = SOUND_HEADERS[-1 - p]; continue; }
+        if (p < 0) { r->header = 1; r->label = hdr[-1 - p]; continue; }
         r->label = param_label(a, p);
         param_text(a, p, r->value, sizeof(r->value));
         r->bar = param_bar(a, p);
         if (p == P_KEYMODE && !a->set.keymode) r->color = C_MUTED;
+        if (p == P_FOLLOW && !a->set.follow) r->color = C_MUTED;
+        if (is_action(p) && !action_ok(a, p)) r->color = C_DIM;
+        if (p == P_DELETE && a->del_armed) r->color = C_RED;
     }
-    draw_list(c, rows, SOUND_ROW_COUNT, a->sound_sel, &a->sound_scroll, 54, 442, 28);
-    draw_hints(c, "Su/giù sceglie · sinistra/destra cambia (L1/R1 a passi grandi) · A tenuto ascolta");
+    int *scroll = a->page == PAGE_CHORDS ? &a->chords_scroll : &a->sound_scroll;
+    draw_list(c, lr, n, *sel, scroll, 54, 442, 28);
+    if (a->page == PAGE_CHORDS) draw_hints(c, "Su/giù sceglie · sinistra/destra cambia (L1/R1 a passi grandi) · A tenuto ascolta");
+    else if (is_action(rows[*sel])) draw_hints(c, "A esegue · su/giù sceglie · SELECT tenuto: elenco dei suoni");
+    else if (rows[*sel] == P_SOUND) draw_hints(c, "Sinistra/destra: suono · L1/R1: categoria · A tenuto ascolta");
+    else draw_hints(c, "Su/giù sceglie · sinistra/destra cambia (L1/R1 a passi grandi) · A tenuto ascolta");
+}
+
+/* Elenco dei suoni con SELECT tenuto: il suono corrente in mezzo, i comandi in basso. */
+static void draw_overlay(OrcApp *a, Canvas *c)
+{
+    gfx_rect_alpha(c, 0, 0, c->w, c->h, RGB(0, 0, 0), 0.55f);
+    const int x = 40, y = 54, w = 560, h = 386;
+    gfx_round_rect(c, x, y, w, h, 16, C_PANEL, 1.0f);
+    gfx_round_frame(c, x, y, w, h, 16, 1.5f, C_GOLD, 1.0f);
+    char k[32], t[128], nm[48];
+    gfx_text(c, FONT_BOLD, x + 22, y + 30, "Suoni", C_TEXT);
+    key_name(k, sizeof(k), a->set.key, a->set.minor);
+    snprintf(t, sizeof(t), "%s%s", k, a->set.keymode ? " · modo tonalità" : "");
+    gfx_text_right(c, FONT_BOLD, x + w - 22, y + 30, t, a->set.keymode ? C_GOLD : C_TEXT);
+    int n = sound_count(a), vis = 10, cur = a->set.sound, top = cur - vis / 2;
+    if (top > n - vis) top = n - vis;
+    if (top < 0) top = 0;
+    for (int r = 0; r < vis && top + r < n; r++) {
+        int i = top + r, yy = y + 44 + r * 26, is_cur = i == cur;
+        if (is_cur) gfx_round_rect(c, x + 12, yy, w - 24, 25, 8, C_GOLD_D, 1.0f);
+        if (is_cur) sound_label(a, nm, sizeof(nm));
+        else snprintf(nm, sizeof(nm), "%s", sound_name(a, i));
+        gfx_text(c, is_cur ? FONT_BOLD : FONT_BODY, x + 30, yy + 18, nm, is_cur ? C_TEXT : C_MUTED);
+        if (r == 0 || i == 0 || strcmp(sound_cat(a, i), sound_cat(a, i - 1)))
+            gfx_text_right(c, FONT_SMALL, x + w - 30, yy + 17, sound_cat(a, i), is_cur ? C_GOLD : C_DIM);
+    }
+    if (n > vis) {
+        float hh = 260.0f * vis / n, yy = y + 44 + (260.0f - hh) * top / (n - vis);
+        gfx_round_rect(c, x + w - 9, yy, 3, hh, 1.5f, C_LINE, 1.0f);
+    }
+    int hy = y + h - 54;
+    gfx_rect(c, x + 18, hy, w - 36, 1, C_LINE);
+    gfx_text_center(c, FONT_SMALL, 320, hy + 21, "Su/giù suono · L1/R1 categoria · sinistra/destra tonalità · L2 magg./min. · R2 modo tonalità", C_MUTED);
+    OrcLoopInfo li;
+    orc_loop_info(a->orc, &li);
+    char st[48];
+    loop_state_text(&li, st, sizeof(st));
+    snprintf(t, sizeof(t), "A registra · B suona/ferma · Y annulla · X batteria   ·   loop %s", st);
+    gfx_text_center(c, FONT_SMALL, 320, hy + 43, t, li.state == LOOP_RECORDING ? C_RED : C_MUTED);
+}
+
+/* Il suono appena scelto dalla MPK: il precedente, lui e il successivo, per un attimo. */
+static void draw_peek(OrcApp *a, Canvas *c)
+{
+    float al = fminf(1.0f, a->peek_t * 4.0f);
+    const int w = 420, x = 320 - w / 2, y = 56, h = 86;
+    int n = sound_count(a), cur = a->set.sound;
+    char nm[48];
+    gfx_round_rect(c, x, y, w, h, 14, C_BAR, al);
+    gfx_round_frame(c, x, y, w, h, 14, 1.5f, C_GOLD, al);
+    gfx_text_center(c, FONT_SMALL, 320, y + 21, sound_name(a, (cur - 1 + n) % n), gfx_mix(C_BAR, C_DIM, al));
+    sound_label(a, nm, sizeof(nm));
+    gfx_text_center(c, FONT_BOLD, 320, y + 48, nm, gfx_mix(C_BAR, C_TEXT, al));
+    gfx_text(c, FONT_SMALL, x + 16, y + 47, sound_cat(a, cur), gfx_mix(C_BAR, C_GOLD, al));
+    gfx_text_center(c, FONT_SMALL, 320, y + 75, sound_name(a, (cur + 1) % n), gfx_mix(C_BAR, C_DIM, al));
+}
+
+/* Rinomina: il nome si scrive con una tastiera USB. */
+static void draw_edit(OrcApp *a, Canvas *c)
+{
+    gfx_rect_alpha(c, 0, 0, c->w, c->h, RGB(0, 0, 0), 0.6f);
+    gfx_round_rect(c, 80, 158, 480, 156, 18, C_PANEL_HI, 1.0f);
+    gfx_round_frame(c, 80, 158, 480, 156, 18, 2, C_GOLD, 1.0f);
+    gfx_text_center(c, FONT_BOLD, 320, 192, "Nome del suono", C_TEXT);
+    gfx_round_rect(c, 108, 208, 424, 42, 10, C_BAR, 1.0f);
+    char t[48];
+    snprintf(t, sizeof(t), "%s%s", a->edit, (int)(a->time * 2.0f) % 2 ? "|" : " ");
+    gfx_text(c, FONT_BODY, 122, 236, t, C_GOLD);
+    gfx_text_center(c, FONT_SMALL, 320, 282, "Scrivi con una tastiera USB · Invio o A conferma · B annulla", C_MUTED);
 }
 
 static void draw_rhythm(OrcApp *a, Canvas *c)
@@ -2013,7 +2817,7 @@ static void draw_rhythm(OrcApp *a, Canvas *c)
         rows[i].bar = i == R_LEVEL ? a->set.beat_level : -1.0f;
     }
     draw_list(c, rows, R_COUNT, a->rhythm_sel, &a->rhythm_scroll, 258, 440, 26);
-    draw_hints(c, "A registra · B suona/ferma · Y cancella il loop · X tap tempo · L1/R1 tempo ±10");
+    draw_hints(c, "A registra · B suona/ferma · Y annulla · X tap tempo · L1/R1 tempo ±10");
 }
 
 static void draw_midi(OrcApp *a, Canvas *c)
@@ -2063,10 +2867,13 @@ void orcapp_draw(OrcApp *a, Canvas *c)
     draw_header(a, c);
     switch (a->page) {
     case PAGE_PLAY: draw_play(a, c); break;
-    case PAGE_SOUND: draw_sound(a, c); break;
+    case PAGE_CHORDS:
+    case PAGE_SOUND: draw_params(a, c); break;
     case PAGE_RHYTHM: draw_rhythm(a, c); break;
     default: draw_midi(a, c); break;
     }
+    if (a->overlay) draw_overlay(a, c);
+    else if (a->peek_t > 0.0f) draw_peek(a, c);
     if (a->toast_t > 0.0f && a->toast[0]) {
         float al = fminf(1.0f, a->toast_t * 3.0f);
         int w = gfx_text_width(FONT_BOLD, a->toast) + 36;
@@ -2075,5 +2882,6 @@ void orcapp_draw(OrcApp *a, Canvas *c)
         gfx_round_frame(c, 320 - w / 2.0f, 398, w, 36, 18, 1.5f, C_GOLD, al);
         gfx_text_center(c, FONT_BOLD, 320, 422, a->toast, gfx_mix(C_BAR, C_TEXT, al));
     }
+    if (a->editing) draw_edit(a, c);
     if (a->quit_dialog) draw_quit(c);
 }

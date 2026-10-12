@@ -47,7 +47,7 @@ For the pads: MidiCh **10**. **BANK A/B** switches the bank.
 | **Bank A, top row** | 40 Dim | 41 Min | 42 Maj | 43 Sus |
 | **Bank A, bottom row** | 36 6 | 37 m7 | 38 M7 | 39 9 |
 | **Bank B, top row** | 48 Key mode | 49 Next playing style | 50 Previous sound | 51 Next sound |
-| **Bank B, bottom row** | 44 Drums | 45 Loop: record | 46 Loop: play/stop | 47 Loop: clear |
+| **Bank B, bottom row** | 44 Drums | 45 Loop: record | 46 Loop: play/stop | 47 Loop: undo |
 
 This is the MPC layout: the note is 35 + the pad number, counting from the bottom-left pad.
 

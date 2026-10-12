@@ -3,12 +3,21 @@
  * audio dimostrativo (WAV) e schermate (BMP).
  *
  * Uso: orc-test <cartella dei font> <cartella di uscita> [preset della MPK mini IV]
+ * Nella cartella di uscita lascia anche openorc-suoni.wav: tutti i suoni di fabbrica, uno dopo l'altro.
  */
+#include <dirent.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <sys/stat.h>
+#ifdef _WIN32
+#include <direct.h>
+#define make_dir(p) _mkdir(p)
+#else
+#define make_dir(p) mkdir(p, 0755)
+#endif
 
 #include "chords.h"
 #include "gfx.h"
@@ -372,10 +381,12 @@ static void test_session(const char *outdir)
     }
     btn(a, PAD_RIGHT, 1); btn(a, PAD_L2, 1); EXPECT(a, "Sol7"); btn(a, PAD_L2, 0); btn(a, PAD_RIGHT, 0);
 
-    /* program change: suono 4 = Cascata (arpeggio) */
-    unsigned char pc[2] = { 0xC0, 4 };
+    /* program change: il numero di Cascata (arpeggio) */
+    int cascata = orcapp_sound_find(a, "Cascata");
+    CHECK(cascata > 0, "Cascata c'e' (%d)", cascata);
+    unsigned char pc[2] = { 0xC0, (unsigned char)cascata };
     orcapp_midi(a, 0, pc, 2);
-    CHECK(orcapp_sound(a)->perform == PERF_ARP, "program change 4 -> Cascata");
+    CHECK(orcapp_sound(a)->perform == PERF_ARP, "program change %d -> Cascata", cascata);
 
     /* apprendimento: CC 21 diventa K4 (riga 22 della pagina MIDI) */
     orcapp_set_page(a, PAGE_MIDI);
@@ -420,7 +431,7 @@ static void test_session(const char *outdir)
     btn(a, PAD_A, 1); btn(a, PAD_A, 0);
     orcapp_set_knob_mode(a, 0);                   /* la prova usa valori assoluti */
     cc(a, 21, 64);
-    orcapp_set_page(a, PAGE_SOUND);
+    orcapp_set_page(a, PAGE_CHORDS);
     orcapp_select(a, 5);                          /* Voicing */
     btn(a, PAD_RIGHT, 1); btn(a, PAD_RIGHT, 0);
     orcapp_destroy(a);
@@ -629,6 +640,445 @@ static void test_looper(void)
     orc_destroy(o);
 }
 
+/* ------------------------------------------------------------------ stereo e motori nuovi */
+static size_t slurp(const char *path, char *buf, size_t n);
+
+static double side_ratio(const float *lr, int frames)
+{
+    double m = 0.0, d = 0.0;
+    for (int i = 0; i < frames; i++) {
+        double l = lr[2 * i], r = lr[2 * i + 1];
+        m += (l + r) * (l + r);
+        d += (l - r) * (l - r);
+    }
+    return m > 0.0 ? sqrt(d / m) : 0.0;
+}
+
+static double rms_of(const float *lr, int frames)
+{
+    double e = 0.0;
+    for (int i = 0; i < 2 * frames; i++) e += lr[i] * lr[i];
+    return frames ? sqrt(e / (2.0 * frames)) : 0.0;
+}
+
+/* Volume percepito, alla buona: il massimo dell'RMS su finestre di 50 ms. Tratta allo stesso modo i
+   suoni tenuti e quelli che si spengono da soli (corde, campane). */
+static double loudness(const float *lr, int frames)
+{
+    const int win = SR / 20;
+    double best = 0.0;
+    for (int i = 0; i + win <= frames; i += win / 2) {
+        double r = rms_of(lr + 2 * i, win);
+        if (r > best) best = r;
+    }
+    return best;
+}
+
+static void test_stereo_engines(void)
+{
+    static float audio[2 * SR * 2];
+    int C[3] = { 60, 64, 67 };
+
+    /* corda pizzicata: intonata (La3, 220 Hz) */
+    Orc *o = orc_create(SR);
+    OrcSound s = plain_sound(ENG_PLUCK, PERF_CHORD, 0.3f);
+    s.sustain = 1.0f; s.character = 0.7f; s.tone = 0.6f;
+    orc_set_sound(o, &s);
+    int A3[1] = { 57 };
+    orc_chord_on(o, A3, 1, -1, 0.9f, 0);
+    render_seconds(o, 0.05f, NULL);
+    render_seconds(o, 0.5f, audio);
+    double on = goertzel(audio, SR / 2, 220.0f), off = goertzel(audio, SR / 2, 233.08f) + goertzel(audio, SR / 2, 207.65f);
+    CHECK(on > 10.0 * off, "corda: La3 %.1f contro le note vicine %.1f", on, off);
+    CHECK(rms_of(audio, SR / 2) > 0.01, "corda: si sente (RMS %.4f)", rms_of(audio, SR / 2));
+    orc_destroy(o);
+
+    /* corda corta (durata minima): dopo un secondo e' quasi spenta */
+    o = orc_create(SR);
+    s.character = 0.0f;
+    orc_set_sound(o, &s);
+    orc_chord_on(o, A3, 1, -1, 0.9f, 0);
+    render_seconds(o, 0.1f, audio);
+    double early = rms_of(audio, SR / 10);
+    render_seconds(o, 0.9f, NULL);
+    render_seconds(o, 0.1f, audio);
+    double late = rms_of(audio, SR / 10);
+    CHECK(late < early * 0.05, "corda corta: %.4f dopo un secondo contro %.4f all'inizio", late, early);
+    orc_destroy(o);
+
+    /* ensemble e analogico: a stereo 0 i canali coincidono, a 1 si aprono */
+    const int engines[3] = { ENG_SUPER, ENG_VA, ENG_PLUCK };
+    for (int e = 0; e < 3; e++) {
+        double side[2];
+        for (int w = 0; w < 2; w++) {
+            o = orc_create(SR);
+            s = plain_sound(engines[e], PERF_CHORD, 0.3f);
+            s.sustain = 1.0f;
+            s.stereo = (float)w;
+            orc_set_sound(o, &s);
+            orc_chord_on(o, C, 3, -1, 0.8f, 0);
+            render_seconds(o, 0.2f, NULL);
+            render_seconds(o, 0.5f, audio);
+            side[w] = side_ratio(audio, SR / 2);
+            orc_destroy(o);
+        }
+        CHECK(side[0] < 1e-3, "motore %d, stereo 0: canali uguali (%.5f)", engines[e], side[0]);
+        CHECK(side[1] > 0.08, "motore %d, stereo 1: canali diversi (%.3f)", engines[e], side[1]);
+    }
+
+    /* piano elettrico: a stereo 1 il tremolo va da un lato all'altro */
+    o = orc_create(SR);
+    s = plain_sound(ENG_REED, PERF_CHORD, 0.3f);
+    s.sustain = 1.0f; s.vibrato = 1.0f; s.stereo = 1.0f;
+    orc_set_sound(o, &s);
+    int D4[1] = { 62 };
+    orc_chord_on(o, D4, 1, -1, 0.8f, 0);
+    render_seconds(o, 0.2f, NULL);
+    render_seconds(o, 1.0f, audio);
+    CHECK(side_ratio(audio, SR) > 0.1, "tremolo stereo (%.3f)", side_ratio(audio, SR));
+    orc_destroy(o);
+}
+
+/* ------------------------------------------------------------------ suoni di fabbrica */
+static void test_presets(const char *outdir)
+{
+    char path[512];
+    OrcApp *a = orcapp_create(SR, NULL);
+    int n = orcapp_sound_count(a);
+    CHECK(n >= 25, "suoni di fabbrica: %d", n);
+    for (int i = 0; i < n; i++)
+        for (int j = 0; j < i; j++)
+            CHECK(strcmp(orcapp_sound_name(a, i), orcapp_sound_name(a, j)), "nome doppio: %s", orcapp_sound_name(a, i));
+    const float per = 3.0f;
+    g_rec_cap = (int)(SR * per * n) + SR;
+    g_rec = calloc((size_t)g_rec_cap * 2, sizeof(float));
+    g_rec_pos = 0;
+    pad(a, 48, 1); pad(a, 48, 0);                 /* modo tonalita' */
+    printf("suoni di fabbrica: volume (RMS massimo su 50 ms), RMS medio, picco, stereo (lati / centro)\n");
+    double lo = 1.0, hi = 0.0;
+    for (int i = 0; i < n; i++) {
+        unsigned char pc[2] = { 0xC0, (unsigned char)i };
+        orcapp_midi(a, 0, pc, 2);
+        int start = g_rec_pos;
+        key(a, 60, 1); run(a, 1.2f); key(a, 60, 0);
+        key(a, 67, 1); run(a, 1.2f); key(a, 67, 0);
+        run(a, 0.6f);
+        const float *seg = g_rec + 2 * start;
+        int frames = g_rec_pos - start, finite = 1;
+        float peak = 0.0f;
+        for (int k = 0; k < 2 * frames; k++) { finite &= isfinite(seg[k]) != 0; peak = fmaxf(peak, fabsf(seg[k])); }
+        double rms = rms_of(seg, frames), side = side_ratio(seg, frames), loud = loudness(seg, frames);
+        const OrcSound *snd = orcapp_sound(a);
+        printf("  %2d %-20s %-9s volume %.3f  RMS %.3f  picco %.2f  stereo %.2f\n", i, orcapp_sound_name(a, i),
+               snd->engine == ENG_PLUCK ? "corda" : snd->engine == ENG_SUPER ? "ensemble" : "", loud, rms, peak, side);
+        CHECK(finite && peak <= 1.0f && rms > 0.02, "%s: RMS %.3f, picco %.3f", orcapp_sound_name(a, i), rms, peak);
+        if (snd->stereo >= 0.5f) CHECK(side > 0.05, "%s: stereo %.3f", orcapp_sound_name(a, i), side);
+        if (loud < lo) lo = loud;
+        if (loud > hi) hi = loud;
+    }
+    CHECK(hi < lo * 3.0, "volumi dei suoni troppo diversi: da %.3f a %.3f", lo, hi);
+    snprintf(path, sizeof(path), "%s/openorc-suoni.wav", outdir);
+    write_wav(path, g_rec, g_rec_pos);
+    printf("tutti i suoni: %.0f s -> %s\n", (float)g_rec_pos / SR, path);
+    free(g_rec);
+    g_rec = NULL;
+    orcapp_destroy(a);
+}
+
+/* ------------------------------------------------------------------ suoni dell'utente */
+static void clean_dir(const char *dir)
+{
+    DIR *dp = opendir(dir);
+    if (!dp) return;
+    struct dirent *e;
+    char path[700];
+    while ((e = readdir(dp))) {
+        if (e->d_name[0] == '.') continue;
+        snprintf(path, sizeof(path), "%s/%s", dir, e->d_name);
+        remove(path);
+    }
+    closedir(dp);
+}
+
+static int exists(const char *path)
+{
+    FILE *f = fopen(path, "r");
+    if (f) fclose(f);
+    return f != NULL;
+}
+
+static void test_user_sounds(const char *outdir)
+{
+    char dir[512], sdir[600], state[600], file[700];
+    static char buf[4096];
+    snprintf(dir, sizeof(dir), "%s/suoni-prova", outdir);
+    snprintf(sdir, sizeof(sdir), "%s/suoni", dir);
+    snprintf(state, sizeof(state), "%s/stato.txt", dir);
+    make_dir(dir);
+    clean_dir(sdir);
+    clean_dir(dir);
+
+    OrcApp *a = orcapp_create(SR, state);
+    int n0 = orcapp_sound_count(a);
+    CHECK(!strcmp(orcapp_current_name(a), "Lungolago") && !orcapp_sound_modified(a), "si parte da Lungolago, senza modifiche");
+    /* pagina Suono: 1 Suono, 2 Salva come nuovo, 3 Aggiorna, 4 Ripristina, 5 Variazione, 6 Rinomina, 7 Elimina, 10 Tono */
+    orcapp_set_page(a, PAGE_SOUND);
+    orcapp_select(a, 10);
+    btn(a, PAD_RIGHT, 1); btn(a, PAD_RIGHT, 0);
+    CHECK(orcapp_sound_modified(a), "tono cambiato: asterisco");
+    orcapp_select(a, 3);                          /* Aggiorna su un suono di fabbrica: non si puo' */
+    btn(a, PAD_A, 1); btn(a, PAD_A, 0);
+    CHECK(orcapp_sound_count(a) == n0, "Aggiorna non tocca i suoni di fabbrica");
+    orcapp_select(a, 2);
+    btn(a, PAD_A, 1); btn(a, PAD_A, 0);
+    CHECK(orcapp_sound_count(a) == n0 + 1, "salvato: %d suoni", orcapp_sound_count(a));
+    CHECK(!strcmp(orcapp_current_name(a), "Lungolago 2"), "nome: %s", orcapp_current_name(a));
+    CHECK(!orcapp_sound_modified(a), "appena salvato: niente asterisco");
+    snprintf(file, sizeof(file), "%s/lungolago-2.txt", sdir);
+    slurp(file, buf, sizeof(buf));
+    CHECK(strstr(buf, "nome=Lungolago 2") != NULL, "file del suono: %s", file);
+
+    /* aggiorna */
+    orcapp_select(a, 10);
+    btn(a, PAD_RIGHT, 1); btn(a, PAD_RIGHT, 0);
+    float tone = orcapp_sound(a)->tone;
+    orcapp_select(a, 3);
+    btn(a, PAD_A, 1); btn(a, PAD_A, 0);
+    CHECK(!orcapp_sound_modified(a) && orcapp_sound_count(a) == n0 + 1, "aggiornato al suo posto");
+
+    /* variazione e ripristino */
+    orcapp_select(a, 5);
+    btn(a, PAD_A, 1); btn(a, PAD_A, 0);
+    CHECK(orcapp_sound_modified(a), "la variazione cambia il suono");
+    orcapp_select(a, 4);
+    btn(a, PAD_A, 1); btn(a, PAD_A, 0);
+    CHECK(!orcapp_sound_modified(a) && fabsf(orcapp_sound(a)->tone - tone) < 1e-4f, "ripristinato (tono %.3f)", orcapp_sound(a)->tone);
+
+    /* rinomina con la tastiera USB */
+    orcapp_select(a, 6);
+    btn(a, PAD_A, 1); btn(a, PAD_A, 0);
+    CHECK(orcapp_editing(a), "rinomina aperta");
+    orcapp_text(a, "", TEXT_BACKSPACE);
+    orcapp_text(a, "", TEXT_BACKSPACE);
+    orcapp_text(a, " di sera", TEXT_CHARS);
+    orcapp_text(a, "", TEXT_ENTER);
+    CHECK(!orcapp_editing(a) && !strcmp(orcapp_current_name(a), "Lungolago di sera"), "rinominato: %s", orcapp_current_name(a));
+    snprintf(file, sizeof(file), "%s/lungolago-di-sera.txt", sdir);
+    CHECK(exists(file), "file rinominato");
+    snprintf(file, sizeof(file), "%s/lungolago-2.txt", sdir);
+    CHECK(!exists(file), "il file vecchio non c'e' piu'");
+    btn(a, PAD_A, 1); btn(a, PAD_A, 0);           /* B annulla: il nome resta */
+    btn(a, PAD_B, 1); btn(a, PAD_B, 0);
+    CHECK(!strcmp(orcapp_current_name(a), "Lungolago di sera"), "B lascia il nome com'era");
+
+    /* nell'elenco i tuoi suoni vengono dopo quelli di fabbrica */
+    CHECK(orcapp_current_sound(a) == n0, "il tuo suono e' in fondo all'elenco (%d)", orcapp_current_sound(a));
+
+    /* ripresa: suono e valori */
+    orcapp_destroy(a);
+    a = orcapp_create(SR, state);
+    CHECK(!strcmp(orcapp_current_name(a), "Lungolago di sera") && !orcapp_sound_modified(a), "ripreso: %s", orcapp_current_name(a));
+    CHECK(fabsf(orcapp_sound(a)->tone - tone) < 1e-3f, "tono ripreso %.3f", orcapp_sound(a)->tone);
+
+    /* program change oltre i suoni di fabbrica: il tuo */
+    pad(a, 51, 1); pad(a, 51, 0);
+    unsigned char pc[2] = { 0xC0, (unsigned char)n0 };
+    orcapp_midi(a, 0, pc, 2);
+    CHECK(!strcmp(orcapp_current_name(a), "Lungolago di sera"), "program change %d: il tuo suono", n0);
+
+    /* elimina: A due volte */
+    orcapp_set_page(a, PAGE_SOUND);
+    orcapp_select(a, 7);
+    btn(a, PAD_A, 1); btn(a, PAD_A, 0);
+    CHECK(orcapp_sound_count(a) == n0 + 1, "la prima A chiede conferma");
+    btn(a, PAD_A, 1); btn(a, PAD_A, 0);
+    CHECK(orcapp_sound_count(a) == n0, "eliminato");
+    snprintf(file, sizeof(file), "%s/lungolago-di-sera.txt", sdir);
+    CHECK(!exists(file), "file eliminato");
+    orcapp_destroy(a);
+
+    /* stato delle versioni con il solo numero del suono, nell'ordine di allora (4 = Cascata) */
+    FILE *f = fopen(state, "w");
+    if (f) { fputs("sound=4\nperform=3\n", f); fclose(f); }
+    a = orcapp_create(SR, state);
+    CHECK(!strcmp(orcapp_current_name(a), "Cascata"), "stato vecchio: %s", orcapp_current_name(a));
+    orcapp_destroy(a);
+    clean_dir(sdir);
+    clean_dir(dir);
+}
+
+/* ------------------------------------------------------------------ SELECT tenuto, pad dei suoni */
+static void test_select(void)
+{
+    OrcApp *a = orcapp_create(SR, NULL);
+    Orc *o = orcapp_engine(a);
+    OrcLoopInfo li;
+    orcapp_set_page(a, PAGE_PLAY);
+    orcapp_button(a, PAD_SELECT, 1); run(a, 0.1f); orcapp_button(a, PAD_SELECT, 0); run(a, 0.02f);
+    CHECK(orcapp_page(a) == PAGE_CHORDS && !orcapp_overlay(a), "SELECT toccato: pagina Accordi (%d)", orcapp_page(a));
+    orcapp_set_page(a, PAGE_PLAY);
+
+    int s0 = orcapp_current_sound(a);
+    orcapp_button(a, PAD_SELECT, 1); run(a, 0.4f);
+    CHECK(orcapp_overlay(a) == 1, "SELECT tenuto: elenco aperto");
+    btn(a, PAD_DOWN, 1); btn(a, PAD_DOWN, 0);
+    CHECK(orcapp_current_sound(a) == s0 + 1, "giu': suono successivo");
+    btn(a, PAD_R1, 1); btn(a, PAD_R1, 0);
+    CHECK(!strcmp(orcapp_current_name(a), "Tramonto FM"), "R1: prima voce della categoria dopo (%s)", orcapp_current_name(a));
+    btn(a, PAD_L1, 1); btn(a, PAD_L1, 0);
+    CHECK(!strcmp(orcapp_current_name(a), "Lungolago"), "L1: categoria prima (%s)", orcapp_current_name(a));
+    btn(a, PAD_RIGHT, 1); btn(a, PAD_RIGHT, 0);   /* tonalita' Re bemolle */
+    btn(a, PAD_A, 1); btn(a, PAD_A, 0);
+    orc_loop_info(o, &li);
+    CHECK(li.state == LOOP_RECORDING, "SELECT + A: registra (stato %d)", li.state);
+    btn(a, PAD_Y, 1); btn(a, PAD_Y, 0);
+    orc_loop_info(o, &li);
+    CHECK(li.state == LOOP_EMPTY, "SELECT + Y: annullato (stato %d)", li.state);
+    btn(a, PAD_X, 1); btn(a, PAD_X, 0);
+    CHECK(orc_transport_on(o), "SELECT + X: batteria");
+    btn(a, PAD_X, 1); btn(a, PAD_X, 0);
+    orcapp_button(a, PAD_SELECT, 0); run(a, 0.02f);
+    CHECK(!orcapp_overlay(a) && orcapp_page(a) == PAGE_PLAY, "lasciato SELECT: elenco chiuso, stessa pagina");
+
+    /* SELECT e subito un tasto: niente attesa, niente cambio di pagina */
+    int s1 = orcapp_current_sound(a);
+    orcapp_button(a, PAD_SELECT, 1);
+    btn(a, PAD_DOWN, 1); btn(a, PAD_DOWN, 0);
+    orcapp_button(a, PAD_SELECT, 0); run(a, 0.02f);
+    CHECK(orcapp_current_sound(a) == s1 + 1 && orcapp_page(a) == PAGE_PLAY, "SELECT + giu' veloce");
+    btn(a, PAD_LEFT, 1);
+    CHECK(orcapp_chord_live(a) && strcmp(orcapp_chord_name(a), "Do"), "la croce suona in Re bemolle (%s)", orcapp_chord_name(a));
+    btn(a, PAD_LEFT, 0);
+
+    /* pad 51 della MPK: suono successivo, elenco in vista per un attimo */
+    int s2 = orcapp_current_sound(a);
+    pad(a, 51, 1); pad(a, 51, 0); run(a, 0.05f);
+    CHECK(orcapp_current_sound(a) == s2 + 1 && orcapp_overlay(a) == 2, "pad 51: suono dopo, elenco in vista");
+    run(a, 2.0f);
+    CHECK(!orcapp_overlay(a), "e poi sparisce");
+
+    /* l'esecuzione che resta cambiando suono */
+    orcapp_set_follow(a, 0);
+    int perf = orcapp_sound(a)->perform;
+    pad(a, 49, 1); pad(a, 49, 0);
+    int mine = (perf + 1) % PERF_COUNT;
+    for (int i = 0; i < 6; i++) { pad(a, 51, 1); pad(a, 51, 0); }
+    CHECK(orcapp_sound(a)->perform == mine, "esecuzione tenuta: %d, attesa %d", orcapp_sound(a)->perform, mine);
+    orcapp_set_follow(a, 1);
+    int cascata = orcapp_sound_find(a, "Cascata");
+    unsigned char pc[2] = { 0xC0, (unsigned char)cascata };
+    orcapp_midi(a, 0, pc, 2);
+    CHECK(orcapp_sound(a)->perform == PERF_ARP, "esecuzione dal suono: Cascata arpeggia");
+    orcapp_destroy(a);
+}
+
+/* ------------------------------------------------------------------ looper a strati e salvataggio */
+static void test_loop_layers(const char *outdir)
+{
+    Orc *o = orc_create(SR);
+    OrcSound s = plain_sound(ENG_VA, PERF_CHORD, 0.3f);
+    orc_set_sound(o, &s);
+    orc_set_tempo(o, 120.0f);
+    orc_loop_config(o, 1, 0.5f);
+    orc_loop_record(o);
+    float buf[2 * 64];
+    orc_render(o, buf, 64);
+    int A[3] = { 57, 60, 64 }, ln[ORC_MAX_CHORD], tag;
+    orc_chord_on(o, A, 3, 45, 0.8f, 5);
+    render_until(o, 2.0);
+    orc_chord_off(o);
+    render_until(o, 4.05);
+    OrcLoopInfo li;
+    orc_loop_info(o, &li);
+    CHECK(li.state == LOOP_PLAYING && li.events == 2 && li.layers == 0, "primo giro: stato %d, eventi %d, strati %d", li.state, li.events, li.layers);
+    const int notes[2] = { 72, 76 };
+    for (int k = 0; k < 2; k++) {                 /* due sovraincisioni */
+        double b = 4.0 * (k + 1);
+        orc_loop_record(o);
+        render_until(o, b + 0.5);
+        orc_note_on(o, notes[k], 0.9f);
+        render_until(o, b + 1.0);
+        orc_note_off(o, notes[k]);
+        render_until(o, b + 1.2);
+        orc_loop_record(o);
+        render_until(o, b + 1.3);
+    }
+    orc_loop_info(o, &li);
+    CHECK(li.events == 6 && li.layers == 2, "due sovraincisioni: eventi %d, strati %d", li.events, li.layers);
+    orc_loop_record(o);                           /* una sovraincisione senza note non conta */
+    render_until(o, 13.0);
+    orc_loop_record(o);
+    render_until(o, 13.1);
+    orc_loop_info(o, &li);
+    CHECK(li.layers == 2, "sovraincisione vuota: strati %d", li.layers);
+    orc_loop_undo(o);
+    render_until(o, 13.2);
+    orc_loop_info(o, &li);
+    CHECK(li.state == LOOP_PLAYING && li.events == 4 && li.layers == 1, "annulla: tolta la seconda (eventi %d, strati %d)", li.events, li.layers);
+    orc_loop_record(o);                           /* sovraincisione in corso, annullata */
+    render_until(o, 16.5);
+    orc_note_on(o, 79, 0.9f);
+    render_until(o, 16.8);
+    orc_loop_undo(o);
+    render_until(o, 16.9);
+    orc_note_off(o, 79);
+    orc_loop_info(o, &li);
+    CHECK(li.state == LOOP_PLAYING && li.events == 4 && li.layers == 1, "annullata quella in corso: stato %d, eventi %d", li.state, li.events);
+
+    /* salvataggio e ripresa (motore) */
+    static OrcLoopEvent ev[ORC_LOOP_MAX];
+    double len = 0.0;
+    int layers = -1, n = orc_loop_export(o, ev, ORC_LOOP_MAX, &len, &layers);
+    CHECK(n == 4 && fabs(len - 4.0) < 1e-9 && layers == 1, "esportati %d eventi, %.1f battiti, %d strati", n, len, layers);
+    Orc *o2 = orc_create(SR);
+    orc_set_sound(o2, &s);
+    orc_loop_import(o2, ev, n, len, layers);
+    orc_loop_info(o2, &li);
+    CHECK(li.state == LOOP_STOPPED && li.events == 4 && li.layers == 1, "ripreso fermo: stato %d, eventi %d", li.state, li.events);
+    orc_loop_play(o2);
+    render_until(o2, 0.3);
+    CHECK(orc_layer_notes(o2, ORC_LOOP, ln, &tag) == 3 && tag == 5, "il loop ripreso suona l'accordo");
+    orc_destroy(o2);
+
+    orc_loop_undo(o);
+    render_until(o, 17.0);
+    orc_loop_info(o, &li);
+    CHECK(li.events == 2 && li.layers == 0, "annulla di nuovo: resta il primo giro (%d)", li.events);
+    orc_loop_undo(o);
+    render_until(o, 17.1);
+    orc_loop_info(o, &li);
+    CHECK(li.state == LOOP_EMPTY, "e poi il loop e' vuoto (stato %d)", li.state);
+    orc_destroy(o);
+
+    /* l'app salva il loop all'uscita e lo riprende fermo */
+    char state[512], lf[512];
+    snprintf(state, sizeof(state), "%s/stato-loop.txt", outdir);
+    snprintf(lf, sizeof(lf), "%s/loop.txt", outdir);
+    remove(state);
+    remove(lf);
+    OrcApp *a = orcapp_create(SR, state);
+    orcapp_set_page(a, PAGE_RHYTHM);
+    btn(a, PAD_A, 1); btn(a, PAD_A, 0);
+    pad(a, 42, 1); key(a, 60, 1);
+    run(a, 1.5f);
+    key(a, 60, 0); pad(a, 42, 0);
+    run(a, 1.0f);
+    btn(a, PAD_A, 1); btn(a, PAD_A, 0);
+    run(a, 0.1f);
+    orc_loop_info(orcapp_engine(a), &li);
+    CHECK(li.state == LOOP_PLAYING && li.events == 2, "loop dell'app: stato %d, eventi %d", li.state, li.events);
+    orcapp_destroy(a);
+    CHECK(exists(lf), "loop salvato in %s", lf);
+    a = orcapp_create(SR, state);
+    orc_loop_info(orcapp_engine(a), &li);
+    CHECK(li.state == LOOP_STOPPED && li.events == 2, "loop ripreso all'avvio: stato %d, eventi %d", li.state, li.events);
+    orcapp_set_page(a, PAGE_RHYTHM);
+    btn(a, PAD_Y, 1); btn(a, PAD_Y, 0);           /* annulla: vuoto */
+    orcapp_destroy(a);
+    CHECK(!exists(lf), "loop vuoto: il file se ne va");
+    remove(state);
+}
+
 /* ------------------------------------------------------------------ prestazioni */
 static void test_performance(void)
 {
@@ -649,6 +1099,25 @@ static void test_performance(void)
     double secs = (double)(clock() - t0) / CLOCKS_PER_SEC;
     printf("prestazioni: 10 s di audio (16 voci, batteria, effetti) in %.3f s (%.0f volte il tempo reale)\n", secs, 10.0 / (secs > 0 ? secs : 1e-9));
     orc_destroy(o);
+    const int heavy[2] = { ENG_SUPER, ENG_PLUCK };
+    for (int e = 0; e < 2; e++) {
+        o = orc_create(SR);
+        s.engine = heavy[e];
+        s.stereo = 1.0f;
+        s.sustain = 1.0f;
+        orc_set_sound(o, &s);
+        orc_set_tempo(o, 120.0f);
+        orc_set_beat(o, 1, BEAT_PSYCH, 0.8f);
+        orc_transport(o, 1);
+        t0 = clock();
+        for (int i = 0; i < 10 * SR / BLOCK; i++) {
+            if (i % 20 == 0) orc_chord_on(o, ch, 6, 36, 0.9f, 0);
+            orc_render(o, buf, BLOCK);
+        }
+        secs = (double)(clock() - t0) / CLOCKS_PER_SEC;
+        printf("prestazioni %s stereo: %.0f volte il tempo reale\n", e ? "corda" : "ensemble", 10.0 / (secs > 0 ? secs : 1e-9));
+        orc_destroy(o);
+    }
 }
 
 /* ------------------------------------------------------------------ preset della tastiera */
@@ -703,6 +1172,14 @@ static void test_keyboard(const char *outdir, const char *repo)
     FILE *f = fopen(bad, "w");
     if (f) { fputs("\xEF\xBB\xBFnome = rotto\nMaj = tasto 42\nK9 = cc 1\n", f); fclose(f); }
     CHECK(orcapp_load_keyboard(a, bad, name, sizeof(name)) != 0, "file senza controlli validi rifiutato");
+    /* il nome di prima di «Loop: annulla» si legge ancora */
+    f = fopen(rep, "w");
+    if (f) { fputs("Loop: cancella = nota 61 canale 3\n", f); fclose(f); }
+    CHECK(!orcapp_load_keyboard(a, rep, name, sizeof(name)), "preset con «Loop: cancella» letto");
+    orcapp_save_keyboard(a, def, "x");
+    slurp(def, b1, sizeof(b1));
+    CHECK(strstr(b1, "Loop: annulla = nota 61 canale 3") != NULL, "«Loop: cancella» diventa «Loop: annulla»");
+    btn(a, PAD_Y, 1); btn(a, PAD_Y, 0);           /* di nuovo la mappa di prima */
     midi3(a, 0, 0x91, 60, 90); midi3(a, 0, 0x81, 60, 0); run(a, 0.05f);
     CHECK(orc_transport_on(o), "la mappa resta quella di prima");
 
@@ -857,11 +1334,26 @@ static void screenshots(OrcApp *a, const char *outdir)
     pad(a, 37, 0);
     run(a, 1.0f);
 
+    orcapp_set_page(a, PAGE_CHORDS);
+    orcapp_select(a, 9);
+    SHOT("orc-3-accordi");
     orcapp_set_page(a, PAGE_SOUND);
-    orcapp_select(a, 7);
-    SHOT("orc-3-suono");
-    orcapp_select(a, 16);
-    SHOT("orc-3b-suono-timbro");
+    orcapp_select(a, 10);
+    btn(a, PAD_RIGHT, 1); btn(a, PAD_RIGHT, 0);   /* un suono cambiato: l'asterisco */
+    orcapp_select(a, 2);
+    SHOT("orc-3b-suono");
+    orcapp_select(a, 22);
+    SHOT("orc-3c-suono-effetti");
+    orcapp_select(a, 2);
+    btn(a, PAD_A, 1); btn(a, PAD_A, 0);           /* salvato come suono tuo */
+    orcapp_select(a, 6);
+    btn(a, PAD_A, 1); btn(a, PAD_A, 0);
+    orcapp_text(a, "", TEXT_BACKSPACE);
+    orcapp_text(a, "", TEXT_BACKSPACE);
+    orcapp_text(a, " al tramonto", TEXT_CHARS);
+    SHOT("orc-3d-rinomina");
+    orcapp_text(a, "", TEXT_ENTER);
+    run(a, 2.5f);
     orcapp_set_page(a, PAGE_RHYTHM);
     pad(a, 44, 1); pad(a, 44, 0);
     run(a, 0.7f);
@@ -883,6 +1375,19 @@ static void screenshots(OrcApp *a, const char *outdir)
     SHOT("orc-6-uscita");
     orcapp_button(a, PAD_B, 1);
     orcapp_button(a, PAD_B, 0);
+    run(a, 2.5f);
+    /* SELECT tenuto: l'elenco dei suoni */
+    orcapp_button(a, PAD_SELECT, 1);
+    run(a, 0.4f);
+    for (int i = 0; i < 3; i++) { btn(a, PAD_DOWN, 1); btn(a, PAD_DOWN, 0); }
+    SHOT("orc-9-elenco");
+    orcapp_button(a, PAD_SELECT, 0);
+    run(a, 0.05f);
+    /* pad 51: il suono dopo, in vista per un attimo */
+    pad(a, 51, 1); pad(a, 51, 0);
+    run(a, 0.2f);
+    SHOT("orc-10-suono-dopo");
+    run(a, 2.0f);
     btn(a, PAD_DOWN, 1);
     btn(a, PAD_L2, 1);
     run(a, 0.1f);
@@ -909,6 +1414,11 @@ int main(int argc, char **argv)
     snprintf(f2, sizeof(f2), "%s/BeVietnamPro-SemiBold.ttf", fonts);
     if (gfx_load_fonts(f1, f2)) return 1;
 
+    char lf[512], sd[512];
+    snprintf(lf, sizeof(lf), "%s/loop.txt", outdir);
+    remove(lf);                                   /* il loop lasciato dalle schermate della volta prima */
+    snprintf(sd, sizeof(sd), "%s/suoni", outdir);
+    clean_dir(sd);
     test_theory();
     printf("teoria: %d controlli, %d errori\n", checks, fails);
     test_session(outdir);
@@ -921,6 +1431,16 @@ int main(int argc, char **argv)
     printf("ridisegno: %d controlli, %d errori\n", checks, fails);
     test_keyboard(outdir, argc > 3 ? argv[3] : "../tastiere/akai-mpk-mini-iv.txt");
     printf("preset della tastiera: %d controlli, %d errori\n", checks, fails);
+    test_stereo_engines();
+    printf("stereo e motori nuovi: %d controlli, %d errori\n", checks, fails);
+    test_presets(outdir);
+    printf("suoni di fabbrica: %d controlli, %d errori\n", checks, fails);
+    test_user_sounds(outdir);
+    printf("suoni dell'utente: %d controlli, %d errori\n", checks, fails);
+    test_select();
+    printf("SELECT tenuto e pad dei suoni: %d controlli, %d errori\n", checks, fails);
+    test_loop_layers(outdir);
+    printf("loop a strati e salvato: %d controlli, %d errori\n", checks, fails);
     test_performance();
 
     char state[512];
@@ -930,6 +1450,8 @@ int main(int argc, char **argv)
     demo(a, outdir);
     screenshots(a, outdir);
     orcapp_destroy(a);
+    remove(lf);
+    clean_dir(sd);
 
     printf("TOTALE: %d controlli, %d errori\n", checks, fails);
     gfx_free_fonts();

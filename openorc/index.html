@@ -239,6 +239,7 @@ select {
 
 /* ---------------------------------------------------------------- motori */
 .motori { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.motore:last-child:nth-child(3n+1) { grid-column: 1 / -1; }
 .motore { background: var(--pannello); border: 1px solid var(--filo); border-radius: 16px; padding: 18px; display: grid; gap: 8px; align-content: start; }
 .motore canvas { width: 100%; height: 56px; display: block; }
 .motore p { color: #cfd2de; font-size: 0.92rem; }
@@ -322,8 +323,8 @@ pre {
       <p class="sottotitolo">Un tasto, <em>un accordo intero</em>. Il manuale illustrato.</p>
       <p class="intro">Sintetizzatore di accordi ispirato all'Orchid. Si suona con i tasti della Flip o con la Akai MPK mini IV: ogni tasto dà l'accordo completo, con il basso, nel modo che scegli.</p>
       <div class="cifre">
-        <div><b>6</b><span>motori di suono</span></div>
-        <div><b>25</b><span>suoni di fabbrica</span></div>
+        <div><b>7</b><span>motori di suono</span></div>
+        <div><b>28</b><span>suoni di fabbrica</span></div>
         <div><b>16</b><span>voci in stereo</span></div>
         <div><b>6</b><span>modi di suonare</span></div>
       </div>
@@ -637,8 +638,8 @@ spread=2</pre>
   <div class="contenitore">
     <div class="testata">
       <p class="etichetta">Timbro</p>
-      <h2>Sei motori, e uno spazio largo</h2>
-      <p>Il motore decide la natura del suono. Il «Carattere» cambia nome e significato con il motore. Le forme d'onda qui sotto sono indicative: danno l'idea del carattere di ogni motore.</p>
+      <h2>Sette motori, e uno spazio largo</h2>
+      <p>Sette motori. Il motore decide la natura del suono. Il «Carattere» cambia nome e significato con il motore. Le forme d'onda qui sotto sono indicative: danno l'idea del carattere di ogni motore.</p>
     </div>
     <div class="motori" id="motori-griglia"></div>
     <div class="due" style="margin-top:44px">
@@ -649,11 +650,12 @@ spread=2</pre>
         <input type="range" id="stereo" min="0" max="100" value="70">
       </div>
       <div class="testo">
+        <p><b>Quattro effetti che cambiano carattere al suono.</b> <b>Risonanza</b>: il filtro canta, fino all'acido. <b>Shimmer</b>: il riverbero rimanda la coda un'ottava sopra, da cattedrale. <b>Nastro</b>: il suono passa da una cassetta, con la velocità che oscilla e un filo di fruscio. <b>Pompa</b>: con START il suono respira sul battito, come nella house francese.</p>
         <p>A 0 tutto è al centro. Alzandola, le note dell'accordo si aprono dalla più grave a sinistra alla più acuta a destra, e arpeggi, strum e arpa passano da un lato all'altro.</p>
         <p>L'<b>Ensemble</b> apre anche i suoi oscillatori, come un coro largo. Nel <b>Piano elettrico</b> il tremolo va da un lato all'altro, come nei piani a valigia. Il basso resta sempre al centro.</p>
         <div class="figura">
-          <div class="schermo"><img src="img/08-corda.png" width="640" height="480" loading="lazy" alt="Pagina Suono con Arpa celtica: motore Corda pizzicata, Durata 4 secondi"></div>
-          <p class="didascalia">Con la corda pizzicata il Carattere diventa Durata: quanto vibra la corda.</p>
+          <div class="schermo"><img src="img/08-corda.png" width="640" height="480" loading="lazy" alt="Pagina Suono con Cattedrale: motore Ensemble, Desintonia e Risonanza"></div>
+          <p class="didascalia">Con l'Ensemble il Carattere diventa Desintonia; sotto c'è la Risonanza. Con la corda pizzicata diventa Durata, con il coro Vocale.</p>
         </div>
       </div>
     </div>
@@ -665,8 +667,8 @@ spread=2</pre>
   <div class="contenitore">
     <div class="testata">
       <p class="etichetta">Suoni di fabbrica</p>
-      <h2>Venticinque punti di partenza</h2>
-      <p>Il numero è quello del program change. Quelli segnati «stereo» sono nati insieme ai motori nuovi, a ottobre 2026.</p>
+      <h2>Ventotto punti di partenza</h2>
+      <p>Il numero è quello del program change. Quelli segnati «stereo» si allargano a destra e a sinistra; i più nuovi usano il coro, lo shimmer, il nastro, la pompa e la risonanza.</p>
     </div>
     <div class="suoni" id="suoni-griglia"></div>
   </div>
@@ -1145,7 +1147,8 @@ spread=2</pre>
     ["Piano elettrico", false, "FM con saturazione, alla maniera di Rhodes e Wurlitzer.", "Carattere", "quanto è spinta la saturazione", "piano"],
     ["Organo", false, "Armoniche sommate, come i registri di un organo.", "Registri", "quante armoniche entrano", "organo"],
     ["Corda pizzicata", true, "Una corda simulata, Karplus-Strong: chitarra, arpa, koto.", "Durata", "quanto vibra la corda, da 0,25 a 8 secondi", "corda"],
-    ["Ensemble", true, "Cinque oscillatori desintonizzati, larghi in stereo: archi, pad, fanfare.", "Desintonia", "quanto sono scostati gli oscillatori", "ensemble"]
+    ["Ensemble", true, "Cinque oscillatori desintonizzati, larghi in stereo: archi, pad, fanfare.", "Desintonia", "quanto sono scostati gli oscillatori", "ensemble"],
+    ["Coro", true, "Voci umane: una sorgente come le corde vocali, filtrata dalle formanti di una vocale.", "Vocale", "U, O, A, E, I, dalla più scura alla più chiara", "coro"]
   ];
   document.getElementById("motori-griglia").innerHTML = MOTORI.map(function (m, i) {
     return '<div class="motore"><h3>' + m[0] + (m[1] ? '<span class="nuovo">nuovo</span>' : "") + '</h3><canvas data-onda="' + m[5] + '" aria-hidden="true"></canvas><p>' + m[2] +
@@ -1159,6 +1162,7 @@ spread=2</pre>
       case "piano": var x = Math.sin(t + 0.9 * Math.sin(t)); return Math.tanh(x * 1.8) / Math.tanh(1.8);
       case "organo": return (Math.sin(t) + 0.6 * Math.sin(2 * t) + 0.35 * Math.sin(3 * t) + 0.25 * Math.sin(4 * t)) / 1.8;
       case "corda": return Math.exp(-u * 2.6) * (Math.sin(t) * 0.8 + 0.35 * Math.sin(2 * t + 0.4) + 0.2 * Math.sin(3 * t + 1.1));
+      case "coro": var vv = 0; for (var hh = 1; hh <= 12; hh++) vv += Math.sin(t * hh) / hh * (Math.exp(-Math.pow((hh * 160 - 700) / 220, 2)) + 0.5 * Math.exp(-Math.pow((hh * 160 - 1150) / 260, 2))); return vv * 1.6;
       case "ensemble": var s = 0, d = [1, 1.006, 0.994, 1.0028, 0.9972]; for (var k = 0; k < 5; k++) s += 2 * ((u * 4 * d[k] + k * 0.21) % 1) - 1; return s / 3.2;
     }
     return 0;
@@ -1199,28 +1203,43 @@ spread=2</pre>
 
   /* ------------------------------------------------------------ i 25 suoni */
   var SUONI = [
-    [0, "Lungolago", "Atmosfere", "Analogico", "Accordo", 0], [1, "Nebbia", "Atmosfere", "Analogico", "Accordo", 0],
-    [2, "Psichedelia", "Atmosfere", "Analogico", "Slop", 0], [3, "Aurora", "Atmosfere", "Ensemble", "Accordo", 1],
-    [4, "Archi d'inverno", "Atmosfere", "Ensemble", "Accordo", 1], [5, "Respiro di vetro", "Atmosfere", "FM", "Slop", 1],
-    [6, "Tramonto FM", "Tastiere", "FM", "Accordo", 0], [7, "Wurli di notte", "Tastiere", "Piano elettrico", "Slop", 0],
-    [8, "Valigia stereo", "Tastiere", "Piano elettrico", "Accordo", 1], [9, "Organo della pieve", "Tastiere", "Organo", "Accordo", 0],
-    [10, "Organo rotante", "Tastiere", "Organo", "Accordo", 1], [11, "Chitarra di carta", "Corde", "Analogico", "Strum", 0],
-    [12, "Dodici corde", "Corde", "Corda pizzicata", "Strum", 1], [13, "Koto del lago", "Corde", "Corda pizzicata", "Slop", 1],
-    [14, "Arpa celtica", "Corde", "Corda pizzicata", "Arpa", 1], [15, "Arpa di vetro", "Corde", "FM", "Arpa", 0],
-    [16, "Pizzicato", "Corde", "Corda pizzicata", "Accordo", 1], [17, "Cascata", "Arpeggi", "Analogico", "Arpeggio", 0],
-    [18, "Pioggia", "Arpeggi", "Corda pizzicata", "Arpeggio", 1], [19, "Ritmo in levare", "Arpeggi", "Analogico", "Pattern", 0],
-    [20, "Treno notturno", "Arpeggi", "Ensemble", "Pattern", 1], [21, "Campane lunari", "Campane", "FM", "Strum", 0],
-    [22, "Carillon", "Campane", "FM", "Arpeggio", 1], [23, "Ottoni", "Ottoni", "Analogico", "Strum", 0],
-    [24, "Fanfara", "Ottoni", "Ensemble", "Strum", 1]
+    [0, "Lungolago", "Atmosfere", "Analogico", "Accordo", 0],
+    [1, "Nebbia", "Atmosfere", "Analogico", "Accordo", 1],
+    [2, "Psichedelia", "Atmosfere", "Analogico", "Slop", 0],
+    [3, "Aurora", "Atmosfere", "Ensemble", "Accordo", 1],
+    [4, "Cattedrale", "Atmosfere", "Ensemble", "Accordo", 1],
+    [5, "Coro di montagna", "Voci", "Coro", "Accordo", 1],
+    [6, "Voci dal nastro", "Voci", "Coro", "Slop", 1],
+    [7, "Tramonto FM", "Tastiere", "FM", "Accordo", 0],
+    [8, "Wurli di notte", "Tastiere", "Piano elettrico", "Slop", 0],
+    [9, "Valigia stereo", "Tastiere", "Piano elettrico", "Accordo", 1],
+    [10, "Cassetta", "Tastiere", "Piano elettrico", "Slop", 1],
+    [11, "Organo della pieve", "Tastiere", "Organo", "Accordo", 0],
+    [12, "Organo rotante", "Tastiere", "Organo", "Accordo", 1],
+    [13, "Chitarra di carta", "Corde", "Analogico", "Strum", 0],
+    [14, "Dodici corde", "Corde", "Corda pizzicata", "Strum", 1],
+    [15, "Koto del lago", "Corde", "Corda pizzicata", "Slop", 1],
+    [16, "Arpa celtica", "Corde", "Corda pizzicata", "Arpa", 1],
+    [17, "Arpa di vetro", "Corde", "FM", "Arpa", 0],
+    [18, "Cascata", "Arpeggi", "Analogico", "Arpeggio", 0],
+    [19, "Pioggia", "Arpeggi", "Corda pizzicata", "Arpeggio", 1],
+    [20, "Acido", "Arpeggi", "Analogico", "Arpeggio", 1],
+    [21, "Ritmo in levare", "Arpeggi", "Analogico", "Pattern", 0],
+    [22, "Treno notturno", "Arpeggi", "Ensemble", "Pattern", 1],
+    [23, "Pompa francese", "Arpeggi", "Ensemble", "Accordo", 1],
+    [24, "Campane lunari", "Campane", "FM", "Strum", 0],
+    [25, "Cristalli", "Campane", "FM", "Arpa", 1],
+    [26, "Ottoni", "Ottoni", "Analogico", "Strum", 0],
+    [27, "Ottanta", "Ottoni", "Analogico", "Accordo", 1]
   ];
-  var CAT = [["Atmosfere", ["Atmosfere"], "pad e paesaggi"], ["Tastiere", ["Tastiere"], "piani e organi"],
+  var CAT = [["Atmosfere e voci", ["Atmosfere", "Voci"], "pad, paesaggi e un coro"], ["Tastiere", ["Tastiere"], "piani e organi"],
              ["Corde", ["Corde"], "pizzicate e strimpellate"], ["Arpeggi", ["Arpeggi"], "che si muovono da soli"],
              ["Campane e Ottoni", ["Campane", "Ottoni"], "vetro, metallo e fiati"]];
   document.getElementById("suoni-griglia").innerHTML = CAT.map(function (c) {
     return '<div class="categoria"><h3>' + c[0] + "<small>" + c[2] + "</small></h3>" + SUONI.filter(function (s) { return c[1].indexOf(s[2]) >= 0; }).map(function (s) {
       return '<div class="patch"><span class="n">' + String(s[0]).padStart(2, "0") + "</span><b>" + s[1] + "</b><span>" + s[3] + " · " + s[4] + (s[5] ? ' · <span class="st">stereo</span>' : "") + "</span></div>";
     }).join("") + "</div>";
-  }).join("") + '<div class="categoria"><h3>Tuoi<small>dal numero 25 in poi</small></h3><p style="color:#cfd2de;font-size:.92rem">I suoni che salvi tu, in ordine alfabetico, dopo quelli di fabbrica. Anche loro rispondono al program change.</p></div>';
+  }).join("") + '<div class="categoria"><h3>Tuoi<small>dal numero 28 in poi</small></h3><p style="color:#cfd2de;font-size:.92rem">I suoni che salvi tu, in ordine alfabetico, dopo quelli di fabbrica. Anche loro rispondono al program change.</p></div>';
 })();
 </script>
 </body>

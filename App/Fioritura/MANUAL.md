@@ -2,7 +2,7 @@
 
 *[Italiano](MANUAL.it.md)*
 
-Fioritura ("blossoming") is a garden of sound and light for the Miyoo Flip. You do not need to know how to play: you plant a few notes, the garden repeats them, lets them fade slowly and, if you leave it alone, carries on by itself. It is made for headphones, for the evening, or for a soft background while you do something else. The interface is in Italian; the names in brackets below are what you see on screen.
+Fioritura ("blossoming") is a garden of sound and light for the Miyoo Flip. You do not need to know how to play: you plant a few notes, the garden repeats them, lets them fade slowly and, if you leave it alone, carries on by itself. It is made for headphones, for the evening, or for a soft background while you do something else. The interface is in Italian; the names in brackets below are what you see on screen. You find it on the Home screen, under **Music** (*Musica*).
 
 It has two modes, and they play together:
 

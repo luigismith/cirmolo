@@ -2,7 +2,7 @@
 
 *[English](MANUAL.md)*
 
-Fioritura è un giardino di suoni e luci per la Miyoo Flip. Non serve saper suonare: pianti qualche nota, il giardino la ripete, la fa sfiorire piano e, se lo lasci stare, continua da solo. È fatto per le cuffie, la sera, o per tenere un sottofondo mentre fai altro.
+Fioritura è un giardino di suoni e luci per la Miyoo Flip. Non serve saper suonare: pianti qualche nota, il giardino la ripete, la fa sfiorire piano e, se lo lasci stare, continua da solo. È fatto per le cuffie, la sera, o per tenere un sottofondo mentre fai altro. Lo trovi nella Home, sotto **Musica**.
 
 Ha due modi, che suonano insieme:
 

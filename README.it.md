@@ -30,7 +30,7 @@ Il nome viene dal cirmolo, il pino cembro delle Dolomiti: un legno profumato e r
 - **Versione di Cirmolo** in Impostazioni → Informazioni.
 - **Logo di avvio di Cirmolo** (la pigna viola del cirmolo) e **cambio del logo più sicuro sulla Flip:** prima di riscrivere la memoria interna, l'app «Logo di avvio» controlla la batteria, copia sulla SD tutta la memoria interna con i checksum, verifica la partizione di avvio e, se la scrittura fallisce, rimette da sola la copia.
 - **Tema Cirmolo**, predefinito: i colori del logo (notte, viola della pigna, verde degli aghi) nei menu, nelle icone delle app e delle aree, nelle animazioni di caricamento e di ricarica e nelle schermate di sistema, con la pigna al posto dell'albero di spruce. È ricavato dal tema Spruce di tenlevels ([`.github/branding/tema_cirmolo.py`](.github/branding/tema_cirmolo.py)), che resta tra i temi.
-- **App raggruppate in cartelle** (Musica, Giochi, Sistema, Altro...).
+- **App raggruppate in cartelle** (Musica, Giochi, Sistema, Altro...). Musica è anche la prima icona della Home e apre direttamente le app musicali.
 
 ### App native nuove
 Scritte in C per la Flip, con un kit comune ([`spruce/cirmolo-kit`](spruce/cirmolo-kit)): grafica, tasti, audio e tastiere MIDI USB.

@@ -31,7 +31,7 @@ The name comes from *cirmolo*, the Swiss stone pine of the Dolomites: a fragrant
 - **Cirmolo version** in About this Device.
 - **Cirmolo boot logo** (the violet pine cone) and a **safer logo change on the Flip:** before rewriting the internal flash, the Boot Logo app checks the battery, copies the whole internal flash to the SD card with checksums, verifies the boot partition and restores the copy by itself if the write fails.
 - **Cirmolo theme**, the default: the logo's colours (night, violet cone, green needles) across menus, app and area icons, loading and charging animations and system screens, with the pine cone in place of the spruce tree. It is derived from tenlevels' Spruce theme ([`.github/branding/tema_cirmolo.py`](.github/branding/tema_cirmolo.py)), which is still available.
-- **Apps grouped into folders** (Music, Games, System, Other...).
+- **Apps grouped into folders** (Music, Games, System, Other...). Music is also the first icon on the Home screen and opens the music apps directly.
 
 ### New native apps
 Written in C for the Flip on a shared kit ([`spruce/cirmolo-kit`](spruce/cirmolo-kit)): graphics, buttons, audio and USB MIDI keyboards. Cirmolo Synth, Diapason, OpenOrc and Fioritura are in Italian only for now.

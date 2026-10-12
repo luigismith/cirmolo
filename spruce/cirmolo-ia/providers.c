@@ -75,10 +75,10 @@ static const PProvider PRESETS[] = {
     { "groq", "Groq", PROTO_OPENAI, "https://api.groq.com/openai/v1", "console.groq.com",
       N_("Piano gratuito senza carta, velocissimo. Trascrive la voce con Whisper."), NULL, 1, 1, STT_OPENAI, TTS_NONE,
       "whisper-large-v3-turbo", NULL, NULL,
+      /* elenco del 12/10/2026 (GET /models): Qwen 3.8 27B legge anche le immagini */
       { { "openai/gpt-oss-120b", "gpt-oss 120B", 0, 0, 0, MF_FREE },
         { "qwen/qwen3.8-27b", "Qwen 3.8 27B", 0, 0, 0, MF_FREE },
-        { "llama-3.3-70b-versatile", "Llama 3.3 70B", 0, 0, 0, MF_FREE },
-        { "minimaxai/minimax-m2.7", "MiniMax M2.7", 0, 0, 0, MF_FREE } } },
+        { "openai/gpt-oss-20b", "gpt-oss 20B", 0, 0, 0, MF_FREE } } },
     { "openrouter", "OpenRouter", PROTO_OPENAI, "https://openrouter.ai/api/v1", "openrouter.ai",
       N_("Centinaia di modelli; quelli «:free» sono gratis (50 richieste al giorno)."),
       "HTTP-Referer: https://github.com/luigismith/cirmolo\nX-Title: Cirmolo\n", 1, 1, STT_NONE, TTS_NONE, NULL, NULL, NULL,

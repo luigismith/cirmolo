@@ -1761,7 +1761,7 @@ static int ai_pick(OrcApp *a, int from, const Provider **pp, Model *mm, char *ke
     static const struct { const char *prov, *model; } FREE[] = {
         { "groq", "openai/gpt-oss-120b" },
         { "groq", "qwen/qwen3.8-27b" },                /* limiti al minuto separati da gpt-oss */
-        { "groq", "llama-3.3-70b-versatile" },
+        { "groq", "openai/gpt-oss-20b" },
         { "openrouter", "nvidia/nemotron-3-ultra-550b-a55b:free" },
         { "zai", "glm-4.7-flash" },
         { "mistral", "mistral-medium-latest" },

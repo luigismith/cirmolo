@@ -62,7 +62,10 @@ static const char *OPT_NAMES[OPT_COUNT] = { "Tempo", "Swing", "Metronomo", "Volu
 static const float THRESHOLDS[4] = { 0.0f, 0.01f, 0.03f, 0.1f };
 static const char *THRESHOLD_NAMES[4] = { "subito", "-40 dB", "-30 dB", "-20 dB" };
 
-#define LIB_STOCK "/mnt/SDCARD/App/LittleGPTracker/samplelib"
+/* Libreria di serie: i campioni che arrivavano con LittleGPTracker (tolto da Cirmolo), ora nel sampler.
+   I pad salvati con il percorso vecchio vengono portati su quello nuovo al caricamento. */
+#define LIB_STOCK "/mnt/SDCARD/App/CirmoloSampler/libreria"
+#define LIB_OLD "/mnt/SDCARD/App/LittleGPTracker/samplelib"
 #define WAVE_COLS 600
 
 typedef struct { char name[160]; int is_dir; } LibEntry;
@@ -299,7 +302,11 @@ static void load_state(App *a)
             if (p < 0 || p >= SP_PADS || !dot) continue;
             PadParams *pp = sampler_pad(a->s, p);
             dot++;
-            if (!strcmp(dot, "file")) { if (*v && app_assign_wav(a, p, v)) fprintf(stderr, "pad %d: campione non caricato: %s\n", p + 1, v); }
+            if (!strcmp(dot, "file")) {
+                char moved[700];
+                if (!strncmp(v, LIB_OLD "/", sizeof(LIB_OLD))) { snprintf(moved, sizeof(moved), "%s%s", LIB_STOCK, v + sizeof(LIB_OLD) - 1); v = moved; }
+                if (*v && app_assign_wav(a, p, v)) fprintf(stderr, "pad %d: campione non caricato: %s\n", p + 1, v);
+            }
             else if (!strcmp(dot, "volume")) pp->volume = clampf((float)atof(v), 0.0f, 1.5f);
             else if (!strcmp(dot, "pitch")) pp->pitch = clampf((float)atof(v), -12.0f, 12.0f);
             else if (!strcmp(dot, "start")) pp->start = clampf((float)atof(v), 0.0f, 1.0f);
@@ -408,7 +415,7 @@ static void lib_read(App *a)
     a->lib_sel = a->lib_scroll = 0;
     if (a->lib_level == 0) {
         lib_add(a, "Le mie registrazioni", 1);
-        lib_add(a, "Libreria di serie (LittleGPTracker)", 1);
+        lib_add(a, "Libreria di serie", 1);
         return;
     }
     DIR *d = opendir(a->lib_dir);

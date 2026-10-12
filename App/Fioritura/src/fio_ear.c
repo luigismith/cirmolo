@@ -22,6 +22,8 @@
 #define HIST 5
 #define MAXQ 32
 #define CALIBRA 0.6                 /* secondi iniziali in cui si impara il fondo, senza eventi */
+#define CH 384                      /* passi tenuti per la correlazione con l'uscita: 2 s */
+#define CW 300                      /* passi confrontati: 1,6 s */
 #define PI_F 3.14159265f
 
 struct FioEar {
@@ -40,11 +42,12 @@ struct FioEar {
 
     /* livelli in dB */
     float floor_db, leak_db, out_hold, hold_k, odb, thr_db, lvl_db, recent_db, rec_db[YIN_EVERY], level;
-    float ohist[6], mhist[8];       /* uscita e microfono degli ultimi passi */
-    float hear, att_out, att_pre, att_mic, att_late;   /* il microfono sente l'altoparlante? (-1..1) e l'attacco in esame */
-    int att_blow;
-    int att_k, leak_n;
-    float leak_s[5];                /* ultime prove di quanto rientra */
+    float oh[CH], mh[CH], mr[CH];   /* ultimi 2 s, un valore per passo: inviluppo dell'uscita e del microfono (dB,
+                                       come fio_level: sale in 2 ms, scende in 100), livello del microfono */
+    float menv, env_a, env_r;
+    float hear;                     /* il microfono sente l'altoparlante? -1..1, media delle prove */
+    int hears;                      /* 1 altoparlante, -1 cuffia, 0 non si sa (con isteresi) */
+    double user_t;                  /* ultimo battito o soffio: le prove vicine non valgono */
     float hi_hist[8];
 
     /* battito */
@@ -118,12 +121,12 @@ void fear_set_rate(FioEar *e, float rate)
     e->level = 0.0f;
     e->floor_db = -50.0f;
     e->leak_db = -80.0f;               /* finche' non si sa, l'altoparlante non conta nella soglia */
-    e->leak_n = 0;
     e->hear = 0.0f;                    /* non si sa ancora */
-    e->att_k = -1;
+    e->hears = 0;
+    e->user_t = -10.0;
     e->out_hold = 0.0f;
-    for (int k = 0; k < 6; k++) e->ohist[k] = -120.0f;
-    for (int k = 0; k < 8; k++) e->mhist[k] = -120.0f;
+    for (int k = 0; k < CH; k++) e->oh[k] = e->mh[k] = e->mr[k] = -80.0f;
+    e->menv = 0.0f;
     e->dc_x = e->dc_y = e->lp_hi = 0.0f;
     for (int k = 0; k < 8; k++) e->hi_hist[k] = -120.0f;
     for (int k = 0; k < YIN_EVERY; k++) e->rec_db[k] = -120.0f;
@@ -139,6 +142,8 @@ void fear_set_rate(FioEar *e, float rate)
     if (e->tau_min < 2) e->tau_min = 2;
     float hs = (float)e->hop / e->rate;
     e->a_hi = 1.0f - expf(-2.0f * PI_F * 2000.0f / e->rate);
+    e->env_a = 1.0f - expf(-1.0f / (0.002f * e->rate));
+    e->env_r = 1.0f - expf(-1.0f / (0.1f * e->rate));
     e->hold_k = expf(-hs / 0.15f);
     e->sdecay = expf(-hs / 0.35f);
     strings_coef(e);
@@ -251,8 +256,8 @@ static void analyze(FioEar *e)
         e->unv = 0;
         e->conf = conf;
         e->pitch = med;
-        /* una nota conta quando resta ferma (mezzo semitono) per sei analisi, circa 120 ms: le vocali del
-           parlato di solito scivolano prima */
+        /* una nota conta quando resta ferma (mezzo semitono) per nove analisi, circa 190 ms: le vocali del
+           parlato scivolano prima, e chi canta in fretta non riempie il giardino */
         if (e->run_n == 0 || fabsf(med - e->run_mean) > 0.5f) {
             e->run_mean = med;
             e->run_n = 1;
@@ -263,7 +268,7 @@ static void analyze(FioEar *e)
             e->run_mean += (med - e->run_mean) * 0.3f;
             if (e->recent_db > e->run_lvl) e->run_lvl = e->recent_db;
         }
-        if (e->run_n >= 6 && (!e->has_note || fabsf(e->run_mean - e->note_on) > 0.75f)) {
+        if (e->run_n >= 9 && (!e->has_note || fabsf(e->run_mean - e->note_on) > 0.75f)) {
             push_ev(e, EAR_NOTE, e->run_mean, (e->run_lvl - e->thr_db) / 30.0f + 0.3f, e->run_t0);
             e->has_note = 1;
             e->note_on = e->run_mean;
@@ -274,6 +279,51 @@ static void analyze(FioEar *e)
         e->run_n = 0;
         e->hist_n = 0;
     }
+}
+
+/* Una prova: l'uscita e il microfono degli ultimi CW passi, con il ritardo che li fa somigliare di piu'. */
+static void hear_check(FioEar *e)
+{
+    long h = e->hops;
+    float omax = -80.0f;
+    for (int k = 0; k < CW + 48; k++) { float o = e->oh[(h - k) % CH]; if (o > omax) omax = o; }
+    if (omax < -45.0f) return;                              /* il giardino tace: niente da confrontare */
+    float best = -1.0f;
+    int bl = 8;
+    for (int L = 8; L <= 48; L += 4) {
+        float so = 0.0f, sm = 0.0f, soo = 0.0f, smm = 0.0f, som = 0.0f;
+        for (int k = 0; k < CW; k++) {
+            float o = e->oh[(h - k - L) % CH], m = e->mh[(h - k) % CH];
+            so += o; sm += m; soo += o * o; smm += m * m; som += o * m;
+        }
+        float n = (float)CW, vo = soo / n - (so / n) * (so / n), vm = smm / n - (sm / n) * (sm / n);
+        if (vo < 0.25f) return;                             /* l'uscita non cambia abbastanza: la prova non dice niente */
+        float c = vm > 1e-3f ? (som / n - (so / n) * (sm / n)) / sqrtf(vo * vm) : 0.0f;
+        if (c > best) { best = c; bl = L; }
+    }
+    float mmean = 0.0f;
+    for (int k = 0; k < CW; k++) mmean += e->mr[(h - k) % CH];
+    mmean /= (float)CW;
+    int ev = 0;
+    if (best > 0.6f) {
+        ev = 1;
+        float sum = 0.0f;
+        int cnt = 0;
+        for (int k = 0; k < CW; k++) {                      /* nei momenti forti del giardino: quanto arriva */
+            float o = e->oh[(h - k - bl) % CH];
+            if (o > omax - 6.0f) { sum += e->mh[(h - k) % CH] - o; cnt++; }
+        }
+        if (cnt) {
+            float sample = sum / (float)cnt;
+            e->leak_db = e->leak_db < -79.0f ? sample : e->leak_db + (sample - e->leak_db) * 0.4f;
+        }
+    } else if (mmean < e->floor_db + 4.0f) {
+        ev = -1;                                            /* il giardino suona e il microfono resta sul fondo */
+    }
+    if (ev) e->hear += ((float)ev - e->hear) * 0.35f;
+    if (e->hear > 0.4f) e->hears = 1;
+    else if (e->hear < -0.4f) e->hears = -1;
+    else if (!(e->hears == 1 && e->hear > -0.1f) && !(e->hears == -1 && e->hear < 0.1f)) e->hears = 0;
 }
 
 static void hop_end(FioEar *e, float out_level)
@@ -297,57 +347,22 @@ static void hop_end(FioEar *e, float out_level)
     else e->floor_db += (db - e->floor_db) * 0.0006f;
     e->floor_db = clampf(e->floor_db, -90.0f, 0.0f);
 
-    /* Il microfono sente l'altoparlante? A ogni attacco del giardino (l'uscita sale di 4,5 dB in 30 ms)
-       si guarda se tra 40 e 250 ms dopo il microfono sale anche lui (il ritardo dell'altoparlante sta li'
-       dentro). Se si', si annota di quanto: e' la parte dell'uscita che rientra (mediana delle ultime
-       prove). In cuffia non sale mai, salvo quando qualcuno comincia a cantare proprio li': la media delle
-       prove lo dice dopo pochi attacchi. */
-    float oinst = 20.0f * log10f(out_level + 1e-6f);
-    float omin = e->ohist[0];
-    for (int k = 1; k < 6; k++) if (e->ohist[k] < omin) omin = e->ohist[k];
-    memmove(e->ohist + 1, e->ohist, sizeof(float) * 5);
-    e->ohist[0] = oinst;
-    float mpre = 0.0f;
-    for (int k = 0; k < 8; k++) mpre += e->mhist[k];
-    mpre /= 8.0f;
-    if (e->att_k >= 0) {
-        e->att_k++;
-        if (e->att_k <= 4 && oinst > e->att_out) e->att_out = oinst;
-        if (e->att_k >= 8 && db > e->att_mic) e->att_mic = db;
-        if (e->att_k >= 30 && db > e->att_late) e->att_late = db;
-        if (e->blowing) e->att_blow = 1;
-        if (e->att_k >= 47) {
-            /* «non sentito» e' una prova solo se prima il microfono era quasi in silenzio: se era gia'
-               pieno di suono (il giardino stesso, o qualcuno che canta) la salita non si vedrebbe */
-            /* una nota del giardino che rientra dura: tra 160 e 250 ms il microfono e' ancora sopra. Un
-               battito di mani caduto per caso nella finestra e' gia' spento; chi soffia non conta. */
-            int heard = e->att_mic - e->att_pre > 4.0f && e->att_late - e->att_pre > 2.0f;
-            if (!e->att_blow && (heard || e->att_pre < e->floor_db + 6.0f)) e->hear += ((heard ? 1.0f : -1.0f) - e->hear) * 0.25f;
-            if (heard && !e->att_blow) {
-                e->leak_s[e->leak_n++ % 5] = e->att_mic - e->att_out;
-                int n = e->leak_n < 5 ? e->leak_n : 5;
-                float v[5];
-                memcpy(v, e->leak_s, sizeof(float) * (size_t)n);
-                for (int i = 1; i < n; i++) for (int j = i; j > 0 && v[j - 1] > v[j]; j--) { float t = v[j]; v[j] = v[j - 1]; v[j - 1] = t; }
-                e->leak_db = v[n / 2];
-            }
-            e->att_k = -1;
-        }
-    } else if (e->t > CALIBRA && oinst > -45.0f && oinst - omin > 4.5f) {
-        e->att_k = 0;
-        e->att_out = oinst;
-        e->att_pre = mpre;
-        e->att_mic = -120.0f;
-        e->att_late = -120.0f;
-        e->att_blow = 0;
-    }
-    memmove(e->mhist + 1, e->mhist, sizeof(float) * 7);
-    e->mhist[0] = db;
+    /* Il microfono sente l'altoparlante? Ogni mezzo secondo si confronta l'andamento dell'uscita del
+       giardino negli ultimi 1,6 s con quello del microfono, con un ritardo tra 40 e 250 ms (l'altoparlante,
+       i buffer). Se si somigliano (correlazione oltre 0,6) il microfono sente il giardino, e la differenza
+       nei momenti forti dice quanto rientra. Se il giardino suona e il microfono resta sul fondo, e' una
+       cuffia. Voce, battiti e soffi non seguono il giardino: non ingannano, e vicino a un battito o a un
+       soffio la prova non si fa. */
+    e->oh[e->hops % CH] = fmaxf(20.0f * log10f(out_level + 1e-6f), -80.0f);
+    e->mh[e->hops % CH] = fmaxf(20.0f * log10f(e->menv + 1e-6f), -80.0f);
+    e->mr[e->hops % CH] = fmaxf(db, -80.0f);
+    if (e->blowing || e->blow_run > 0) e->user_t = e->t;
+    if (e->hops > CH && e->hops % 94 == 0 && e->t - e->user_t > 2.0) hear_check(e);
     e->leak_db = clampf(e->leak_db, -80.0f, 20.0f);
     /* soglia: ben sopra il fondo; se il microfono sente l'altoparlante, anche sopra il giardino che rientra
        (li' aiuta il filtro delle note appena suonate, in fio_app.c); mai sotto un minimo assoluto */
     float thr = fmaxf(e->floor_db + 20.0f - 12.0f * s, -64.0f + 18.0f * (1.0f - s));
-    if (e->hear > 0.2f) thr = fmaxf(thr, e->odb + e->leak_db + 12.0f - 8.0f * s);
+    if (e->hears == 1) thr = fmaxf(thr, e->odb + e->leak_db + 10.0f - 6.0f * s);
     e->thr_db = thr;
     e->level += (clampf((db - e->thr_db + 6.0f) / 30.0f, 0.0f, 1.0f) - e->level) * 0.25f;
     for (int i = 0; i < e->ns; i++) e->sres[i] *= e->sdecay;
@@ -362,10 +377,12 @@ static void hop_end(FioEar *e, float out_level)
             if (e->clap_tail / 4.0f < e->clap_peak - 9.0f) {
                 push_ev(e, EAR_CLAP, 0.0f, (e->clap_peak - e->thr_db) / 24.0f + 0.2f, e->clap_t);
                 e->last_clap = e->clap_t;
+                e->user_t = e->t;
             }
             e->clap_wait = 0;
         }
-    } else if (e->hops > 8 && e->t - e->last_clap > 0.09 && hdb - ref > 15.0f - 5.0f * s && db > e->thr_db + 4.0f && hdb > -52.0f) {
+    } else if (e->hops > 8 && e->t - e->last_clap > 0.09 && hdb - ref > (e->hears == 1 ? 19.0f : 15.0f) - 5.0f * s &&
+               db > e->thr_db + 4.0f && hdb > -52.0f) {      /* con l'altoparlante serve un attacco piu' netto */
         e->clap_wait = 1;
         e->clap_k = 0;
         e->clap_peak = db;
@@ -388,7 +405,7 @@ static void hop_end(FioEar *e, float out_level)
     if (e->blowing) {
         e->blow += (fmaxf(k, 0.1f) - e->blow) * 0.12f;
         if (db < e->thr_db + 4.0f || e->voiced) {
-            if (++e->blow_quiet > 14) {
+            if (++e->blow_quiet > (db < e->thr_db + 4.0f ? 14 : 30)) {
                 e->blowing = 0;
                 e->blow_run = 0;
                 push_ev(e, EAR_BLOW_END, 0.0f, e->blow, e->t);
@@ -421,6 +438,8 @@ int fear_poll(FioEar *e, float out_level, EarEvent *ev, int max)
         float hi = y - e->lp_hi;
         e->acc += (double)y * y;
         e->acc_hi += (double)hi * hi;
+        float ay = fabsf(y);
+        e->menv += (ay - e->menv) * (ay > e->menv ? e->env_a : e->env_r);
         if (++e->hop_n >= e->hop) {
             hop_end(e, out_level);
             e->hop_n = 0;
@@ -438,7 +457,7 @@ float fear_pitch(const FioEar *e) { return e->pitch; }
 float fear_level(const FioEar *e) { return e->rate > 0.0f ? e->level : 0.0f; }
 float fear_blow(const FioEar *e) { return e->rate > 0.0f && e->blowing ? e->blow : 0.0f; }
 float fear_string(const FioEar *e, int i) { return i >= 0 && i < e->ns ? e->sres[i] : 0.0f; }
-int   fear_hears_output(const FioEar *e) { return e->rate <= 0.0f ? -1 : (e->hear > 0.2f ? 1 : (e->hear < -0.3f ? -1 : 0)); }
+int   fear_hears_output(const FioEar *e) { return e->rate <= 0.0f ? -1 : e->hears; }
 float fear_threshold_db(const FioEar *e) { return e->thr_db; }
 float fear_floor_db(const FioEar *e) { return e->floor_db; }
 float fear_leak_db(const FioEar *e) { return e->leak_db; }

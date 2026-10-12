@@ -9,7 +9,7 @@ It has two modes, and they play together:
 - **the Garden** (*Giardino*), after *Bloom* by Brian Eno and Peter Chilvers: every note you plant blooms on screen and comes back on each turn of the cycle, softer each time, until the garden forgets it;
 - **the Fireflies** (*Lucciole*), after *Otomata* by Batuhan Bozkurt: on an 8×8 grid fireflies fly straight, play a note when they hit an edge and turn when they meet.
 
-If you connect a USB microphone, the garden listens to you: sing and it blooms, blow and the wind rises, clap and a firefly is born (see [Microphone](#microphone)).
+If you connect a USB microphone, the garden listens to you: sing and it blooms, blow and a breeze passes, clap and a firefly passes (see [Microphone](#microphone)).
 
 Quit with **MENU** (then A). The garden, the fireflies and the settings are saved: next time the garden starts playing again where it was.
 
@@ -128,15 +128,15 @@ Three gestures:
 
 | Gesture | What happens |
 |---|---|
-| **Sing** a note (humming or whistling works too) | a trail of light writes your voice from left to right, at its exact pitch, vibrato and flat notes included; every note you hold for a moment becomes a flower on the nearest string, and the garden repeats it like any other. Notes that are too low or too high are brought into the garden's three octaves. |
-| **Blow** on the microphone (or go "ssss") | the wind rises: the strings sway, petals fly away and a wave of light crosses the garden from left to right, softly playing the flowers it meets, like an aeolian harp. The wind can move a few flowers by one string. If the garden is nearly empty, the wind sows new flowers. |
-| **Clap** (or snap your fingers, or knock on the table) | a firefly is born and flies across the garden, and the fireflies start flying. If you keep clapping, the fireflies flash with you (a new firefly is born only after two seconds of silence); if you clap in time, from the fourth clap they take your tempo, one clap per quarter note, with a step on the clap. |
+| **Sing** a note (humming or whistling works too) | a trail of light writes your voice from left to right, at its exact pitch, vibrato and flat notes included; every note you hold for a moment (a fifth of a second) becomes a flower on the nearest string, softer than those planted with A, and the garden repeats it like any other. If you sing fast, no more than one flower every third of a second. Notes that are too low or too high are brought into the garden's three octaves. |
+| **Blow** on the microphone (or go "ssss") | a breeze passes: the strings sway gently, a few petals fly away and a wave of light slowly crosses the garden from left to right (three or four seconds), brushing the flowers it meets, like an aeolian harp. The wind can move a few flowers by one string. If the garden is nearly empty, the wind sows new flowers. |
+| **Clap** (or snap your fingers, or knock on the table) | a firefly of light slowly drifts into the garden, with a soft, high chime in the scale. The fireflies of the grid never start by themselves: if they are already flying, the clap gives birth to a new one (while there are fewer than eight), and if you clap in time, from the fourth clap they fly at your tempo, brought between 60 and 120 BPM (fast claps count as half), with a step on the clap. A clap less than two seconds after the previous one only makes the garden flash. |
 
 Singing, blowing or clapping keeps the garden awake: the dream waits for the microphone to be quiet too.
 
 In the panel, **Ascolto** sets the sensitivity (10–100%) or turns listening off. With high sensitivity the garden also hears soft, distant sounds; with low sensitivity only loud, close ones.
 
-The garden does not listen to itself. If the microphone hears the Flip's speaker, after a few notes the ear notices, learns how loud the garden reaches it and only listens to what is louder; it also ignores a note that starts right after the garden played the same note. With headphones there is no such problem and listening is more sensitive. With the speaker, sing a little louder than the garden, or get closer to the microphone.
+The garden does not listen to itself. It keeps comparing what it plays with what it hears: if the microphone follows the garden (the Flip's speaker is close), within a few seconds it notices, learns how loud the garden reaches it and only listens to what is louder; it also ignores a note that starts right after the garden played the same note. With headphones there is no such problem and listening is more sensitive. With the speaker, sing a little louder than the garden, or get closer to the microphone.
 
 ## Recording
 

@@ -164,6 +164,8 @@ static Voice *voice_alloc(Fio *f)
 
 static void voice_start(Fio *f, const FioNote *n, int wait)
 {
+    /* una nota con un nan (o un infinito) avvelenerebbe per sempre eco e riverbero: si scarta */
+    if (!isfinite(n->note) || !isfinite(n->vel) || !isfinite(n->pan) || !isfinite(n->bright) || !isfinite(n->length)) return;
     Voice *v = voice_alloc(f);
     float *ks = v->ks;                      /* la linea della corda e' fissa per voce */
     memset(v, 0, sizeof(*v));
@@ -460,6 +462,8 @@ void fio_destroy(Fio *f)
 /* ------------------------------------------------------------------ interfaccia */
 void fio_set_mix(Fio *f, const FioMix *m)
 {
+    if (!isfinite(m->reverb) || !isfinite(m->shimmer) || !isfinite(m->delay) || !isfinite(m->delay_time) ||
+        !isfinite(m->drone) || !isfinite(m->drone_note) || !isfinite(m->volume)) return;
     Event e;
     memset(&e, 0, sizeof(e));
     e.type = EV_MIX;
@@ -513,6 +517,29 @@ int fio_tap_read(Fio *f, float *dst, int max_frames)
 int fio_tap_lost(const Fio *f) { return get_i(&f->tap_lost); }
 
 /* ------------------------------------------------------------------ resa */
+/* Un nan e' entrato nonostante tutto: voci, eco, riverbero, shimmer e bordone ripartono puliti, invece di
+   restare muti per sempre. */
+static void heal(Fio *f)
+{
+    for (int i = 0; i < FIO_VOICES; i++) f->v[i].active = 0;
+    memset(f->dl, 0, sizeof(float) * (size_t)f->dlen);
+    memset(f->dr, 0, sizeof(float) * (size_t)f->dlen);
+    memset(f->sh, 0, sizeof(float) * SH_LEN);
+    for (int c = 0; c < 8; c++) {
+        memset(f->cl[c].buf, 0, sizeof(float) * (size_t)f->cl[c].len); f->cl[c].store = 0.0f;
+        memset(f->cr[c].buf, 0, sizeof(float) * (size_t)f->cr[c].len); f->cr[c].store = 0.0f;
+    }
+    for (int c = 0; c < 4; c++) {
+        memset(f->al[c].buf, 0, sizeof(float) * (size_t)f->al[c].len);
+        memset(f->ar[c].buf, 0, sizeof(float) * (size_t)f->ar[c].len);
+    }
+    f->dlp_l = f->dlp_r = f->sh_fb = 0.0f;
+    memset(f->dr_lp, 0, sizeof(f->dr_lp));
+    if (!isfinite(f->dr_note)) f->dr_note = 38.0f;
+    if (!isfinite(f->dr_amp)) f->dr_amp = 0.0f;
+    f->level = 0.0f;
+}
+
 void fio_render(Fio *f, float *out, int frames)
 {
     f->cur = f->clock;
@@ -521,7 +548,7 @@ void fio_render(Fio *f, float *out, int frames)
     const float ksm = 1.0f - expf(-(float)SUB / (0.06f * sr));       /* levigatura dei parametri */
     const float glide = 1.0f - expf(-1.0f / (0.9f * sr));            /* bordone: scivola sulla nuova tonica */
     const float famp = 1.0f - expf(-1.0f / (0.6f * sr));
-    int tap_on = get_i(&f->tap_on);
+    int tap_on = get_i(&f->tap_on), poisoned = 0;
 
     for (int off = 0; off < frames; off += SUB) {
         int n = frames - off < SUB ? frames - off : SUB;
@@ -632,6 +659,7 @@ void fio_render(Fio *f, float *out, int frames)
 
             out_l = softclip(out_l * vol);
             out_r = softclip(out_r * vol);
+            if (!(fabsf(out_l) <= 1.0f && fabsf(out_r) <= 1.0f)) { out_l = out_r = 0.0f; poisoned = 1; }   /* nan */
             out[2 * (off + i)] = out_l;
             out[2 * (off + i) + 1] = out_r;
             float pk = 0.5f * (fabsf(out_l) + fabsf(out_r));
@@ -650,6 +678,7 @@ void fio_render(Fio *f, float *out, int frames)
         }
         set_i(&f->voices_pub, voices);
     }
+    if (poisoned || !isfinite(f->level)) heal(f);
     set_f(&f->level_pub, f->level);
     set_ll(&f->clock, f->clock + frames);
     set_i(&f->starts, f->starts);

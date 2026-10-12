@@ -131,7 +131,7 @@ typedef struct { long long when; int kind; float x, y, s; uint32_t col; int a, b
 typedef struct { float x, y, s, age, life, rot; uint32_t col; int petals, small; } Bloom;
 typedef struct { float x, y, ph, r, sp; } Pollen;
 typedef struct { float x, y, vx, vy, age, life, r, ph; uint32_t col; } Petal;   /* petali portati dal soffio */
-typedef struct { float x, y, vx, vy, age, life; } Spark;                       /* lucciola nata da un battito */
+typedef struct { float x, y, vx, vy, age, life, ph; } Spark;                   /* lucciola di luce di un battito */
 
 struct FioApp {
     Fio *dsp;
@@ -201,6 +201,7 @@ struct FioApp {
     float ff_flash;
     float recent_note[N_RECENT], recent_t[N_RECENT]; int recent_w;
     float sres[64];                  /* corde che vibrano per simpatia */
+    float voice_last;                /* quando il canto ha piantato l'ultimo fiore */
     float ear_log;                   /* secondi al prossimo riepilogo dell'orecchio nel registro */
 
     /* registrazione */
@@ -369,7 +370,9 @@ static void echo(FioApp *a, Seed *s, long long t)
 {
     s->done++;
     int M = a->g.memoria;
-    float v = M > 0 ? s->vel * powf(1.0f - (float)s->done / (float)(M + 1), 0.85f) : s->vel * 0.82f;
+    /* fmaxf: se la memoria e' stata abbassata sotto i ritorni gia' fatti, la base sarebbe negativa e la
+       potenza darebbe nan (12/10/2026: il nan restava nell'eco e nel riverbero e il giardino ammutoliva) */
+    float v = M > 0 ? s->vel * powf(fmaxf(0.0f, 1.0f - (float)s->done / (float)(M + 1)), 0.85f) : s->vel * 0.82f;
     if (a->g.vento > 0.001f && s->deg >= 0 && frand(a) < a->g.vento * 0.5f) {
         int d = s->deg + (frand(a) < 0.5f ? -1 : 1);
         if (d >= 0 && d < g_ndeg(a)) s->deg = d;
@@ -1086,20 +1089,21 @@ static void ear_sing(FioApp *a, float m, float strength, double t)
         fprintf(stderr, "orecchio %.1f s: nota %.2f -> %s, scartata (e' il giardino che rientra)\n", fear_time(a->ear), m, nn);
         return;
     }
+    if (a->t - a->voice_last < 0.35f) return;            /* chi canta in fretta non riempie il giardino */
+    a->voice_last = a->t;
     fprintf(stderr, "orecchio %.1f s: nota %.2f -> fiore su %s, forza %.2f\n", fear_time(a->ear), m, nn, strength);
-    plant(a, d, 0.0f, a->pen_x, 0.3f + 0.6f * strength, 0);
-    if (a->mode == MODE_GARDEN) bloom_add(a, x_pix(a->pen_x), deg_y(a, d), 0.8f, RGB(255, 255, 255), 0, 1);
+    plant(a, d, 0.0f, a->pen_x, 0.22f + 0.4f * strength, 0);   /* piu' piano dei fiori piantati con A */
 }
 
 static void petal_add(FioApp *a, float x, float y, uint32_t col)
 {
     Petal *p = a->npetals < MAX_PETALS ? &a->petals[a->npetals++] : &a->petals[(int)(frand(a) * MAX_PETALS) % MAX_PETALS];
     p->x = x; p->y = y;
-    p->vx = 30.0f + 90.0f * frand(a);
-    p->vy = (frand(a) - 0.65f) * 60.0f;
+    p->vx = 12.0f + 30.0f * frand(a);
+    p->vy = (frand(a) - 0.6f) * 24.0f;
     p->age = 0.0f;
-    p->life = 1.3f + 1.4f * frand(a);
-    p->r = 2.5f + 3.0f * frand(a);
+    p->life = 2.8f + 2.4f * frand(a);
+    p->r = 2.2f + 2.6f * frand(a);
     p->ph = frand(a) * 2.0f * PI_F;
     p->col = col;
 }
@@ -1116,15 +1120,15 @@ static void strum(FioApp *a, float x0, float x1)
         float y = seed_y(a, s);
         uint32_t col = palette_y(a, y);
         s->glow = fmaxf(s->glow, 0.8f);
-        int np = 3 + (int)(5.0f * a->gust);
+        int np = 2 + (int)(3.0f * a->gust);
         for (int k = 0; k < np; k++) petal_add(a, x + (frand(a) - 0.5f) * 10.0f, y + (frand(a) - 0.5f) * 10.0f, col);
-        if (a->t - a->strum_t >= 0.03f) {            /* al piu' una nota ogni 30 ms: un giardino fitto non satura */
+        if (a->t - a->strum_t >= 0.14f) {            /* al piu' una nota ogni 140 ms: un'arpa eolica, non una raffica */
             a->strum_t = a->t;
-            float v = s->vel * (0.22f + 0.4f * a->gust);
+            float v = s->vel * (0.12f + 0.2f * a->gust);
             sound(a, 0, seed_note(a, s), v, pan_of(s->x));
             if (a->mode == MODE_GARDEN) bloom_add(a, x, y, v, col, 0, 1);
         }
-        if (s->deg >= 0 && frand(a) < 0.3f * a->gust) {
+        if (s->deg >= 0 && frand(a) < 0.15f * a->gust) {
             int d = s->deg + (frand(a) < 0.5f ? -1 : 1);
             if (d >= 0 && d < g_ndeg(a)) { s->deg = d; a->dirty = 1; }
         }
@@ -1136,28 +1140,35 @@ static void spark_add(FioApp *a)
     if (a->nsparks >= MAX_SPARKS) return;
     Spark *s = &a->sparks[a->nsparks++];
     int right = frand(a) < 0.5f;
-    float ang = (frand(a) - 0.5f) * 0.7f, sp = 250.0f + 120.0f * frand(a);
+    float ang = (frand(a) - 0.5f) * 0.6f, sp = 55.0f + 30.0f * frand(a);
     s->x = right ? (float)W + 10.0f : -10.0f;
     s->y = G_TOP + 40.0f + frand(a) * (G_BOT - G_TOP - 80.0f);
     s->vx = (right ? -1.0f : 1.0f) * sp * cosf(ang);
     s->vy = sp * sinf(ang);
     s->age = 0.0f;
-    s->life = 2.6f;
+    s->life = 7.0f;
+    s->ph = frand(a) * 2.0f * PI_F;
 }
 
-/* Battito: un battito solo fa nascere una lucciola (e le lucciole partono); battiti regolari danno il
-   tempo alle lucciole, un battito un quarto (un passo e' un ottavo), con un passo sul battito. */
+/* Battito, con l'indole del giardino: una lucciola di luce entra piano nel giardino con un rintocco lieve,
+   acuto, nella scala. Le lucciole della griglia non partono da sole: se stanno gia' volando, il primo
+   battito ne fa nascere una (finche' sono meno di otto), e battiti regolari danno loro il tempo,
+   riportato tra 60 e 120 BPM (battiti veloci valgono la meta', lenti il doppio). Un battito arrivato meno
+   di due secondi dopo il precedente fa solo lampeggiare. */
 static void ear_clap(FioApp *a, double t)
 {
     a->ear_quiet = 0.0f;
     a->ear_busy = 1.0f;
     a->ff_flash = 1.0f;
-    for (int i = 0; i < MAX_SEEDS; i++) if (a->seeds[i].alive) a->seeds[i].glow = fmaxf(a->seeds[i].glow, 0.45f);
+    for (int i = 0; i < MAX_SEEDS; i++) if (a->seeds[i].alive) a->seeds[i].glow = fmaxf(a->seeds[i].glow, 0.35f);
     if (a->nclaps && t - a->claps[a->nclaps - 1] > 2.0) a->nclaps = 0;
     if (a->nclaps == 6) { memmove(a->claps, a->claps + 1, sizeof(double) * 5); a->nclaps = 5; }
     a->claps[a->nclaps++] = t;
     if (a->nclaps == 1) {
-        if (a->nff >= MAX_FF) return;
+        int n = g_ndeg(a), d = n - 1 - (int)(frand(a) * (float)(scale_of(a)->n + 1));
+        sound(a, 0, (float)deg_note(a, clampi(d, 0, n - 1)), 0.2f, (frand(a) - 0.5f) * 1.2f);
+        spark_add(a);
+        if (!a->f_playing || a->nff >= 8) return;
         int r = 0, c = 0;
         for (int tries = 0; tries < 24; tries++) {
             r = (int)(frand(a) * GRID) % GRID;
@@ -1169,19 +1180,20 @@ static void ear_clap(FioApp *a, double t)
         a->pr[i] = r; a->pc[i] = c; a->bump[i] = 0;
         float x, y;
         cell_xy(r, c, &x, &y);
-        if (a->mode == MODE_FIREFLIES) bloom_add(a, x, y, 1.0f, MOODS[a->mood].col[2], 0, 1);
-        else spark_add(a);
-        if (!a->f_playing) { a->f_playing = 1; a->f_next = a->sched; }
+        if (a->mode == MODE_FIREFLIES) bloom_add(a, x, y, 0.7f, MOODS[a->mood].col[2], 0, 1);
         toast(a, "Una lucciola dalle tue mani");
         a->dirty = 1;
         return;
     }
-    if (a->nclaps < 4) return;
+    if (a->nclaps < 4 || !a->f_playing) return;
     int n = a->nclaps;
     double mean = (a->claps[n - 1] - a->claps[0]) / (double)(n - 1);
-    if (mean < 0.25 || mean > 1.5) return;
+    if (mean < 0.2 || mean > 2.0) return;
     for (int i = 1; i < n; i++) if (fabs(a->claps[i] - a->claps[i - 1] - mean) > 0.15 * mean) return;
-    a->g.tempo = clampf(roundf((float)(60.0 / mean)), 40.0f, 240.0f);
+    double bpm = 60.0 / mean;
+    while (bpm > 126.0) bpm *= 0.5;                      /* margine: 0,5 s esatti danno 120,01 */
+    while (bpm < 58.0) bpm *= 2.0;
+    a->g.tempo = clampf(roundf((float)bpm), 40.0f, 240.0f);
     ff_set_tempo(a);
     /* fase: il battito e' arrivato qualche centesimo dopo (microfono) e le note escono dopo (uscita) */
     double age = fear_time(a->ear) - t + 0.07;
@@ -1191,9 +1203,8 @@ static void ear_clap(FioApp *a, double t)
         if (k < 0) k = 0;
         a->f_next = clap_s + k * step;
     }
-    a->f_playing = 1;
     char msg[80];
-    snprintf(msg, sizeof(msg), "Le lucciole seguono le tue mani: %d BPM", (int)lroundf(a->g.tempo));
+    snprintf(msg, sizeof(msg), "Le lucciole prendono il tuo tempo: %d BPM", (int)lroundf(a->g.tempo));
     toast(a, msg);
     a->dirty = 1;
 }
@@ -1224,7 +1235,10 @@ static void ear_tick(FioApp *a, float dt)
                 if (!a->front_on) { a->front_on = 1; a->front_x = G_LEFT - 30.0f; }
             }
         }
-        for (int d = 0; d < 64; d++) a->sres[d] = on && d < n ? fear_string(a->ear, d) : 0.0f;
+        for (int d = 0; d < 64; d++) {                   /* le corde si accendono e si spengono piano */
+            float want_s = on && d < n ? fear_string(a->ear, d) : 0.0f;
+            a->sres[d] += (want_s - a->sres[d]) * (1.0f - expf(-dt * (want_s > a->sres[d] ? 3.0f : 0.7f)));
+        }
         a->ear_log -= dt;
         if (on && a->ear_log <= 0.0f) {                  /* nel registro, per capire una stanza da lontano */
             static const char *HEARS[3] = { "no", "non si sa", "si'" };
@@ -1235,11 +1249,11 @@ static void ear_tick(FioApp *a, float dt)
         }
     }
 
-    /* canto: la penna avanza mentre si sente una nota, tutto il giardino in poco piu' di mezzo respiro */
+    /* canto: la penna avanza mentre si sente una nota, tutto il giardino in poco piu' di un respiro */
     if (on && fear_voiced(a->ear)) {
         if (a->t - a->pen_last > 2.5f) a->pen_x = 0.06f + 0.08f * frand(a);   /* frase nuova: da sinistra */
         a->pen_last = a->t;
-        a->pen_x += dt / clampf(a->g.respiro * 0.6f, 5.0f, 24.0f);
+        a->pen_x += dt / clampf(a->g.respiro * 1.2f, 10.0f, 40.0f);
         if (a->pen_x > 0.94f) a->pen_x = 0.06f;
         float m = fold_note(a, fear_pitch(a->ear)), y = note_y(a, m);
         a->voice_y = a->voice_a > 0.01f ? a->voice_y + (y - a->voice_y) * (1.0f - expf(-dt * 25.0f)) : y;
@@ -1268,9 +1282,9 @@ static void ear_tick(FioApp *a, float dt)
     if (want > 0.0f) { a->ear_quiet = 0.0f; a->ear_busy = 0.5f; }
     if (a->front_on) {
         float prev = a->front_x;
-        a->front_x += (G_RIGHT - G_LEFT) / (1.6f - 0.8f * a->gust) * dt;
+        a->front_x += (G_RIGHT - G_LEFT) / (4.5f - 1.5f * a->gust) * dt;
         strum(a, prev, a->front_x);
-        if (a->front_x > G_RIGHT + 30.0f) { a->front_on = 0; a->front_wait = 0.3f; }
+        if (a->front_x > G_RIGHT + 30.0f) { a->front_on = 0; a->front_wait = 1.0f; }
     } else if (want > 0.0f && (a->front_wait -= dt) <= 0.0f) {
         a->front_on = 1;
         a->front_x = G_LEFT - 30.0f;
@@ -1281,13 +1295,13 @@ static void ear_tick(FioApp *a, float dt)
         if (a->sow_t <= 0.0f) {
             int n = g_ndeg(a);
             float xn = a->front_on ? (a->front_x - G_LEFT) / (G_RIGHT - G_LEFT) : frand(a);
-            plant(a, n / 4 + (int)(frand(a) * (float)(n / 2)), 0.0f, clampf(xn, 0.05f, 0.95f), 0.4f + 0.3f * a->gust, 1);
-            a->sow_t = 0.45f;
+            plant(a, n / 4 + (int)(frand(a) * (float)(n / 2)), 0.0f, clampf(xn, 0.05f, 0.95f), 0.3f + 0.15f * a->gust, 1);
+            a->sow_t = 1.2f;
         }
     }
     /* petali: si staccano dai fiori finche' c'e' vento, poi volano via */
     if (a->gust > 0.08f && a->mode == MODE_GARDEN) {
-        float want_n = a->gust * 90.0f * dt;
+        float want_n = a->gust * 30.0f * dt;
         int alive = seed_count(a);
         while (want_n > 0.0f && (want_n >= 1.0f || frand(a) < want_n)) {
             want_n -= 1.0f;
@@ -1301,15 +1315,15 @@ static void ear_tick(FioApp *a, float dt)
             }
         }
     }
-    float wind = 50.0f + 280.0f * a->gust;
+    float wind = 18.0f + 70.0f * a->gust;
     for (int i = 0; i < a->npetals;) {
         Petal *p = &a->petals[i];
         p->age += dt;
         if (p->age >= p->life || p->x > W + 12.0f) { *p = a->petals[--a->npetals]; continue; }
-        p->vx += (wind - p->vx) * (1.0f - expf(-dt * 2.5f));
-        p->vy += (-10.0f - p->vy) * (1.0f - expf(-dt * 1.5f));
+        p->vx += (wind - p->vx) * (1.0f - expf(-dt * 0.8f));
+        p->vy += (-5.0f - p->vy) * (1.0f - expf(-dt * 0.6f));
         p->x += p->vx * dt;
-        p->y += p->vy * dt + sinf(p->ph + p->age * 5.0f) * 24.0f * dt;
+        p->y += p->vy * dt + sinf(p->ph + p->age * 1.8f) * 14.0f * dt;
         i++;
     }
     if (a->npetals) a->ear_busy = fmaxf(a->ear_busy, 0.1f);
@@ -1318,8 +1332,7 @@ static void ear_tick(FioApp *a, float dt)
         s->age += dt;
         if (s->age >= s->life) { *s = a->sparks[--a->nsparks]; continue; }
         s->x += s->vx * dt;
-        s->y += s->vy * dt + sinf(s->age * 7.0f) * 40.0f * dt;
-        s->vx *= expf(-dt * 0.5f);
+        s->y += s->vy * dt + sinf(s->ph + s->age * 1.4f) * 16.0f * dt;     /* vaga come una lucciola vera */
         i++;
     }
     if (a->nsparks) a->ear_busy = fmaxf(a->ear_busy, 0.1f);
@@ -1687,7 +1700,7 @@ void fioapp_update(FioApp *a, float dt)
         Pollen *p = &a->pollen[i];
         p->y -= p->sp * dt;
         p->ph += dt * (0.15f + p->r * 0.05f);
-        p->x += sinf(p->ph * 2.0f * PI_F) * 6.0f * dt + a->gust * 170.0f * dt;
+        p->x += sinf(p->ph * 2.0f * PI_F) * 6.0f * dt + a->gust * 50.0f * dt;
         if (p->x > W + 4.0f) p->x -= W + 8.0f;
         if (p->y < 30.0f) { p->y = H + 4.0f; p->x = frand(a) * W; }
     }
@@ -1808,8 +1821,8 @@ static void draw_ear(FioApp *a, Canvas *c)
     for (int k = 0; k < a->rib_n; k++) {
         int i = (a->rib_w - 1 - k + RIBBON) % RIBBON;
         float age = a->t - a->rib_t[i];
-        if (age > 2.6f) break;
-        float u = 1.0f - age / 2.6f;
+        if (age > 4.0f) break;
+        float u = 1.0f - age / 4.0f;
         fx_glow(c, a->rib_x[i], a->rib_y[i], 3.5f + 6.0f * a->rib_a[i], vc, (0.12f + 0.3f * a->rib_a[i]) * u * u);
         if (k + 1 < a->rib_n) {
             int j = (i - 1 + RIBBON) % RIBBON;
@@ -1843,12 +1856,12 @@ static void draw_garden(FioApp *a, Canvas *c)
         float y = deg_y(a, d);
         int tonic = d % s->n == 0;
         float res = d < 64 ? a->sres[d] : 0.0f;
-        float al = (tonic ? 0.085f : 0.04f) + 0.30f * (d < 64 ? a->line_glow[d] : 0.0f) + 0.5f * res;
+        float al = (tonic ? 0.085f : 0.04f) + 0.30f * (d < 64 ? a->line_glow[d] : 0.0f) + 0.35f * res;
         if (d == a->cdeg) al += 0.08f;
-        float as = 7.0f * res, aw = 5.0f * a->gust;
+        float as = 4.5f * res, aw = 3.5f * a->gust;
         if (as + aw < 0.3f) fx_hline(c, y, (int)G_LEFT, (int)G_RIGHT, palette_y(a, y), al);
-        else fx_wave(c, y, (int)G_LEFT, (int)G_RIGHT, palette_y(a, y), al, as, 1 + d % 3, a->t * (23.0f + 1.7f * (float)d),
-                     aw, a->t * 9.0f - (float)d * 0.45f);
+        else fx_wave(c, y, (int)G_LEFT, (int)G_RIGHT, palette_y(a, y), al, as, 1 + d % 3, a->t * (2.4f + 0.12f * (float)d),
+                     aw, a->t * 2.2f - (float)d * 0.45f);
     }
     draw_pollen(a, c);
     /* il fronte del vento */
@@ -1874,7 +1887,7 @@ static void draw_garden(FioApp *a, Canvas *c)
         const Seed *sd = &a->seeds[i];
         if (!sd->alive) continue;
         int M = a->g.memoria;
-        float life = M > 0 ? 1.0f - (float)sd->done / (float)(M + 1) : 0.8f;
+        float life = M > 0 ? fmaxf(0.0f, 1.0f - (float)sd->done / (float)(M + 1)) : 0.8f;
         float x = x_pix(sd->x), y = sd->ydraw;
         uint32_t col = palette_y(a, y);
         float breath = 0.85f + 0.15f * sinf(a->t * 1.7f + (float)sd->serial);
@@ -2064,7 +2077,7 @@ static void draw_panel(FioApp *a, Canvas *c)
     if (a->pscroll + visible < R_COUNT) gfx_text_center(c, FONT_SMALL, (int)(x0 + w * 0.5f), (int)(y0 + h - 8.0f), "...", C_DIM);
     const char *hint = "su giù sceglie   ·   sinistra destra cambia   ·   L1 R1 atmosfera   ·   B chiude";
     if (a->prow == R_ASCOLTO)
-        hint = a->mic ? "Canta: fiorisce   ·   soffia: c'è vento   ·   batti le mani: nasce una lucciola"
+        hint = a->mic ? "Canta: fiorisce   ·   soffia: una brezza   ·   batti le mani: una lucciola"
                       : "Collega un microfono USB-C: poi canta, soffia o batti le mani";
     gfx_text_center(c, FONT_SMALL, W / 2, H - 9, hint, a->prow == R_ASCOLTO ? C_GOLD : C_MUTED);
 }
@@ -2101,7 +2114,7 @@ static void draw_help(FioApp *a, Canvas *c)
     int ly = a->mic ? 384 : 400;
     gfx_text(c, FONT_SMALL, 52, ly, lp, C_MUTED);
     gfx_text(c, FONT_SMALL, 52, ly + 20, "Lati del Launchpad: le 6 atmosfere, svuota (con User), registra", C_MUTED);
-    if (a->mic) gfx_text(c, FONT_SMALL, 52, 428, "Microfono: canta e fiorisce, soffia e c'è vento, batti le mani e nasce una lucciola", C_GOLD);
+    if (a->mic) gfx_text(c, FONT_SMALL, 52, 428, "Microfono: canta e fiorisce, soffia e passa una brezza, batti le mani e passa una lucciola", C_GOLD);
 }
 
 static void draw_quit(Canvas *c)

@@ -503,6 +503,36 @@ static void test_garden(void)
     run(a, 0.05f, NULL);
     CHECK(fioapp_seed_count(a) == seeds + 1 && fio_voice_starts(fioapp_engine(a)) > before, "nota MIDI: un fiore in piu' (%d) e il suono", fioapp_seed_count(a));
     fioapp_destroy(a);
+
+    /* memoria abbassata quando un fiore e' gia' tornato piu' volte del nuovo limite (12/10/2026: il volume
+       veniva da una potenza di un numero negativo, nan, e il nan restava per sempre nell'eco e nel
+       riverbero: il giardino ammutoliva) */
+    fresh_state("prova-memoria", path, sizeof(path));
+    a = fioapp_create(SR, path);
+    g = fioapp_global(a);
+    g->respiro = 4.0f; g->memoria = 12; g->vento = 0.0f; g->sogno = 0;
+    fioapp_global_changed(a);
+    fioapp_set_cursor(a, 0.5f, 0.5f);
+    press(a, PAD_A);
+    run(a, 42.0f, NULL);                                /* dieci ritorni */
+    g->memoria = 2;
+    float *tail = malloc(sizeof(float) * 2 * 12 * SR);
+    run(a, 12.0f, tail);
+    int finite = 1;
+    for (int i = 0; i < 2 * 12 * SR; i++) finite &= isfinite(tail[i]) != 0;
+    CHECK(finite && isfinite(fio_level(fioapp_engine(a))), "memoria abbassata sotto i ritorni gia' fatti: niente nan");
+    /* e se un nan arrivasse lo stesso, il motore lo scarta e si ripulisce */
+    FioNote bad = note_of(TIM_SOFFIO, NAN, 0.8f);
+    fio_play(fioapp_engine(a), 0, &bad);
+    bad = note_of(TIM_CAMPANA, 60.0f, NAN);
+    fio_play(fioapp_engine(a), 0, &bad);
+    press(a, PAD_A);
+    run(a, 3.0f, tail);
+    finite = 1;
+    for (int i = 0; i < 2 * 3 * SR; i++) finite &= isfinite(tail[i]) != 0;
+    CHECK(finite && rms(tail, 3 * SR) > 1e-4, "note con nan scartate, il giardino suona ancora (rms %.4f)", rms(tail, 3 * SR));
+    free(tail);
+    fioapp_destroy(a);
 }
 
 /* ------------------------------------------------------------------ lucciole */
@@ -915,17 +945,37 @@ static void test_ear_app(void)
     CHECK(fioapp_seed_count(a) == 3 && (p1 == 69.0f || p1 == 66.0f) && fmodf(p2 - 2.0f, 12.0f) == 0.0f && p2 >= 45.0f,
           "fuori scala sulla corda vicina (%.0f), Re2 portato nel giardino (%.0f)", p1, p2);
 
-    /* battito: nasce una lucciola e le lucciole partono */
-    int ff0 = fioapp_firefly_count(a);
+    /* battito con le lucciole ferme: un rintocco e una luce che passa, ma le lucciole restano come sono */
+    int ff0 = fioapp_firefly_count(a), vs0 = fio_voice_starts(fioapp_engine(a));
+    float tempo0 = g->tempo;
     MicEv one[] = { { S_CLAP, 0.1, 0.05, 0, 0.5f } };
     run_mic(a, 2.5f, one, 1);
-    CHECK(fioapp_firefly_count(a) == ff0 + 1 && fioapp_playing(a), "un battito: una lucciola in volo (%d)", fioapp_firefly_count(a));
-    /* battiti regolari: il tempo delle lucciole li segue, senza altre lucciole */
+    CHECK(fioapp_firefly_count(a) == ff0 && !fioapp_playing(a) && fio_voice_starts(fioapp_engine(a)) > vs0,
+          "un battito a lucciole ferme: un rintocco, nessuna lucciola e nessun volo (%d lucciole)", fioapp_firefly_count(a));
+    MicEv fast[] = { { S_CLAP, 0.1, 0.05, 0, 0.5f }, { S_CLAP, 0.4, 0.05, 0, 0.5f }, { S_CLAP, 0.7, 0.05, 0, 0.5f },
+                     { S_CLAP, 1.0, 0.05, 0, 0.5f }, { S_CLAP, 1.3, 0.05, 0, 0.5f } };
+    run_mic(a, 3.6f, fast, 5);
+    CHECK(g->tempo == tempo0, "battiti a lucciole ferme: il tempo non cambia (%.0f)", g->tempo);
+    /* con le lucciole in volo: il primo battito ne fa nascere una */
+    fioapp_set_mode(a, MODE_FIREFLIES);
+    press(a, PAD_Y);
+    fioapp_set_mode(a, MODE_GARDEN);
+    run_mic(a, 2.5f, one, 1);
+    CHECK(fioapp_firefly_count(a) == ff0 + 1 && fioapp_playing(a), "un battito a lucciole in volo: ne nasce una (%d)", fioapp_firefly_count(a));
+    /* battiti regolari: il tempo li segue, senza altre lucciole; quelli veloci valgono la meta' (120 BPM al massimo) */
     MicEv beat[] = { { S_CLAP, 0.1, 0.05, 0, 0.5f }, { S_CLAP, 0.6, 0.05, 0, 0.5f }, { S_CLAP, 1.1, 0.05, 0, 0.5f },
                      { S_CLAP, 1.6, 0.05, 0, 0.5f }, { S_CLAP, 2.1, 0.05, 0, 0.5f } };
     run_mic(a, 2.6f, beat, 5);
     CHECK(fabsf(g->tempo - 120.0f) < 1.5f && fioapp_firefly_count(a) == ff0 + 2, "battiti ogni 0,5 s: %.0f BPM, %d lucciole",
           g->tempo, fioapp_firefly_count(a));
+    run_mic(a, 2.5f, NULL, 0);
+    run_mic(a, 3.6f, fast, 5);
+    CHECK(fabsf(g->tempo - 100.0f) < 1.5f, "battiti ogni 0,3 s (200 BPM): le lucciole volano a %.0f BPM", g->tempo);
+    for (int k = 0; k < 8; k++) run_mic(a, 2.5f, one, 1);
+    CHECK(fioapp_firefly_count(a) <= 8, "dalle mani al massimo otto lucciole (%d)", fioapp_firefly_count(a));
+    fioapp_set_mode(a, MODE_FIREFLIES);
+    press(a, PAD_Y);
+    fioapp_set_mode(a, MODE_GARDEN);
 
     /* soffio: il vento pizzica i fiori (suonano), e su un giardino quasi vuoto semina */
     Fio *f = fioapp_engine(a);

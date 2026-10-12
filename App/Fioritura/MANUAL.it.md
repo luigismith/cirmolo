@@ -9,7 +9,7 @@ Ha due modi, che suonano insieme:
 - **il Giardino**, alla maniera di *Bloom* di Brian Eno e Peter Chilvers: ogni nota che pianti fiorisce sullo schermo e torna a ogni giro, sempre più piano, finché il giardino non la dimentica;
 - **le Lucciole**, alla maniera di *Otomata* di Batuhan Bozkurt: in una griglia 8×8 le lucciole volano dritte, suonano quando toccano un bordo e girano quando si incontrano.
 
-Se colleghi un microfono USB, il giardino ti ascolta: canti e fiorisce, soffi e c'è vento, batti le mani e nasce una lucciola (vedi [Microfono](#microfono)).
+Se colleghi un microfono USB, il giardino ti ascolta: canti e fiorisce, soffi e passa una brezza, batti le mani e passa una lucciola (vedi [Microfono](#microfono)).
 
 Si esce con **MENU** (poi A). Il giardino, le lucciole e le impostazioni restano salvati: alla prossima apertura il giardino riprende a suonare da dove era.
 
@@ -128,15 +128,15 @@ Tre gesti:
 
 | Gesto | Cosa succede |
 |---|---|
-| **Canta** una nota (anche a bocca chiusa, o fischiando) | una scia di luce scrive la tua voce da sinistra a destra, all'altezza esatta, con il vibrato e le note calanti; ogni nota che tieni per un attimo diventa un fiore sulla corda più vicina, e il giardino la ripete come le altre. Le note troppo basse o troppo alte vengono portate nelle tre ottave del giardino. |
-| **Soffia** sul microfono (o fai «ssss») | si alza il vento: le corde ondeggiano, i petali volano via e un'onda di luce attraversa il giardino da sinistra a destra, facendo suonare piano i fiori che incontra, come un'arpa eolica. Il vento può spostare qualche fiore di una corda. Se il giardino è quasi vuoto, il vento semina fiori nuovi. |
-| **Batti le mani** (o schiocca le dita, o dai un colpo sul tavolo) | nasce una lucciola, che attraversa il giardino in volo, e le lucciole partono. Se continui a battere, le lucciole lampeggiano con te (nasce una lucciola nuova solo dopo due secondi di silenzio); se batti a tempo, dal quarto battito prendono il tuo tempo, un battito ogni quarto, con un passo sul battito. |
+| **Canta** una nota (anche a bocca chiusa, o fischiando) | una scia di luce scrive la tua voce da sinistra a destra, all'altezza esatta, con il vibrato e le note calanti; ogni nota che tieni per un attimo (un quinto di secondo) diventa un fiore sulla corda più vicina, più piano di quelli piantati con A, e il giardino la ripete come le altre. Se canti in fretta, non più di un fiore ogni terzo di secondo. Le note troppo basse o troppo alte vengono portate nelle tre ottave del giardino. |
+| **Soffia** sul microfono (o fai «ssss») | passa una brezza: le corde ondeggiano piano, qualche petalo vola via e un'onda di luce attraversa lentamente il giardino da sinistra a destra (tre o quattro secondi), sfiorando i fiori che incontra, come un'arpa eolica. Il vento può spostare qualche fiore di una corda. Se il giardino è quasi vuoto, il vento semina fiori nuovi. |
+| **Batti le mani** (o schiocca le dita, o dai un colpo sul tavolo) | una lucciola di luce entra piano nel giardino, con un rintocco lieve e acuto nella scala. Le lucciole della griglia non partono da sole: se stanno già volando, il battito ne fa nascere una nuova (finché sono meno di otto), e se batti a tempo, dal quarto battito volano al tuo tempo, riportato tra 60 e 120 BPM (battiti veloci valgono la metà), con un passo sul battito. Un battito a meno di due secondi dal precedente fa solo lampeggiare il giardino. |
 
 Chi canta, soffia o batte le mani tiene sveglio il giardino: il sogno aspetta che anche il microfono sia in silenzio.
 
 Nel pannello, **Ascolto** regola la sensibilità (10–100%) o spegne l'ascolto. Con la sensibilità alta il giardino sente anche i suoni lontani e piano; con quella bassa solo quelli vicini e forti.
 
-Il giardino non ascolta se stesso. Se il microfono sente l'altoparlante della Flip, dopo poche note l'orecchio se ne accorge, impara quanto forte arriva il giardino e ascolta solo quello che lo supera; ignora anche una nota che comincia subito dopo la stessa nota del giardino. In cuffia il problema non c'è e l'ascolto è più sensibile. Con l'altoparlante canta un po' più forte del giardino, o avvicinati al microfono.
+Il giardino non ascolta se stesso. Confronta di continuo quello che suona con quello che sente: se il microfono segue il giardino (l'altoparlante della Flip è vicino), in pochi secondi se ne accorge, impara quanto forte arriva il giardino e ascolta solo quello che lo supera; ignora anche una nota che comincia subito dopo la stessa nota del giardino. In cuffia il problema non c'è e l'ascolto è più sensibile. Con l'altoparlante canta un po' più forte del giardino, o avvicinati al microfono.
 
 ## Registrare
 

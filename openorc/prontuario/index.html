@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Prontuario di OpenOrc</title>
+<meta name="description" content="Tutti i comandi di OpenOrc in una pagina, da tenere a vista mentre suoni.">
+<meta property="og:title" content="Prontuario di OpenOrc">
+<meta property="og:description" content="Tutti i comandi di OpenOrc in una pagina, da tenere a vista mentre suoni.">
+<meta property="og:image" content="https://luigismith.github.io/cirmolo/openorc/img/01-suona.png">
+<meta name="theme-color" content="#0c0f15">
+<link rel="icon" type="image/png" href="../../favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=Be+Vietnam+Pro:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Prontuario: una tavola da tenere accanto alla Flip. Schede fitte su una griglia, tasti disegnati come
+   tasti, l'oro dell'app per quello che si preme. Stessa notte del manuale; in stampa diventa chiaro. */
+:root {
+  --notte: #0c0f15;
+  --pannello: #151b25;
+  --pannello-2: #1c2431;
+  --filo: #2b3446;
+  --testo: #ecebf3;
+  --tenue: #9099ae;
+  --spento: #5f6880;
+  --oro: #f2c45c;
+  --oro-scuro: #6f5422;
+  --viola: #9a7cf4;
+  --acqua: #56c9c3;
+  --f-titolo: "Unbounded", "Arial Black", system-ui, sans-serif;
+  --f-testo: "Be Vietnam Pro", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--notte); color: var(--testo); font-family: var(--f-testo); font-size: 14.5px; line-height: 1.45; -webkit-font-smoothing: antialiased; }
+a { color: var(--oro); text-underline-offset: 3px; }
+h1, h2 { font-family: var(--f-titolo); margin: 0; letter-spacing: -0.01em; }
+p { margin: 0; }
+.foglio { max-width: 1240px; margin: 0 auto; padding: 22px clamp(16px, 3vw, 32px) 40px; }
+.testa { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 18px; margin-bottom: 18px; }
+.testa h1 { font-size: clamp(1.6rem, 3.6vw, 2.4rem); font-weight: 800; }
+.testa h1 span { color: var(--oro); }
+.testa nav { margin-left: auto; display: flex; gap: 16px; font-size: 0.9rem; }
+.testa nav a { color: var(--tenue); text-decoration: none; }
+.testa nav a:hover { color: var(--testo); }
+.griglia { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 12px; }
+.scheda { background: var(--pannello); border: 1px solid var(--filo); border-radius: 14px; padding: 14px 16px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+.scheda h2 { font-size: 0.8rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--oro); font-family: var(--f-mono); }
+.s4 { grid-column: span 4; } .s5 { grid-column: span 5; } .s6 { grid-column: span 6; } .s7 { grid-column: span 7; } .s8 { grid-column: span 8; } .s12 { grid-column: span 12; }
+.k {
+  display: inline-block; font-family: var(--f-mono); font-size: 0.78rem; font-weight: 600; line-height: 1.5;
+  padding: 0 0.45em; border-radius: 5px; background: var(--pannello-2); border: 1px solid var(--filo);
+  border-bottom-width: 2px; color: var(--testo); white-space: nowrap;
+}
+.righe { display: grid; gap: 0; }
+.righe div { display: grid; grid-template-columns: 9.5em minmax(0, 1fr); gap: 10px; padding-block: 5px; border-top: 1px solid var(--filo); align-items: baseline; }
+.righe div:first-child { border-top: 0; }
+.righe span:last-child { color: #d3d5e0; }
+.stretto .righe div { grid-template-columns: 6.6em minmax(0, 1fr); }
+
+/* la croce e i tasti della Flip */
+.flip { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.croce { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(3, auto); gap: 5px; text-align: center; }
+.croce > div { background: var(--pannello-2); border: 1px solid var(--filo); border-radius: 9px; padding: 5px 2px; display: grid; }
+.croce > div b { font-family: var(--f-titolo); font-size: 0.9rem; font-weight: 600; }
+.croce > div small { font-family: var(--f-mono); font-size: 0.68rem; color: var(--tenue); }
+.croce > .vuoto { background: none; border: 0; }
+.croce .centro { background: none; border: 0; color: var(--spento); font-family: var(--f-mono); font-size: 0.72rem; place-content: center; }
+.dorsali { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; text-align: center; }
+.dorsali div { background: var(--pannello-2); border: 1px solid var(--filo); border-radius: 9px; padding: 5px 2px; display: grid; }
+.dorsali b { font-family: var(--f-mono); font-size: 0.78rem; color: var(--oro); }
+.dorsali span { font-size: 0.76rem; color: #d3d5e0; }
+.nota { font-size: 0.8rem; color: var(--tenue); }
+
+/* pad della MPK */
+.pad { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; }
+.pad div { background: var(--pannello-2); border: 1px solid var(--filo); border-radius: 9px; padding: 6px 4px; text-align: center; display: grid; }
+.pad b { font-family: var(--f-titolo); font-size: 0.82rem; font-weight: 600; }
+.pad small { font-family: var(--f-mono); font-size: 0.66rem; color: var(--tenue); }
+.pad .q b { color: var(--oro); }
+.pad.funzioni b { font-family: var(--f-testo); font-size: 0.78rem; }
+.manopole { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 4px; text-align: center; }
+.manopole div { display: grid; justify-items: center; gap: 2px; }
+.manopole i { width: 30px; height: 30px; border-radius: 50%; background: var(--pannello-2); border: 2px solid var(--oro-scuro); position: relative; display: block; }
+.manopole i::after { content: ""; position: absolute; left: 50%; top: 3px; width: 2px; height: 10px; margin-left: -1px; background: var(--oro); border-radius: 1px; transform-origin: 50% 11px; }
+.manopole b { font-family: var(--f-mono); font-size: 0.66rem; color: var(--oro); }
+.manopole span { font-size: 0.7rem; color: #d3d5e0; line-height: 1.1; }
+
+/* esecuzioni */
+.esecuzioni { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
+.esecuzioni div { display: grid; gap: 4px; }
+.esecuzioni svg { width: 100%; height: auto; background: var(--notte); border-radius: 7px; }
+.esecuzioni b { font-size: 0.82rem; }
+.esecuzioni span { font-family: var(--f-mono); font-size: 0.66rem; color: var(--tenue); }
+
+/* looper */
+.flusso { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 0.84rem; }
+.flusso .st { border: 1px solid var(--filo); background: var(--pannello-2); border-radius: 8px; padding: 3px 9px; font-weight: 600; }
+.flusso .rec { color: #ec6068; } .flusso .play { color: var(--acqua); } .flusso .over { color: var(--oro); }
+.flusso .fr { color: var(--tenue); font-family: var(--f-mono); font-size: 0.74rem; }
+
+/* suoni */
+.suoni { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+.suoni h3 { margin: 0 0 4px; font-size: 0.78rem; font-family: var(--f-mono); color: var(--tenue); font-weight: 600; }
+.suoni ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 2px; }
+.suoni li { display: grid; grid-template-columns: 1.9em minmax(0, 1fr); font-size: 0.84rem; }
+.suoni li b { font-family: var(--f-mono); color: var(--oro); font-weight: 600; font-size: 0.8rem; }
+.suoni li.st span::after { content: " ·st"; color: var(--acqua); font-family: var(--f-mono); font-size: 0.7rem; }
+.piede { margin-top: 16px; font-size: 0.82rem; color: var(--tenue); display: flex; flex-wrap: wrap; gap: 6px 18px; }
+
+@media (max-width: 1000px) {
+  .s4, .s5, .s6, .s7, .s8 { grid-column: span 6; }
+  .esecuzioni { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .suoni { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 640px) {
+  .s4, .s5, .s6, .s7, .s8, .s12 { grid-column: span 12; }
+  .flip { grid-template-columns: minmax(0, 1fr); }
+  .suoni { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .manopole { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .testa nav { margin-left: 0; }
+}
+@media print {
+  :root { --notte: #ffffff; --pannello: #ffffff; --pannello-2: #f3f1ea; --filo: #cfcabb; --testo: #17140c; --tenue: #5b5546; --spento: #9a937f; --oro: #8a5a00; --oro-scuro: #d9b45a; --acqua: #1f7f7a; color-scheme: light; }
+  body { font-size: 11px; }
+  .foglio { padding: 8mm; max-width: none; }
+  .testa nav, .piede a { display: none; }
+  .scheda { break-inside: avoid; }
+  .griglia { gap: 7px; }
+}
+</style>
+</head>
+<body>
+<div class="foglio">
+  <header class="testa">
+    <h1>OpenOrc <span>prontuario</span></h1>
+    <p style="color:var(--tenue)">tutti i comandi in una pagina · console in Do maggiore</p>
+    <nav aria-label="Collegamenti"><a href="../">Manuale illustrato</a><a href="../../">Cirmolo</a></nav>
+  </header>
+
+  <main class="griglia">
+    <section class="scheda s4 stretto">
+      <h2>Ovunque</h2>
+      <div class="righe">
+        <div><span><span class="k">SELECT</span> tocco</span><span>pagina dopo: Suona, Accordi, Suono, Ritmo, MIDI</span></div>
+        <div><span><span class="k">SELECT</span> tenuto</span><span>elenco dei suoni e scorciatoie</span></div>
+        <div><span><span class="k">START</span></span><span>trasporto: batteria, arpeggi a tempo, loop</span></div>
+        <div><span><span class="k">L3</span></span><span>spegne tutte le note</span></div>
+        <div><span><span class="k">MENU</span></span><span>esci: A sì, B no</span></div>
+        <div><span>Levetta sx</span><span>↔ pitch bend · ↑ vibrato</span></div>
+        <div><span>Levetta dx</span><span>↕ brillantezza</span></div>
+      </div>
+    </section>
+
+    <section class="scheda s4 stretto">
+      <h2>SELECT tenuto +</h2>
+      <div class="righe">
+        <div><span><span class="k">↑</span> <span class="k">↓</span></span><span>suono prima / dopo</span></div>
+        <div><span><span class="k">L1</span> <span class="k">R1</span></span><span>categoria prima / dopo</span></div>
+        <div><span><span class="k">←</span> <span class="k">→</span></span><span>tonalità −1 / +1 semitono</span></div>
+        <div><span><span class="k">L2</span> · <span class="k">R2</span></span><span>maggiore / minore · modo tonalità</span></div>
+        <div><span><span class="k">A</span> <span class="k">B</span> <span class="k">Y</span></span><span>loop: registra · suona/ferma · annulla</span></div>
+        <div><span><span class="k">X</span></span><span>batteria sì / no</span></div>
+      </div>
+    </section>
+
+    <section class="scheda s4">
+      <h2>Pagina Suona, con la Flip</h2>
+      <div class="flip">
+        <div class="croce" aria-label="Croce">
+          <div class="vuoto"></div><div><b>Fa</b><small>↑ IV</small></div><div class="vuoto"></div>
+          <div><b>Do</b><small>← I</small></div><div class="centro">croce</div><div><b>Sol</b><small>→ V</small></div>
+          <div class="vuoto"></div><div><b>Lam</b><small>↓ vi</small></div><div class="vuoto"></div>
+        </div>
+        <div class="croce" aria-label="A B X Y">
+          <div class="vuoto"></div><div><b>Mim</b><small>X iii</small></div><div class="vuoto"></div>
+          <div><b>Rem</b><small>Y ii</small></div><div class="centro">ABXY</div><div><b>Sib</b><small>A ♭VII</small></div>
+          <div class="vuoto"></div><div><b>Sidim</b><small>B vii°</small></div><div class="vuoto"></div>
+        </div>
+      </div>
+      <div class="dorsali">
+        <div><b>L1</b><span>magg ↔ min</span></div><div><b>R1</b><span>sus4</span></div>
+        <div><b>L2</b><span>+ settima</span></div><div><b>R2</b><span>+ nona</span></div><div><b>R3</b><span>esecuzione</span></div>
+      </div>
+      <p class="nota">In minore: i iv v VI ii° III VII, e su A il V maggiore.</p>
+    </section>
+
+    <section class="scheda s7">
+      <h2>MPK mini IV</h2>
+      <div class="flip">
+        <div style="display:grid;gap:6px">
+          <p class="nota">Banco A · tieni un pad e premi un tasto</p>
+          <div class="pad">
+            <div class="q"><b>Dim</b><small>40</small></div><div class="q"><b>Min</b><small>41</small></div><div class="q"><b>Maj</b><small>42</small></div><div class="q"><b>Sus</b><small>43</small></div>
+            <div><b>6</b><small>36</small></div><div><b>m7</b><small>37</small></div><div><b>M7</b><small>38</small></div><div><b>9</b><small>39</small></div>
+          </div>
+          <p class="nota">Dim+Maj aumentato · Min+Sus sus2 · 6+settima 13 · senza pad: melodia</p>
+        </div>
+        <div style="display:grid;gap:6px">
+          <p class="nota">Banco B · funzioni</p>
+          <div class="pad funzioni">
+            <div><b>Modo tonalità</b><small>48</small></div><div><b>Esecuzione +</b><small>49</small></div><div><b>Suono −</b><small>50</small></div><div><b>Suono +</b><small>51</small></div>
+            <div><b>Batteria</b><small>44</small></div><div><b>Loop rec</b><small>45</small></div><div><b>Loop play</b><small>46</small></div><div><b>Annulla</b><small>47</small></div>
+          </div>
+          <p class="nota">Rotelle: pitch ±2, mod = vibrato · pedale = sustain · program change = numero del suono</p>
+        </div>
+      </div>
+      <div class="manopole" aria-label="Manopole">
+        <div><i></i><b>K1</b><span>Voicing</span></div>
+        <div><i></i><b>K2</b><span>Basso</span></div>
+        <div><i></i><b>K3</b><span>Quantità</span></div>
+        <div><i></i><b>K4</b><span>Tono</span></div>
+        <div><i></i><b>K5</b><span>Chorus</span></div>
+        <div><i></i><b>K6</b><span>Delay</span></div>
+        <div><i></i><b>K7</b><span>Riverbero</span></div>
+        <div><i></i><b>K8</b><span>Volume</span></div>
+      </div>
+    </section>
+
+    <section class="scheda s5 stretto">
+      <h2>Le altre pagine</h2>
+      <div class="righe">
+        <div><span>Accordi, Suono</span><span><span class="k">↑↓</span> riga · <span class="k">←→</span> valore · <span class="k">L1</span><span class="k">R1</span> passi grandi · <span class="k">A</span> tenuto ascolta</span></div>
+        <div><span>Suono, azioni</span><span><span class="k">A</span>: salva come nuovo · aggiorna · ripristina · variazione · rinomina · elimina (2×)</span></div>
+        <div><span>Ritmo</span><span><span class="k">A</span> registra · <span class="k">B</span> suona · <span class="k">Y</span> annulla · <span class="k">X</span> tap · <span class="k">L1</span><span class="k">R1</span> ±10 BPM</span></div>
+        <div><span>MIDI</span><span><span class="k">A</span> impara · <span class="k">B</span> annulla · <span class="k">X</span> togli · <span class="k">Y</span> preset · <span class="k">R2</span> salva</span></div>
+        <div><span>Tastiera nuova</span><span>collegala: l'IA la configura. Muovi tutto, <span class="k">A</span>, poi <span class="k">A</span> applica</span></div>
+      </div>
+    </section>
+
+    <section class="scheda s8">
+      <h2>Esecuzioni · R3 o pad 49 · la quantità è K3</h2>
+      <div class="esecuzioni" id="esecuzioni"></div>
+    </section>
+
+    <section class="scheda s4">
+      <h2>Looper</h2>
+      <div class="flusso">
+        <span class="st">vuoto</span><span class="fr">A →</span><span class="st rec">registra</span><span class="fr">A →</span><span class="st play">suona</span><span class="fr">A ⇄</span><span class="st over">sovraincide</span>
+      </div>
+      <p class="nota">Parte subito, o alla battuta se il tempo corre. <span class="k">Y</span> annulla l'ultimo strato, poi tutto. Si salva all'uscita e lo ritrovi fermo.</p>
+    </section>
+
+    <section class="scheda s12">
+      <h2>I 25 suoni · numero = program change · st = stereo</h2>
+      <div class="suoni">
+        <div><h3>Atmosfere</h3><ol><li><b>0</b><span>Lungolago</span></li><li><b>1</b><span>Nebbia</span></li><li><b>2</b><span>Psichedelia</span></li><li class="st"><b>3</b><span>Aurora</span></li><li class="st"><b>4</b><span>Archi d'inverno</span></li><li class="st"><b>5</b><span>Respiro di vetro</span></li></ol></div>
+        <div><h3>Tastiere</h3><ol><li><b>6</b><span>Tramonto FM</span></li><li><b>7</b><span>Wurli di notte</span></li><li class="st"><b>8</b><span>Valigia stereo</span></li><li><b>9</b><span>Organo della pieve</span></li><li class="st"><b>10</b><span>Organo rotante</span></li></ol></div>
+        <div><h3>Corde</h3><ol><li><b>11</b><span>Chitarra di carta</span></li><li class="st"><b>12</b><span>Dodici corde</span></li><li class="st"><b>13</b><span>Koto del lago</span></li><li class="st"><b>14</b><span>Arpa celtica</span></li><li><b>15</b><span>Arpa di vetro</span></li><li class="st"><b>16</b><span>Pizzicato</span></li></ol></div>
+        <div><h3>Arpeggi</h3><ol><li><b>17</b><span>Cascata</span></li><li class="st"><b>18</b><span>Pioggia</span></li><li><b>19</b><span>Ritmo in levare</span></li><li class="st"><b>20</b><span>Treno notturno</span></li></ol></div>
+        <div><h3>Campane e Ottoni</h3><ol><li><b>21</b><span>Campane lunari</span></li><li class="st"><b>22</b><span>Carillon</span></li><li><b>23</b><span>Ottoni</span></li><li class="st"><b>24</b><span>Fanfara</span></li></ol><p class="nota" style="margin-top:6px">Dal 25: i tuoi suoni. * dopo il nome = modificato, non salvato.</p></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="piede">
+    <span>OpenOrc · Cirmolo per Miyoo Flip · aggiornato al 12 ottobre 2026</span>
+    <a href="../">Manuale illustrato</a>
+    <a href="https://github.com/luigismith/cirmolo/blob/cirmolo/App/OpenOrc/QUICKREF.it.md">Versione testo</a>
+  </footer>
+</div>
+<script>
+(function () {
+  var rot = [0.5, 0.4, 0.3, 0.55, 0.35, 0.2, 0.6, 0.8];
+  document.querySelectorAll(".manopole i").forEach(function (el, i) {
+    var st = document.createElement("style");
+    var deg = -135 + 270 * rot[i];
+    el.setAttribute("data-i", i);
+    st.textContent = '.manopole i[data-i="' + i + '"]::after{transform:rotate(' + deg + 'deg)}';
+    document.head.appendChild(st);
+  });
+  var E = [["Accordo", "tutte insieme", "accordo"], ["Strum", "K3 velocità", "strum"], ["Slop", "K3 sfasatura", "slop"],
+           ["Arpeggio", "K3 1/4…1/32", "arp"], ["Pattern", "K3 ritmo 1-4", "pattern"], ["Arpa", "K3 velocità", "arpa"]];
+  function diagramma(tipo) {
+    var W = 300, H = 120, righe = (tipo === "arp" || tipo === "arpa") ? 9 : 4, s = "";
+    for (var i = 0; i <= 16; i++) s += '<line x1="' + (12 + i * 17) + '" y1="8" x2="' + (12 + i * 17) + '" y2="' + (H - 8) + '" stroke="#1c2431" stroke-width="' + (i % 4 === 0 ? 1.4 : 0.7) + '"/>';
+    function y(r) { return H - 14 - r * ((H - 28) / (righe - 1)); }
+    function barra(x, r, l, forte) { return '<rect x="' + x + '" y="' + (y(r) - 4) + '" width="' + Math.max(3, l) + '" height="8" rx="4" fill="#f2c45c" opacity="' + (forte ? 1 : 0.62) + '"/>'; }
+    var fine = 284, r, k;
+    if (tipo === "accordo") for (r = 0; r < 4; r++) s += barra(12, r, fine - 12, true);
+    if (tipo === "strum") { for (r = 0; r < 4; r++) s += barra(12 + r * 14, r, 120 - r * 14, r === 0); for (r = 0; r < 4; r++) s += barra(150 + (3 - r) * 14, r, fine - 150 - (3 - r) * 14, r === 3); }
+    if (tipo === "slop") { var j = [9, 0, 21, 13]; for (r = 0; r < 4; r++) s += barra(12 + j[r], r, fine - 12 - j[r], r % 2 === 0); }
+    if (tipo === "arp") { var seq = [0, 1, 2, 3, 4, 5, 4, 3, 2, 1, 0, 1, 2, 3, 4, 5]; for (k = 0; k < 16; k++) s += barra(13 + k * 17, seq[k] * 1.6, 13, k % 10 === 0); }
+    if (tipo === "pattern") { var pt = "x..x..x...x..x.."; for (k = 0; k < 16; k++) if (pt[k] === "x") for (r = 0; r < 4; r++) s += barra(13 + k * 17, r, 22, k % 4 === 0); }
+    if (tipo === "arpa") for (k = 0; k < 9; k++) s += barra(12 + k * 11, k, fine - 12 - k * 11, k === 0);
+    return '<svg viewBox="0 0 ' + W + " " + H + '" aria-hidden="true">' + s + "</svg>";
+  }
+  document.getElementById("esecuzioni").innerHTML = E.map(function (e) {
+    return "<div>" + diagramma(e[2]) + "<b>" + e[0] + "</b><span>" + e[1] + "</span></div>";
+  }).join("");
+})();
+</script>
+</body>
+</html>

@@ -131,6 +131,7 @@ p { margin: 0; }
 .figura { display: grid; gap: 10px; }
 .figura .schermo { padding: 10px; border-radius: 18px; }
 .figure-doppie { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; }
+.figure-doppie.tre { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 
 .nota {
   border-left: 3px solid var(--viola); padding: 10px 14px; background: rgba(154, 124, 244, 0.08);
@@ -293,6 +294,7 @@ pre {
   .copertina .contenitore, .due, .flip-zona { grid-template-columns: minmax(0, 1fr); }
   .passi, .passi.tre { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .esecuzioni, .motori, .suoni { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .figure-doppie.tre { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 560px) {
   body { font-size: 15.5px; }
@@ -348,7 +350,9 @@ pre {
       <a href="#suoni">I 25 suoni</a>
       <a href="#ritmo">Ritmo e loop</a>
       <a href="#midi">MIDI</a>
+      <a href="#ia">Tastiere e IA</a>
       <a href="#problemi">Problemi</a>
+      <a href="prontuario/">Prontuario</a>
     </nav>
   </div>
 </div>
@@ -739,6 +743,46 @@ spread=2</pre>
   </div>
 </section>
 
+<!-- ============================================================ IA -->
+<section class="capitolo" id="ia">
+  <div class="contenitore">
+    <div class="testata">
+      <p class="etichetta">Tastiere nuove</p>
+      <h2>Qualunque tastiera, configurata dall'IA</h2>
+      <p>Colleghi una tastiera MIDI che OpenOrc non conosce: ti chiede se farla configurare dall'intelligenza artificiale. Tu muovi i controlli, lei decide dove metterli, tu confermi. La volta dopo si ricorda da sola.</p>
+    </div>
+    <div class="figure-doppie tre">
+      <div class="figura">
+        <div class="schermo"><img src="img/15-ia-domanda.png" width="640" height="480" loading="lazy" alt="Finestra Tastiera nuova: MiniLab3, vuoi che l'IA la configuri?"></div>
+        <p class="didascalia"><b>1.</b> Colleghi la tastiera: compare la domanda. A sì, B no. C'è anche nella prima riga della pagina MIDI.</p>
+      </div>
+      <div class="figura">
+        <div class="schermo"><img src="img/16-ia-ascolto.png" width="640" height="480" loading="lazy" alt="Ascolto la MiniLab3: 21 note, 8 manopole, 4 pulsanti, 1 pitch bend"></div>
+        <p class="didascalia"><b>2.</b> Muovi tutto: OpenOrc conta note, manopole, pulsanti e rotelle. Intanto la tastiera non suona. Poi A.</p>
+      </div>
+      <div class="figura">
+        <div class="schermo"><img src="img/17-ia-proposta.png" width="640" height="480" loading="lazy" alt="Proposta dell'IA per la Arturia MiniLab 3 con 20 funzioni"></div>
+        <p class="didascalia"><b>3.</b> La proposta: ogni funzione con il suo controllo. A applica e salva, X ne chiede un'altra, B la scarta.</p>
+      </div>
+    </div>
+    <div class="due" style="margin-top:36px">
+      <div class="testo">
+        <p><b>Cosa sa l'IA.</b> Riceve il nome della tastiera e i controlli che hai mosso. Usa anche quello che sa di quel modello, così i pad degli accordi seguono la fila in alto da sinistra a destra e le manopole vanno da K1 a K8 nell'ordine giusto.</p>
+        <p><b>Cosa controlla OpenOrc.</b> Tiene solo i controlli che hai mosso davvero, ognuno una volta sola, e non assegna mai i tasti del pianoforte: quelli servono a suonare. Il tipo di manopole, assolute o relative, lo capisce dai valori.</p>
+        <p><b>Ogni tastiera la sua mappa.</b> Si salva in <span class="mono">Saves/openorc/tastiere/</span> con il nome della tastiera e si ricarica da sola quando la ricolleghi.</p>
+      </div>
+      <div class="testo">
+        <p><b>Il modello è gratuito.</b> OpenOrc usa il migliore gratuito tra quelli di cui hai una chiave: prima <b>Groq</b> con gpt-oss 120B, gratis senza carta e velocissimo, poi OpenRouter, GLM e Mistral con i loro modelli gratuiti.</p>
+        <ul class="elenco">
+          <li><span>Crea la chiave</span><span>su console.groq.com, voce API Keys</span></li>
+          <li><span>Salvala</span><span>in Chiedi all'IA, scheda Fornitori, oppure in <span class="mono">Saves/claude/chiavi/groq.txt</span></span></li>
+          <li><span>Serve</span><span>il Wi-Fi, solo durante la configurazione</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- ============================================================ problemi -->
 <section class="capitolo" id="problemi">
   <div class="contenitore">
@@ -756,6 +800,7 @@ spread=2</pre>
       <div class="problema"><b>La corda si spegne subito</b><span>Alza la Durata e tieni il Sostegno al massimo.</span></div>
       <div class="problema"><b>Rinomina non scrive</b><span>Serve una tastiera USB collegata alla Flip.</span></div>
       <div class="problema"><b>Il tempo non cambia</b><span>Arriva un clock MIDI: comanda lui. Disattiva «Segui il clock MIDI».</span></div>
+      <div class="problema"><b>L'IA dice che serve una chiave</b><span>Crea una chiave gratuita su console.groq.com e salvala in Chiedi all'IA, scheda Fornitori.</span></div>
       <div class="problema"><b>Un hub USB non viene visto</b><span>Serve un hub semplice, senza ricarica PD per portatili. Le docking station non funzionano.</span></div>
     </div>
   </div>
@@ -774,7 +819,7 @@ spread=2</pre>
     <div class="link">
       <a href="../">Home di Cirmolo</a>
       <a href="https://github.com/luigismith/cirmolo/blob/cirmolo/App/OpenOrc/MANUAL.it.md">Manuale completo (testo)</a>
-      <a href="https://github.com/luigismith/cirmolo/blob/cirmolo/App/OpenOrc/QUICKREF.it.md">Prontuario in una pagina</a>
+      <a href="prontuario/">Prontuario in una pagina</a>
       <a href="https://github.com/luigismith/cirmolo/blob/cirmolo/App/OpenOrc/tastiere/akai-mpk-mini-iv.it.md">Scheda della MPK mini IV</a>
     </div>
     <p>OpenOrc fa parte di Cirmolo, il fork di spruceOS per la Miyoo Flip. Manuale aggiornato al 12 ottobre 2026.</p>

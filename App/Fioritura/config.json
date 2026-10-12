@@ -1,0 +1,7 @@
+{
+  "label": "Fioritura",
+  "icon": "fioritura.png",
+  "launch": "launch.sh",
+  "description": "Generative garden of sound and light: blooms and fireflies",
+  "devices": ["MIYOO_FLIP"]
+}

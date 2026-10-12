@@ -772,6 +772,7 @@
         "Ask AI": "Chiedi all'IA",
         "What should I play?": "Cosa gioco?",
         "Cheevos": "Cheevos",
+        "Fioritura": "Fioritura",
         "Cirmolo Piano": "Cirmolo Piano",
         "Cirmolo Sampler": "Cirmolo Sampler"
     },
@@ -804,6 +805,7 @@
         "Chat with Claude and other AI models, also by voice (Wi-Fi and API key needed)": "Chatta con Claude e altri modelli di IA, anche a voce (servono Wi-Fi e chiave API)",
         "Three questions, and the AI picks games from your collection (Wi-Fi and API key needed)": "Tre domande e l'IA sceglie tra i tuoi giochi (servono Wi-Fi e chiave API)",
         "RetroAchievements hub": "I tuoi obiettivi RetroAchievements",
+        "Generative garden of sound and light: blooms and fireflies": "Giardino generativo di suoni e luci: fiori e lucciole",
         "General MIDI instrument for a USB MIDI keyboard": "Strumento General MIDI per la tastiera MIDI USB",
         "Pad sampler with step sequencer, USB mic recording and MIDI": "Campionatore a pad con sequencer, registrazione dal microfono USB e MIDI"
     },

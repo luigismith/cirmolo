@@ -18,6 +18,7 @@ from utils.py_ui_state import PyUiState
 from views.grid_or_list_entry import GridOrListEntry
 from views.selection import Selection
 from views.view_creator import ViewCreator
+from views.view_type import ViewType
 
 
 class MainMenu:
@@ -35,8 +36,9 @@ class MainMenu:
         # Create a lookup map for ordering priority
         order_map = {text: index for index, text in enumerate(ordering)}
         
-        # Sort objects based on the index of their primary text in the ordering list
-        return sorted(objects, key=lambda obj: order_map.get(obj.get_primary_text(), float('inf')))
+        # Sort objects based on the index of their value ("Game", "App"...) in the ordering list.
+        # Cirmolo: the value, not the primary text, which is translated ("Giochi") and never matched.
+        return sorted(objects, key=lambda obj: order_map.get(obj.get_value(), float('inf')))
 
     def build_options(self):
         image_text_list = []
@@ -100,6 +102,19 @@ class MainMenu:
                 )
             )
 
+        # Cirmolo: l'area Musica del menu App, anche come voce della Home
+        if (Theme.get_music_enabled() and AppMenu.folder_has_apps("music")):
+            image_text_list.append(
+                GridOrListEntry(
+                    primary_text=AppMenu.folder_label("music"),
+                    image_path=Theme.music() or AppMenu.folder_icon("music"),
+                    image_path_selected=Theme.music_selected() or AppMenu.folder_icon("music"),
+                    description=Language.label("yourMusicDesc", "Your music apps"),
+                    icon=None,
+                    value="Music"
+                )
+            )
+
         if (Theme.get_settings_enabled()):
             image_text_list.append(
                 GridOrListEntry(
@@ -116,11 +131,16 @@ class MainMenu:
         return self.reorder_options(Theme.get_main_menu_option_ordering(),image_text_list)
 
     def build_main_menu_view(self, options, selected):
+        cols = Theme.get_main_menu_column_count()
+        # Cirmolo: in una griglia di una riga, con una voce in piu' (Musica) le colonne crescono fino a 5,
+        # cosi' tutte le voci restano sullo schermo
+        if(Theme.get_view_type_for_main_menu() == ViewType.GRID and Theme.get_main_menu_row_count() == 1 and cols < len(options) <= 5):
+            cols = len(options)
         return ViewCreator.create_view(
             view_type=Theme.get_view_type_for_main_menu(),
             top_bar_text=Theme.get_main_menu_title(), 
             options=options, 
-            cols=Theme.get_main_menu_column_count(), 
+            cols=cols, 
             carousel_cols=Theme.get_main_menu_column_count(), #TODO do we care these are the same?
             rows=Theme.get_main_menu_row_count(),
             grid_resized_width=Theme.get_grid_main_menu_img_width(),
@@ -141,6 +161,11 @@ class MainMenu:
             PyUiLogger.get_logger().info(f"Launching App Menu")
             PyUiState.set_last_main_menu_selection("App")
             self.app_menu.run_app_selection()
+            PyUiState.set_last_main_menu_selection(None)
+        elif("Music" == selection):
+            PyUiLogger.get_logger().info(f"Launching Music Menu")
+            PyUiState.set_last_main_menu_selection("Music")
+            self.app_menu.run_folder("music")
             PyUiState.set_last_main_menu_selection(None)
         elif("Favorite" == selection):
             PyUiLogger.get_logger().info(f"Launching Favorite Menu")

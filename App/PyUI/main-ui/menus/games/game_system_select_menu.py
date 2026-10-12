@@ -282,6 +282,17 @@ class GameSystemSelectMenu:
                         icon=self.get_main_menu_icon_selected("apps",Theme.app_selected()),
                         value=lambda input_value: self.run_extra(input_value, "Apps",self.app_menu.run_app_selection)
              ))        
+            if(Theme.get_music_enabled() and self.app_menu.folder_has_apps("music")):
+                music_label = self.app_menu.folder_label("music")
+                systems_list.append(GridOrListEntry(
+                        primary_text=music_label,
+                        primary_text_long=music_label,
+                        image_path=self.get_main_menu_icon("music",Theme.music() or self.app_menu.folder_icon("music")),
+                        image_path_selected=self.get_main_menu_icon_selected("music",Theme.music_selected() or self.app_menu.folder_icon("music")),
+                        description = Language.label("yourMusicDesc", "Your music apps"),
+                        icon=self.get_main_menu_icon_selected("music",Theme.music_selected() or self.app_menu.folder_icon("music")),
+                        value=lambda input_value: self.run_extra(input_value, music_label, lambda: self.app_menu.run_folder("music"))
+             ))
             if(Theme.get_settings_enabled() or (Theme.merge_main_menu_and_game_menu() and not Theme.skip_main_menu())):
                 systems_list.append(GridOrListEntry(
                         primary_text=Language.settings(),

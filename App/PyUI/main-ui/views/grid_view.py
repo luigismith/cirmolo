@@ -229,8 +229,17 @@ class GridView(View):
             else:
                 y_text = bottom_row_y - text_height + Theme.multi_row_grid_text_y_offset()
                 
+            # Cirmolo: una scritta piu' larga della sua colonna (Impostazioni con 5 voci nella Home) si
+            # sposta quanto basta per restare dentro lo schermo
+            text_x = x_offset
+            try:
+                text_w, _ = Display.get_text_dimensions(self.font_purpose, imageTextPair.get_primary_text() or "")
+                screen_w = Device.get_device().screen_width()
+                text_x = min(max(x_offset, text_w // 2 + 4), screen_w - text_w // 2 - 4)
+            except Exception:
+                pass
             Display.render_text(imageTextPair.get_primary_text(),
-                                 x_offset,
+                                 text_x,
                                  y_text,
                                  color,
                                  self.font_purpose,

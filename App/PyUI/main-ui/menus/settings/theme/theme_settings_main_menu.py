@@ -146,6 +146,13 @@ class ThemeSettingsMainMenu(ThemeSettingsMenuCommon):
             )
             option_list.append(
                 self.build_enabled_disabled_entry(
+                    primary_text=Language.label("showMusic", "Show Music"),
+                    get_value_func=Theme.get_music_enabled,
+                    set_value_func=Theme.set_music_enabled
+                )
+            )
+            option_list.append(
+                self.build_enabled_disabled_entry(
                     primary_text=Language.show_settings(),
                     get_value_func=Theme.get_settings_enabled,
                     set_value_func=Theme.set_settings_enabled

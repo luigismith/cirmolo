@@ -143,6 +143,38 @@ class AppMenu:
             defs.append({"key": default, "label": "Other", "icon": "altro.png"})
         return defs
 
+    @staticmethod
+    def folder_has_apps(key):
+        """Cirmolo: c'e' almeno un'app installata in quell'area (per la voce Musica della Home). Guarda solo
+        le cartelle in App/, senza leggere le configurazioni: si chiama a ogni disegno della Home."""
+        data = AppMenu.load_folders()
+        if(data is None):
+            return False
+        apps_dir = os.path.dirname(_PYUI_DIR)
+        for name, area in data.get("apps", {}).items():
+            if(area == key and os.path.isdir(os.path.join(apps_dir, name))):
+                return True
+        return any(area == key for area in data.get("pyui", {}).values())
+
+    @staticmethod
+    def folder_icon(key):
+        data = AppMenu.load_folders() or {}
+        d = next((d for d in data.get("folders", []) if isinstance(d, dict) and d.get("key") == key), {})
+        return AppUtils.get_icon(None, os.path.join(FOLDER_ICONS_DIR, d.get("icon", "altro.png")))
+
+    @staticmethod
+    def folder_label(key):
+        data = AppMenu.load_folders() or {}
+        d = next((d for d in data.get("folders", []) if isinstance(d, dict) and d.get("key") == key), {})
+        return Language.translate("appFolders", d.get("label", key))
+
+    def run_folder(self, key):
+        """Cirmolo: l'elenco delle app di una sola area, aperto dalla Home (voce Musica)."""
+        data = self.load_folders()
+        if(data is None):
+            return self.run_app_list(None, None)
+        return self.run_app_list(key, data, self.folder_label(key))
+
     def run_app_selection(self) :
         data = self.load_folders()
         if(data is None):

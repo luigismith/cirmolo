@@ -299,6 +299,13 @@ class Theme():
     @classmethod
     def app_selected(cls): return cls._asset("ic-app-f.qoi")
     
+    # Cirmolo: la voce Musica della Home (l'area Musica del menu App); senza icone nel tema, None
+    @classmethod
+    def music(cls): return cls._asset("ic-music-n.qoi")
+
+    @classmethod
+    def music_selected(cls): return cls._asset("ic-music-f.qoi")
+
     @classmethod
     def settings(cls): return cls._asset("ic-setting-n.qoi")
     
@@ -1198,6 +1205,15 @@ class Theme():
         return cls._data.get("appsEnabled", True)
 
     @classmethod
+    def get_music_enabled(cls):
+        return cls._data.get("musicEnabled", True)
+
+    @classmethod
+    def set_music_enabled(cls, value):
+        cls._data["musicEnabled"] = value
+        cls.save_changes()
+
+    @classmethod
     def set_apps_enabled(cls, value):
         cls._data["appsEnabled"] = value
         cls.save_changes()
@@ -1213,7 +1229,7 @@ class Theme():
 
     @classmethod
     def get_main_menu_option_ordering(cls):
-        return cls._data.get("mainMenuOrdering", ["Recent", "Favorite","Collection", "Game", "App", "Setting"])
+        return cls._data.get("mainMenuOrdering", ["Music", "Recent", "App", "Favorite", "Collection", "Game", "Setting"])
 
     @classmethod
     def get_game_select_row_count(cls):

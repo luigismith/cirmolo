@@ -1,0 +1,669 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fioritura · Cirmolo</title>
+<meta name="description" content="Fioritura, il giardino di suoni e luci di Cirmolo per la Miyoo Flip: note che fioriscono e tornano, lucciole che rimbalzano, sei atmosfere, tastiera MIDI e Launchpad.">
+<meta property="og:title" content="Fioritura · un giardino di suoni e luci">
+<meta property="og:description" content="Pianti una nota, il giardino la ripete e la fa sfiorire piano. Se lo lasci stare, continua da solo.">
+<meta property="og:image" content="https://luigismith.github.io/cirmolo/fioritura/img/atmosfera-notte.png">
+<meta property="og:type" content="article">
+<meta name="theme-color" content="#0b0a18">
+<link rel="icon" type="image/png" href="../favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=Be+Vietnam+Pro:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Fioritura: la stessa notte del sito, con i colori dei fiori. In apertura un giardino vivo (canvas),
+   poi le schermate vere della console. */
+:root {
+  --notte: #0b0a18;
+  --notte-2: #100f20;
+  --pannello: #161528;
+  --pannello-2: #1e1c34;
+  --filo: #2c2a46;
+  --testo: #eeebf8;
+  --tenue: #a19dbd;
+  --viola: #a88cf6;
+  --lavanda: #c9b8fb;
+  --cielo: #86aaff;
+  --rosa: #ff8aa6;
+  --oro: #f2c45c;
+  --aghi: #6ec68e;
+  --f-titolo: "Unbounded", "Arial Black", system-ui, sans-serif;
+  --f-testo: "Be Vietnam Pro", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 70px; }
+body {
+  margin: 0; background: var(--notte); color: var(--testo); font-family: var(--f-testo);
+  font-size: 16.5px; line-height: 1.62; -webkit-font-smoothing: antialiased;
+}
+img { max-width: 100%; display: block; }
+a { color: var(--lavanda); text-underline-offset: 3px; }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--lavanda); outline-offset: 3px; border-radius: 8px; }
+h1, h2, h3 { font-family: var(--f-titolo); margin: 0; text-wrap: balance; letter-spacing: -0.01em; }
+h2 { font-size: clamp(1.7rem, 3.4vw, 2.5rem); font-weight: 700; line-height: 1.1; }
+h3 { font-size: 1.02rem; font-weight: 700; line-height: 1.25; }
+p { margin: 0; }
+.contenitore { max-width: 1160px; margin: 0 auto; padding-inline: clamp(16px, 4vw, 40px); }
+.etichetta { font-family: var(--f-mono); font-size: 0.74rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--rosa); }
+
+/* barra */
+.barra { position: sticky; top: 0; z-index: 10; background: rgba(11, 10, 24, 0.88); backdrop-filter: blur(10px); border-bottom: 1px solid var(--filo); }
+.barra .contenitore { display: flex; align-items: center; gap: 18px; padding-block: 10px; }
+.marchio { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--testo); font-family: var(--f-titolo); font-weight: 700; font-size: 1.05rem; }
+.marchio img { width: 30px; height: 30px; border-radius: 8px; }
+.marchio small { font-family: var(--f-testo); font-weight: 500; color: var(--tenue); font-size: 0.9rem; }
+.barra nav { display: flex; gap: 4px; margin-left: auto; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.barra nav::-webkit-scrollbar { display: none; }
+.barra nav a { flex: none; color: var(--tenue); text-decoration: none; font-size: 0.9rem; padding: 6px 12px; border-radius: 999px; }
+.barra nav a:hover { color: var(--testo); background: var(--pannello); }
+
+/* copertina con il giardino vivo */
+.copertina { position: relative; overflow: hidden; border-bottom: 1px solid var(--filo);
+  background:
+    radial-gradient(50% 70% at 78% 45%, rgba(168, 140, 246, 0.18), transparent 70%),
+    radial-gradient(40% 50% at 10% 90%, rgba(255, 138, 166, 0.10), transparent 70%),
+    var(--notte); }
+.copertina .contenitore { display: grid; grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr); gap: clamp(28px, 5vw, 56px); align-items: center; padding-block: clamp(40px, 6vw, 84px); }
+.copertina h1 { font-size: clamp(2.6rem, 6vw, 4.4rem); font-weight: 800; line-height: 1; letter-spacing: -0.035em;
+  background: linear-gradient(100deg, #ffd9a8 0%, var(--rosa) 30%, var(--viola) 62%, var(--cielo) 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent; padding-bottom: 6px; }
+.motto { font-family: var(--f-mono); color: var(--lavanda); font-size: 0.95rem; margin-bottom: 14px; }
+.copertina .intro { color: #cfcbe2; max-width: 50ch; margin-top: 16px; font-size: 1.07rem; }
+.bottoni { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 26px; }
+.bottone { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; font: 600 1rem var(--f-testo); padding: 11px 20px; border-radius: 999px; border: 1px solid var(--filo); color: var(--testo); background: var(--pannello); cursor: pointer; }
+.bottone.primo { background: var(--viola); border-color: var(--viola); color: #160f2c; }
+.bottone:hover { border-color: var(--lavanda); }
+.nota { margin-top: 16px; font-size: 0.86rem; color: var(--tenue); }
+
+.schermo { position: relative; border-radius: 22px; padding: 14px; background: linear-gradient(160deg, #24223c, #121122); border: 1px solid #36335a;
+  box-shadow: 0 40px 80px rgba(0, 0, 0, 0.45), 0 0 120px rgba(168, 140, 246, 0.16); }
+.schermo canvas { display: block; width: 100%; height: auto; aspect-ratio: 4 / 3; border-radius: 10px; background: #0b0a18; touch-action: none; cursor: crosshair; }
+.schermo .comandi-vivi { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; }
+.chip { font: 500 0.82rem var(--f-testo); color: var(--tenue); background: var(--pannello); border: 1px solid var(--filo); border-radius: 999px; padding: 5px 12px; cursor: pointer; }
+.chip[aria-pressed="true"] { color: #160f2c; background: var(--lavanda); border-color: var(--lavanda); }
+.chip.suono { margin-left: auto; color: var(--testo); }
+.chip.suono[aria-pressed="true"] { background: var(--rosa); border-color: var(--rosa); }
+.schermo .didascalia { margin-top: 8px; font-size: 0.8rem; color: var(--tenue); }
+
+/* sezioni */
+.sezione { padding-block: clamp(56px, 8vw, 100px); border-bottom: 1px solid var(--filo); }
+.sezione:nth-of-type(even) { background: var(--notte-2); }
+.testata { display: grid; gap: 12px; max-width: 780px; margin-bottom: clamp(26px, 4vw, 42px); }
+.testata p { color: var(--tenue); font-size: 1.05rem; }
+
+.due { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr); gap: clamp(22px, 4vw, 48px); align-items: start; }
+.due > * { min-width: 0; }
+.foto { margin: 0; display: grid; gap: 10px; }
+.foto img { border-radius: 14px; border: 1px solid var(--filo); width: 100%; height: auto; aspect-ratio: 4 / 3; background: var(--pannello); }
+.foto figcaption { font-size: 0.86rem; color: var(--tenue); }
+
+.schede { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.scheda { background: var(--pannello); border: 1px solid var(--filo); border-radius: 16px; padding: 18px 20px; display: grid; gap: 7px; align-content: start; }
+.scheda p { color: #cfcbe2; font-size: 0.94rem; }
+.scheda .valore { font-family: var(--f-mono); font-size: 0.78rem; color: var(--rosa); }
+.scheda h3 { display: flex; align-items: center; gap: 10px; }
+.scheda h3::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--c, var(--viola)); box-shadow: 0 0 12px var(--c, var(--viola)); }
+
+.regole { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; counter-reset: regola; }
+.regole li { background: var(--pannello); border: 1px solid var(--filo); border-radius: 16px; padding: 16px 18px 16px 62px; position: relative; color: #cfcbe2; }
+.regole li::before { counter-increment: regola; content: counter(regola); position: absolute; left: 18px; top: 12px; font-family: var(--f-titolo); font-weight: 800; font-size: 1.7rem; line-height: 1; color: var(--cielo); }
+.regole b { color: var(--testo); }
+.dopo { margin-top: 16px; color: var(--tenue); }
+
+.galleria { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+.galleria figure { margin: 0; display: grid; gap: 8px; }
+.galleria img { border-radius: 12px; border: 1px solid var(--filo); aspect-ratio: 4 / 3; width: 100%; height: auto; background: var(--pannello); }
+.galleria figcaption { font-size: 0.88rem; color: var(--tenue); display: grid; gap: 2px; }
+.galleria figcaption b { color: var(--testo); font-family: var(--f-titolo); font-size: 0.98rem; display: flex; align-items: center; gap: 8px; }
+.galleria figcaption b i { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+
+.tabelle { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.tabella { background: var(--pannello); border: 1px solid var(--filo); border-radius: 18px; padding: 18px 20px; }
+.tabella h3 { margin-bottom: 10px; }
+table { width: 100%; border-collapse: collapse; font-size: 0.93rem; }
+td { padding: 8px 0; border-top: 1px solid var(--filo); vertical-align: top; }
+td:first-child { width: 38%; padding-right: 12px; font-family: var(--f-mono); font-size: 0.82rem; color: var(--oro); }
+td:last-child { color: #cfcbe2; }
+
+/* Launchpad disegnato */
+.lp-blocco { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: clamp(22px, 4vw, 48px); align-items: center; }
+.lp-blocco > * { min-width: 0; }
+.lp { background: linear-gradient(160deg, #1d1c2c, #111018); border: 1px solid #34324c; border-radius: 22px; padding: 16px; display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 6px; box-shadow: 0 30px 60px rgba(0,0,0,0.4); max-width: 470px; }
+.lp span { aspect-ratio: 1; border-radius: 6px; background: #22212f; display: grid; place-items: center; font: 600 0.62rem var(--f-mono); color: #c7c3dc; }
+.lp span.tondo { border-radius: 50%; }
+.lp span.vuoto { background: none; }
+.legenda { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.legenda li { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 12px; align-items: start; color: #cfcbe2; }
+.legenda li i { width: 18px; height: 18px; border-radius: 5px; margin-top: 3px; }
+.legenda b { color: var(--testo); }
+
+.file { display: grid; gap: 10px; margin-top: 16px; }
+.file code { font-family: var(--f-mono); font-size: 0.86rem; color: var(--lavanda); background: var(--pannello); border: 1px solid var(--filo); border-radius: 8px; padding: 2px 8px; }
+
+.piede { padding-block: 44px 60px; color: var(--tenue); font-size: 0.92rem; }
+.piede .contenitore { display: grid; gap: 14px; }
+.piede .link { display: flex; flex-wrap: wrap; gap: 10px 22px; }
+
+@media (max-width: 900px) {
+  .copertina .contenitore, .due, .lp-blocco, .tabelle { grid-template-columns: minmax(0, 1fr); }
+  .galleria { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+  .galleria, .schede { grid-template-columns: minmax(0, 1fr); }
+  .barra .marchio small, .barra .marchio span { display: none; }
+  .chip.suono { margin-left: 0; }
+}
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+</style>
+</head>
+<body>
+
+<header class="barra">
+  <div class="contenitore">
+    <a class="marchio" href="../"><img src="../favicon.png" alt="" width="30" height="30"><span>Cirmolo</span> <small>· Fioritura</small></a>
+    <nav aria-label="Sezioni">
+      <a href="#giardino">Giardino</a>
+      <a href="#lucciole">Lucciole</a>
+      <a href="#atmosfere">Atmosfere</a>
+      <a href="#comandi">Comandi</a>
+      <a href="#launchpad">Launchpad</a>
+      <a href="#registrare">Registrare</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+<section class="copertina">
+  <div class="contenitore">
+    <div>
+      <p class="motto">un giardino di suoni e luci · Miyoo Flip</p>
+      <h1>Fioritura</h1>
+      <p class="intro">Pianti una nota: fiorisce sullo schermo e torna a ogni respiro, sempre più piano, finché il giardino non la dimentica. Se lo lasci stare, il giardino sogna e continua da solo. Accanto, in una griglia, le lucciole volano dritte, suonano quando toccano un bordo e girano quando si incontrano.</p>
+      <p class="intro">Non serve saper suonare. È fatta per le cuffie, la sera, o per tenere un sottofondo mentre fai altro.</p>
+      <div class="bottoni">
+        <a class="bottone primo" href="#giardino">Come funziona</a>
+        <a class="bottone" href="https://github.com/luigismith/cirmolo/blob/cirmolo/App/Fioritura/MANUAL.it.md">Manuale completo</a>
+      </div>
+      <p class="nota">Nell'area Musica di Cirmolo, cartella <code>App/Fioritura</code>. Il giardino di questa pagina è una piccola imitazione per il browser: tocca per piantare.</p>
+    </div>
+    <div class="schermo">
+      <canvas id="vivo" width="1280" height="960" role="img" aria-label="Un giardino vivo: righe sottili come corde, fiori di luce che sbocciano dove si tocca e tornano a ogni giro"></canvas>
+      <div class="comandi-vivi" role="group" aria-label="Atmosfera del giardino qui sopra">
+        <button class="chip" data-umore="0" aria-pressed="false">Alba</button>
+        <button class="chip" data-umore="1" aria-pressed="false">Lago</button>
+        <button class="chip" data-umore="2" aria-pressed="false">Bosco</button>
+        <button class="chip" data-umore="3" aria-pressed="true">Notte</button>
+        <button class="chip" data-umore="4" aria-pressed="false">Pioggia</button>
+        <button class="chip" data-umore="5" aria-pressed="false">Neve</button>
+        <button class="chip suono" id="suono" aria-pressed="false">Accendi il suono</button>
+      </div>
+      <p class="didascalia">Tocca o clicca per piantare un fiore: l'altezza è la nota, da sinistra a destra lo stereo. Dopo qualche secondo il giardino sogna da solo.</p>
+    </div>
+  </div>
+</section>
+
+<section class="sezione" id="giardino">
+  <div class="contenitore">
+    <div class="testata">
+      <p class="etichetta">Il giardino</p>
+      <h2>Pianti una nota, torna a ogni respiro</h2>
+      <p>Lo schermo è attraversato dalle corde: le note della scala, tre ottave dal basso all'alto. A pianta un fiore dove sta il cursore; con A tenuto e la croce, ogni corda nuova è un fiore e nascono glissando e arpeggi. La linea sottile in alto è il giro, con un punto per ogni fiore e la luce che scorre.</p>
+    </div>
+    <div class="due">
+      <figure class="foto">
+        <img src="img/giardino.png" width="640" height="480" loading="lazy" alt="Il giardino nell'atmosfera Alba: corde sottili, fiori di luce rosa e oro, la riga dei comandi in basso">
+        <figcaption>Il giardino nell'atmosfera Alba, appena toccato: in alto il modo e il numero dei fiori, in basso i comandi. Dopo qualche secondo le scritte spariscono.</figcaption>
+      </figure>
+      <div class="schede">
+        <div class="scheda" style="--c: var(--rosa)"><h3>Respiro</h3><p>La durata del giro. Ogni fiore torna nello stesso punto in cui l'hai piantato.</p><span class="valore">4–40 s · 14 all'inizio</span></div>
+        <div class="scheda" style="--c: var(--oro)"><h3>Memoria</h3><p>Quante volte torna un fiore, ogni volta più piano. Poi se ne va.</p><span class="valore">1–16 ritorni · o per sempre</span></div>
+        <div class="scheda" style="--c: var(--cielo)"><h3>Vento</h3><p>A ogni ritorno può spostare un fiore di una corda: la melodia cambia piano da sola.</p><span class="valore">0–100%</span></div>
+        <div class="scheda" style="--c: var(--viola)"><h3>Sogno</h3><p>Se non tocchi niente per sei secondi, un cursore fantasma cammina tra le corde e pianta da solo.</p><span class="valore">Y lo accende e lo spegne</span></div>
+      </div>
+    </div>
+    <div class="due" style="margin-top: clamp(26px, 4vw, 44px)">
+      <figure class="foto">
+        <img src="img/sogno.png" width="640" height="480" loading="lazy" alt="Il giardino nell'atmosfera Notte mentre sogna: pochi fiori viola e il cerchio del cursore fantasma">
+        <figcaption>Nessuno tocca niente: nella Notte il giardino sogna, il cursore fantasma pianta fiori viola e le scritte se ne sono andate.</figcaption>
+      </figure>
+      <div class="schede" style="grid-template-columns: minmax(0, 1fr)">
+        <div class="scheda" style="--c: var(--lavanda)"><h3>Il bordone</h3><p>Sotto a tutto respira una nota lunga e bassa, la tonica con la sua quinta. Quando cambi atmosfera scivola sulla tonica nuova.</p></div>
+        <div class="scheda" style="--c: var(--aghi)"><h3>Spazio e shimmer</h3><p>Un riverbero lungo; con lo shimmer la sua coda risale di un'ottava, come un coro. L'eco rimbalza da sinistra a destra.</p></div>
+        <div class="scheda" style="--c: var(--oro)"><h3>A tempo davvero</h3><p>Le note si preparano un decimo di secondo prima e partono al campione esatto: ogni luce si accende quando la sua nota esce.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="sezione" id="lucciole">
+  <div class="contenitore">
+    <div class="testata">
+      <p class="etichetta">Le lucciole</p>
+      <h2>Tre regole, giri che non finiscono</h2>
+      <p>SELECT porta alla griglia 8×8. A fa nascere una lucciola verso l'alto; premendo ancora la giri a destra, in giù, a sinistra, e al quinto colpo vola via. Y le fa volare, L2 e R2 cambiano il tempo. Ispirate a Otomata di Batuhan Bozkurt.</p>
+    </div>
+    <div class="due">
+      <figure class="foto">
+        <img src="img/lucciole.png" width="640" height="480" loading="lazy" alt="Le lucciole nell'atmosfera Lago: una griglia otto per otto, le note delle righe a sinistra, lucciole azzurre che volano e bordi che si accendono">
+        <figcaption>Otto lucciole nel Lago. A sinistra le note delle righe; le colonne suonano le stesse note da sinistra a destra.</figcaption>
+      </figure>
+      <div>
+        <ol class="regole">
+          <li><b>Volano dritte.</b> A ogni passo, un ottavo del tempo, ogni lucciola avanza di una casella nella sua direzione.</li>
+          <li><b>Il bordo suona.</b> Quando tocca un bordo suona la nota della sua colonna o della sua riga, e torna indietro.</li>
+          <li><b>Chi si incontra gira.</b> Due lucciole nella stessa casella girano tutte e due a destra.</li>
+        </ol>
+        <p class="dopo">Due o tre lucciole bastano per giri che si ripetono e cambiano piano. Volano anche quando torni al giardino, e il giardino suona mentre guardi le lucciole: si sovrappongono.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="sezione" id="atmosfere">
+  <div class="contenitore">
+    <div class="testata">
+      <p class="etichetta">Atmosfere</p>
+      <h2>Sei atmosfere, ognuna con il suo strumento</h2>
+      <p>X, L1 e R1 le cambiano: il cielo sfuma nel colore nuovo, la scala e lo strumento cambiano, i fiori restano sulla loro corda e cambiano nota con lei. Dal pannello ogni atmosfera si può ritoccare, e ricorda le sue scelte.</p>
+    </div>
+    <div class="galleria">
+      <figure><img src="img/atmosfera-alba.png" width="640" height="480" loading="lazy" alt="Atmosfera Alba: cielo indaco che diventa rosa, fiori arancio e rosa"><figcaption><b><i style="background:#ffa858"></i>Alba</b>Campana · pentatonica maggiore in Re</figcaption></figure>
+      <figure><img src="img/atmosfera-lago.png" width="640" height="480" loading="lazy" alt="Atmosfera Lago: blu profondo, fiori azzurri"><figcaption><b><i style="background:#3cc8e6"></i>Lago</b>Vetro · lidia in Fa</figcaption></figure>
+      <figure><img src="img/atmosfera-bosco.png" width="640" height="480" loading="lazy" alt="Atmosfera Bosco: verde scuro, fiori verdi e oro"><figcaption><b><i style="background:#6ec68e"></i>Bosco</b>Arpa · dorica in La</figcaption></figure>
+      <figure><img src="img/atmosfera-notte.png" width="640" height="480" loading="lazy" alt="Atmosfera Notte: cielo viola, fiori lavanda"><figcaption><b><i style="background:#9a7cf4"></i>Notte</b>Soffio · pentatonica minore in Do#</figcaption></figure>
+      <figure><img src="img/atmosfera-pioggia.png" width="640" height="480" loading="lazy" alt="Atmosfera Pioggia: grigio azzurro, fiori bianchi"><figcaption><b><i style="background:#96bee6"></i>Pioggia</b>Goccia · maggiore in Sol, eco lunga</figcaption></figure>
+      <figure><img src="img/atmosfera-neve.png" width="640" height="480" loading="lazy" alt="Atmosfera Neve: cielo grigio chiaro, fiori bianchi e ghiaccio"><figcaption><b><i style="background:#ebf0ff"></i>Neve</b>Kalimba · in-sen in Mi</figcaption></figure>
+    </div>
+  </div>
+</section>
+
+<section class="sezione" id="comandi">
+  <div class="contenitore">
+    <div class="testata">
+      <p class="etichetta">Comandi</p>
+      <h2>Tutto sotto le dita</h2>
+      <p>SELECT tenuto mostra questi comandi sulla console finché lo tieni. MENU, poi A, esce: giardino, lucciole e impostazioni restano salvati e il giardino riprende da dov'era.</p>
+    </div>
+    <div class="tabelle">
+      <div class="tabella">
+        <h3>Nel giardino</h3>
+        <table>
+          <tr><td>Croce su e giù</td><td>cambia corda, cioè la nota</td></tr>
+          <tr><td>Croce, levetta</td><td>sposta il cursore; da sinistra a destra è lo stereo</td></tr>
+          <tr><td>A</td><td>pianta un fiore; tenuto, ogni corda nuova suona</td></tr>
+          <tr><td>B · B tenuto</td><td>toglie l'ultimo fiore · svuota il giardino</td></tr>
+          <tr><td>X · L1 R1</td><td>atmosfera successiva · precedente</td></tr>
+          <tr><td>Y</td><td>sogno acceso o spento</td></tr>
+          <tr><td>L2 R2</td><td>memoria: quante volte torna ogni fiore</td></tr>
+          <tr><td>SELECT</td><td>passa alle lucciole</td></tr>
+          <tr><td>START</td><td>pannello</td></tr>
+        </table>
+      </div>
+      <div class="tabella">
+        <h3>Tra le lucciole</h3>
+        <table>
+          <tr><td>Croce, levetta</td><td>sceglie la casella</td></tr>
+          <tr><td>A</td><td>nasce una lucciola, poi la giri; al quinto colpo vola via</td></tr>
+          <tr><td>B · B tenuto</td><td>toglie quelle della casella · le libera tutte</td></tr>
+          <tr><td>Y</td><td>volano o si fermano</td></tr>
+          <tr><td>L2 R2</td><td>tempo, a passi di 4 BPM</td></tr>
+          <tr><td>X · L1 R1</td><td>atmosfera</td></tr>
+          <tr><td>SELECT</td><td>torna al giardino</td></tr>
+          <tr><td>START</td><td>pannello</td></tr>
+        </table>
+      </div>
+    </div>
+    <div class="due" style="margin-top: clamp(26px, 4vw, 44px)">
+      <figure class="foto">
+        <img src="img/pannello.png" width="640" height="480" loading="lazy" alt="Il pannello aperto sopra il giardino: atmosfera, strumento, scala, tonica, luce, coda, respiro, memoria, vento, tempo, spazio, shimmer, eco">
+        <figcaption>Il pannello si apre a lato: il giardino continua a fiorire dietro.</figcaption>
+      </figure>
+      <div class="schede" style="grid-template-columns: minmax(0, 1fr)">
+        <div class="scheda" style="--c: var(--lavanda)"><h3>Il pannello</h3><p>Su e giù scelgono, sinistra e destra cambiano, B chiude. Atmosfera, strumento, scala (dieci, dalla pentatonica alla hirajoshi), tonica, luce, coda, respiro, memoria, vento, tempo delle lucciole, spazio, shimmer, eco, bordone, sogno, volume.</p></div>
+        <div class="scheda" style="--c: var(--rosa)"><h3>Senti subito</h3><p>Cambiando strumento, scala, tonica, luce o coda parte una nota di prova. «Ripristina l'atmosfera» rimette tutto com'era.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="sezione" id="launchpad">
+  <div class="contenitore">
+    <div class="testata">
+      <p class="etichetta">Launchpad e tastiera MIDI</p>
+      <h2>Una griglia di luci in mano</h2>
+      <p>Collegato alla porta USB-C, un Launchpad Mini MK3 diventa una seconda superficie con i LED a colori. Con una tastiera MIDI, come la MPK mini, ogni nota che suoni diventa un fiore alla sua altezza esatta, e la forza decide quanto è forte.</p>
+    </div>
+    <div class="lp-blocco">
+      <div class="lp" role="img" aria-label="Il Launchpad Mini MK3 nel giardino: righe di pad nei colori della Notte, le toniche più chiare, alcuni fiori accesi, i tasti in alto e a destra">
+        <span class="tondo" style="background:#3a3850;color:#c7c3dc">▲</span><span class="tondo" style="background:#3a3850;color:#c7c3dc">▼</span><span class="tondo" style="background:#3a3850;color:#c7c3dc">◀</span><span class="tondo" style="background:#3a3850;color:#c7c3dc">▶</span><span class="tondo" style="background:#c4b0fa;color:#160f2c">Sess</span><span class="tondo" style="background:#9a7cf4;color:#160f2c">Drum</span><span class="tondo" style="background:#5a4a2a;color:#c7c3dc">Keys</span><span class="tondo" style="background:#2e2d3c;color:#c7c3dc">User</span><span class="vuoto"></span><span style="background:rgb(47,52,76)"></span><span style="background:rgb(47,52,76)"></span><span style="background:rgb(47,52,76)"></span><span style="background:rgb(47,52,76)"></span><span style="background:rgb(47,52,76)"></span><span style="background:rgb(47,52,76)"></span><span style="background:rgb(47,52,76)"></span><span style="background:rgb(47,52,76)"></span><span class="tondo" style="background:rgb(111,80,61);font-size:.5rem;color:#160f2c"></span><span style="background:rgb(50,52,76)"></span><span style="background:rgb(50,52,76)"></span><span style="background:rgb(50,52,76)"></span><span style="background:rgb(50,52,76)"></span><span style="background:rgb(126,144,213);box-shadow:0 0 14px rgba(126,144,213,.55)"></span><span style="background:rgb(50,52,76)"></span><span style="background:rgb(50,52,76)"></span><span style="background:rgb(50,52,76)"></span><span class="tondo" style="background:rgb(43,91,111);font-size:.5rem;color:#160f2c"></span><span style="background:rgb(74,75,108)"></span><span style="background:rgb(74,75,108)"></span><span style="background:rgb(74,75,108)"></span><span style="background:rgb(74,75,108)"></span><span style="background:rgb(74,75,108)"></span><span style="background:rgb(74,75,108)"></span><span style="background:rgb(74,75,108)"></span><span style="background:rgb(74,75,108)"></span><span class="tondo" style="background:rgb(61,91,80);font-size:.5rem;color:#160f2c"></span><span style="background:rgb(55,53,76)"></span><span style="background:rgb(145,136,195);box-shadow:0 0 14px rgba(145,136,195,.55)"></span><span style="background:rgb(55,53,76)"></span><span style="background:rgb(55,53,76)"></span><span style="background:rgb(55,53,76)"></span><span style="background:rgb(55,53,76)"></span><span style="background:rgb(55,53,76)"></span><span style="background:rgb(55,53,76)"></span><span class="tondo" style="background:rgb(154,124,244);font-size:.5rem;color:#160f2c"></span><span style="background:rgb(56,52,75)"></span><span style="background:rgb(56,52,75)"></span><span style="background:rgb(56,52,75)"></span><span style="background:rgb(56,52,75)"></span><span style="background:rgb(56,52,75)"></span><span style="background:rgb(56,52,75)"></span><span style="background:rgb(151,135,198);box-shadow:0 0 14px rgba(151,135,198,.55)"></span><span style="background:rgb(56,52,75)"></span><span class="tondo" style="background:rgb(75,88,111);font-size:.5rem;color:#160f2c"></span><span style="background:rgb(54,50,75)"></span><span style="background:rgb(54,50,75)"></span><span style="background:rgb(54,50,75)"></span><span style="background:rgb(54,50,75)"></span><span style="background:rgb(220,210,251);box-shadow:0 0 14px rgba(220,210,251,.55)"></span><span style="background:rgb(54,50,75)"></span><span style="background:rgb(54,50,75)"></span><span style="background:rgb(54,50,75)"></span><span class="tondo" style="background:rgb(104,105,120);font-size:.5rem;color:#160f2c"></span><span style="background:rgb(52,48,75)"></span><span style="background:rgb(52,48,75)"></span><span style="background:rgb(143,120,211);box-shadow:0 0 14px rgba(143,120,211,.55)"></span><span style="background:rgb(52,48,75)"></span><span style="background:rgb(52,48,75)"></span><span style="background:rgb(52,48,75)"></span><span style="background:rgb(52,48,75)"></span><span style="background:rgb(52,48,75)"></span><span class="tondo" style="background:rgb(95,52,64);font-size:.5rem;color:#160f2c">svuota</span><span style="background:rgb(70,60,106)"></span><span style="background:rgb(70,60,106)"></span><span style="background:rgb(70,60,106)"></span><span style="background:rgb(70,60,106)"></span><span style="background:rgb(70,60,106)"></span><span style="background:rgb(70,60,106)"></span><span style="background:rgb(70,60,106)"></span><span style="background:rgb(70,60,106)"></span><span class="tondo" style="background:rgb(216,90,98);font-size:.5rem;color:#160f2c">rec</span>
+      </div>
+      <ul class="legenda">
+        <li><i style="background: linear-gradient(#c4b0fa, #9a7cf4)"></i><span><b>La griglia.</b> Nel giardino sono 8 corde, la più grave in basso: ogni pad pianta un fiore e la colonna è lo stereo. Le righe più chiare sono le toniche; i fiori accesi e quelli che tornano si illuminano. Tra le lucciole è la loro griglia: un pad fa nascere o gira una lucciola.</span></li>
+        <li><i style="background:#3a3850"></i><span><b>In alto.</b> ▲ ▼ spostano le corde di un'ottava (tra le lucciole: il tempo), ◀ ▶ cambiano atmosfera, Session cambia modo, Drums accende il sogno, Keys fa volare le lucciole. User si tiene premuto insieme a un pad per togliere le lucciole, o al tasto «svuota».</span></li>
+        <li><i style="background: linear-gradient(#ffa858, #3cc8e6, #6ec68e, #9a7cf4)"></i><span><b>A destra.</b> Le sei atmosfere, ognuna con il suo colore; poi «svuota», solo con User tenuto, e «registra», che pulsa rosso mentre registra.</span></li>
+        <li><i style="background:#16151f; border: 1px solid #34324c"></i><span>All'uscita il Launchpad si spegne e torna al suo modo normale.</span></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="sezione" id="registrare">
+  <div class="contenitore">
+    <div class="testata">
+      <p class="etichetta">Registrare</p>
+      <h2>Porta il giardino fuori dalla console</h2>
+      <p>Nel pannello, «Registra in WAV» registra quello che senti; in alto a destra compare REC con il tempo, e sullo stesso tasto la registrazione si ferma. Dal Launchpad è l'ultimo tasto a destra. All'uscita una registrazione in corso si chiude da sola.</p>
+    </div>
+    <div class="file">
+      <p><code>Saves/fioritura/registrazioni/fioritura-2026-10-12-213000.wav</code> WAV stereo, 48 kHz, 16 bit</p>
+      <p><code>Saves/fioritura/stato.txt</code> atmosfere, impostazioni, fiori e lucciole</p>
+      <p><code>App/Fioritura/src</code> i sorgenti in C, con 103 prove automatiche</p>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer class="piede">
+  <div class="contenitore">
+    <p>Fioritura è un'app di <a href="../">Cirmolo</a>, il fork di spruceOS per la Miyoo Flip. Il giardino si ispira a <i>Bloom</i> di Brian Eno e Peter Chilvers, le lucciole a <i>Otomata</i> di Batuhan Bozkurt; suoni, grafica e codice sono scritti da zero.</p>
+    <div class="link">
+      <a href="../">Cirmolo</a>
+      <a href="https://github.com/luigismith/cirmolo/blob/cirmolo/App/Fioritura/MANUAL.it.md">Manuale</a>
+      <a href="https://github.com/luigismith/cirmolo/blob/cirmolo/App/Fioritura/MANUAL.md">Manual (English)</a>
+      <a href="https://github.com/luigismith/cirmolo/tree/cirmolo/App/Fioritura">Codice</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+/* Un piccolo giardino nel browser: stesse idee dell'app (corde della scala, fiori che tornano e sfioriscono,
+   sogno), disegnato con il canvas e, se lo accendi, suonato con Web Audio. */
+(function () {
+  "use strict";
+  var cv = document.getElementById("vivo");
+  if (!cv || !cv.getContext) return;
+  var ctx = cv.getContext("2d");
+  var W = 640, H = 480, TOP = 46, BOT = 446, LEFT = 30, RIGHT = 610;
+  var GIRO = 9, MEMORIA = 6;
+  var calmo = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  var UMORI = [
+    { scala: [0, 2, 4, 7, 9], tonica: 2, alto: "#0e0c24", basso: "#542842", c: ["#ffa858", "#ff7696", "#ffe296"], voce: "campana" },
+    { scala: [0, 2, 4, 6, 7, 9, 11], tonica: 5, alto: "#04101c", basso: "#0c364a", c: ["#3cc8e6", "#78f0d2", "#d2faff"], voce: "vetro" },
+    { scala: [0, 2, 3, 5, 7, 9, 10], tonica: 9, alto: "#05100b", basso: "#14301e", c: ["#6ec68e", "#bee66e", "#f2c45c"], voce: "arpa" },
+    { scala: [0, 3, 5, 7, 10], tonica: 1, alto: "#070714", basso: "#221844", c: ["#9a7cf4", "#c4b0fa", "#82aaff"], voce: "soffio" },
+    { scala: [0, 2, 4, 5, 7, 9, 11], tonica: 7, alto: "#0b0e16", basso: "#262f3e", c: ["#96bee6", "#c8dcf5", "#6e96d2"], voce: "goccia" },
+    { scala: [0, 1, 5, 7, 10], tonica: 4, alto: "#0e1220", basso: "#3c4662", c: ["#ebf0ff", "#aac8ff", "#d2bef5"], voce: "kalimba" }
+  ];
+  var umore = 3, cieloDa = null, cieloT = 1;
+
+  function rgb(h) { return [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)]; }
+  function mix(a, b, t) { return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t]; }
+  function css(c, a) { return "rgba(" + (c[0] | 0) + "," + (c[1] | 0) + "," + (c[2] | 0) + "," + a.toFixed(3) + ")"; }
+  function colore(h) {
+    var c = UMORI[umore].c.map(rgb);
+    h = Math.max(0, Math.min(1, h));
+    return h < 0.5 ? mix(c[0], c[1], h * 2) : mix(c[1], c[2], h * 2 - 1);
+  }
+  function corde() { return UMORI[umore].scala.length * 3 + 1; }
+  function yCorda(d) { return BOT - d * (BOT - TOP) / (corde() - 1); }
+  function cordaY(y) { return Math.max(0, Math.min(corde() - 1, Math.round((BOT - y) / (BOT - TOP) * (corde() - 1)))); }
+  function nota(d) {
+    var u = UMORI[umore], n = u.scala.length, base = 45 + ((u.tonica - 9 + 12) % 12);
+    return base + 12 * Math.floor(d / n) + u.scala[d % n];
+  }
+
+  /* cieli: uno per atmosfera, preparati una volta */
+  var cieli = UMORI.map(function (u) {
+    var o = document.createElement("canvas"); o.width = W; o.height = H;
+    var g = o.getContext("2d");
+    var lin = g.createLinearGradient(0, 0, 0, H); lin.addColorStop(0, u.alto); lin.addColorStop(1, u.basso);
+    g.fillStyle = lin; g.fillRect(0, 0, W, H);
+    var rad = g.createRadialGradient(W / 2, H * 1.05, 10, W / 2, H * 1.05, H * 0.75);
+    rad.addColorStop(0, css(rgb(u.c[0]), 0.22)); rad.addColorStop(1, css(rgb(u.c[0]), 0));
+    g.fillStyle = rad; g.fillRect(0, 0, W, H);
+    return o;
+  });
+
+  var semi = [], fiori = [], polline = [], fili = [];
+  for (var i = 0; i < 40; i++) polline.push({ x: Math.random() * W, y: Math.random() * H, r: 0.8 + Math.random() * 1.4, v: 4 + Math.random() * 8, f: Math.random() * 6 });
+  var cursore = null, fermo = 0, fantasma = { x: W / 2, y: H / 2, tx: W / 2, ty: H / 2, d: 7, timer: 1.5, attivo: false };
+
+  /* ---------------- suono */
+  var ac = null, uscita = null, riverbero = null;
+  function apriAudio() {
+    var C = window.AudioContext || window.webkitAudioContext;
+    if (!C) return false;
+    ac = new C();
+    var comp = ac.createDynamicsCompressor();
+    comp.threshold.value = -14; comp.ratio.value = 4;
+    comp.connect(ac.destination);
+    uscita = ac.createGain(); uscita.gain.value = 0.55; uscita.connect(comp);
+    var conv = ac.createConvolver(), len = Math.floor(ac.sampleRate * 3.2), ir = ac.createBuffer(2, len, ac.sampleRate);
+    for (var ch = 0; ch < 2; ch++) {
+      var d = ir.getChannelData(ch);
+      for (var k = 0; k < len; k++) d[k] = (Math.random() * 2 - 1) * Math.pow(1 - k / len, 2.6);
+    }
+    conv.buffer = ir;
+    riverbero = ac.createGain(); riverbero.gain.value = 0.42;
+    riverbero.connect(conv); conv.connect(comp);
+    var eco = ac.createDelay(1.0), ritorno = ac.createGain(), tono = ac.createBiquadFilter();
+    eco.delayTime.value = 0.42; ritorno.gain.value = 0.32; tono.type = "lowpass"; tono.frequency.value = 2400;
+    uscita.connect(eco); eco.connect(tono); tono.connect(ritorno); ritorno.connect(eco); ritorno.connect(riverbero);
+    var ecoOut = ac.createGain(); ecoOut.gain.value = 0.35; tono.connect(ecoOut); ecoOut.connect(comp);
+    uscita.connect(riverbero);
+    return true;
+  }
+  function suona(n, vel, pan) {
+    if (!ac) return;
+    var t = ac.currentTime + 0.01, f = 440 * Math.pow(2, (n - 69) / 12), voce = UMORI[umore].voce;
+    var amp = ac.createGain(), p = ac.createStereoPanner ? ac.createStereoPanner() : null;
+    if (p) { p.pan.value = pan; amp.connect(p); p.connect(uscita); } else amp.connect(uscita);
+    var v = 0.08 + 0.32 * vel * vel, fine = t + 5;
+    function inv(g, a, att, dur) { g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(a, t + att); g.gain.exponentialRampToValueAtTime(0.0001, t + att + dur); }
+    function osc(tipo, fr) { var o = ac.createOscillator(); o.type = tipo; o.frequency.value = fr; return o; }
+    if (voce === "campana") {
+      var c = osc("sine", f), m = osc("sine", f * 3.5), mi = ac.createGain();
+      mi.gain.setValueAtTime(f * 2.2, t); mi.gain.exponentialRampToValueAtTime(f * 0.05, t + 1.2);
+      m.connect(mi); mi.connect(c.frequency); c.connect(amp); inv(amp, v, 0.003, 4.5);
+      c.start(t); m.start(t); c.stop(fine); m.stop(fine);
+    } else if (voce === "vetro" || voce === "kalimba") {
+      var parti = voce === "vetro" ? [[1, 1, 3.2], [2.756, 0.35, 1.4], [5.404, 0.15, 0.7]] : [[1, 1, 2.2], [6.27, 0.25, 0.16]];
+      parti.forEach(function (q) {
+        if (f * q[0] > 16000) return;
+        var o = osc("sine", f * q[0]), g = ac.createGain(); o.connect(g); g.connect(amp);
+        inv(g, q[1], 0.004, q[2]); o.start(t); o.stop(t + q[2] + 0.1);
+      });
+      amp.gain.value = v;
+    } else if (voce === "arpa") {
+      var s = osc("sawtooth", f), filtro = ac.createBiquadFilter();
+      filtro.type = "lowpass"; filtro.Q.value = 0.7;
+      filtro.frequency.setValueAtTime(f * 8, t); filtro.frequency.exponentialRampToValueAtTime(f * 1.2, t + 0.8);
+      s.connect(filtro); filtro.connect(amp); inv(amp, v * 0.6, 0.002, 3.2); s.start(t); s.stop(fine);
+    } else if (voce === "soffio") {
+      var o2 = osc("sine", f), br = ac.createBufferSource(), nb = ac.createBuffer(1, ac.sampleRate * 2, ac.sampleRate), bp = ac.createBiquadFilter(), bg = ac.createGain();
+      var nd = nb.getChannelData(0); for (var j = 0; j < nd.length; j++) nd[j] = Math.random() * 2 - 1;
+      br.buffer = nb; br.loop = true; bp.type = "bandpass"; bp.frequency.value = f; bp.Q.value = 9; bg.gain.value = 0.9;
+      br.connect(bp); bp.connect(bg); bg.connect(amp); o2.connect(amp);
+      amp.gain.setValueAtTime(0.0001, t); amp.gain.exponentialRampToValueAtTime(v * 0.8, t + 0.4); amp.gain.exponentialRampToValueAtTime(0.0001, t + 4.2);
+      o2.start(t); br.start(t); o2.stop(fine); br.stop(fine);
+    } else {
+      var gq = osc("sine", f * 0.58); gq.frequency.exponentialRampToValueAtTime(f, t + 0.03);
+      gq.connect(amp); inv(amp, v, 0.001, 0.5); gq.start(t); gq.stop(t + 0.7);
+    }
+  }
+
+  /* ---------------- giardino */
+  function ora() { return performance.now() / 1000; }
+  function sboccia(x, y, s, col) {
+    if (fiori.length > 70) fiori.shift();
+    fiori.push({ x: x, y: y, s: s, col: col, eta: 0, vita: 2.2 + 1.2 * s, rot: Math.random() * 6.28, petali: Math.random() < 0.5 ? 5 : 6 });
+  }
+  function pianta(x, y, vel, sogno) {
+    var d = cordaY(y), t = ora();
+    if (semi.length >= 30) semi.shift();
+    var seme = { d: d, x: (x - LEFT) / (RIGHT - LEFT), vel: vel, prossimo: t + GIRO, fatti: 0, luce: 1, sogno: sogno };
+    semi.push(seme);
+    accendi(seme, vel);
+  }
+  function accendi(seme, vel) {
+    var y = yCorda(Math.min(seme.d, corde() - 1)), x = LEFT + seme.x * (RIGHT - LEFT), h = (BOT - y) / (BOT - TOP);
+    sboccia(x, y, vel, colore(h));
+    fili[seme.d] = Math.max(fili[seme.d] || 0, 0.4 + 0.6 * vel);
+    seme.luce = 1;
+    suona(nota(Math.min(seme.d, corde() - 1)), vel, (seme.x * 2 - 1) * 0.85);
+  }
+
+  function punto(e) {
+    var r = cv.getBoundingClientRect();
+    return { x: (e.clientX - r.left) / r.width * W, y: (e.clientY - r.top) / r.height * H };
+  }
+  cv.addEventListener("pointerdown", function (e) {
+    var p = punto(e);
+    fermo = 0; fantasma.attivo = false;
+    pianta(Math.max(LEFT, Math.min(RIGHT, p.x)), Math.max(TOP, Math.min(BOT, p.y)), 0.8, false);
+  });
+  cv.addEventListener("pointermove", function (e) { cursore = punto(e); });
+  cv.addEventListener("pointerleave", function () { cursore = null; });
+
+  Array.prototype.forEach.call(document.querySelectorAll(".chip[data-umore]"), function (b) {
+    b.addEventListener("click", function () {
+      var u = +b.getAttribute("data-umore");
+      if (u === umore) return;
+      cieloDa = umore; cieloT = 0; umore = u;
+      Array.prototype.forEach.call(document.querySelectorAll(".chip[data-umore]"), function (o) { o.setAttribute("aria-pressed", o === b ? "true" : "false"); });
+    });
+  });
+  var bs = document.getElementById("suono");
+  bs.addEventListener("click", function () {
+    if (!ac && !apriAudio()) { bs.textContent = "Audio non disponibile"; return; }
+    if (ac.state === "suspended") ac.resume();
+    var acceso = bs.getAttribute("aria-pressed") !== "true";
+    uscita.gain.setTargetAtTime(acceso ? 0.55 : 0, ac.currentTime, 0.05);
+    bs.setAttribute("aria-pressed", acceso ? "true" : "false");
+    bs.textContent = acceso ? "Spegni il suono" : "Accendi il suono";
+  });
+  /* senza suono acceso, ac resta null e suona() non fa niente */
+  function attivo() { return ac && bs.getAttribute("aria-pressed") === "true"; }
+  var suonaVero = suona;
+  suona = function (n, v, p) { if (attivo()) suonaVero(n, v, p); };
+
+  /* ---------------- disegno */
+  function bagliore(x, y, r, col, a) {
+    if (a <= 0.004 || r < 0.5) return;
+    var g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, css(col, a)); g.addColorStop(0.45, css(col, a * 0.45)); g.addColorStop(1, css(col, 0));
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, 6.2832); ctx.fill();
+  }
+  function anello(x, y, r, w, col, a) {
+    if (a <= 0.004) return;
+    ctx.strokeStyle = css(col, a); ctx.lineWidth = w; ctx.beginPath(); ctx.arc(x, y, r, 0, 6.2832); ctx.stroke();
+  }
+  var bianco = [255, 255, 255], prima = ora(), visibile = true;
+
+  function passo() {
+    var t = ora(), dt = Math.min(0.1, t - prima);
+    prima = t;
+    if (!visibile) { requestAnimationFrame(passo); return; }
+    /* i ritorni */
+    for (var i = semi.length - 1; i >= 0; i--) {
+      var s = semi[i];
+      if (t >= s.prossimo) {
+        s.fatti++;
+        var v = s.vel * Math.pow(1 - s.fatti / (MEMORIA + 1), 0.85);
+        if (Math.random() < 0.08) s.d = Math.max(0, Math.min(corde() - 1, s.d + (Math.random() < 0.5 ? -1 : 1)));
+        accendi(s, v);
+        s.prossimo += GIRO;
+        if (t > s.prossimo) s.prossimo = t + GIRO;
+        if (s.fatti >= MEMORIA) semi.splice(i, 1);
+      }
+      s.luce *= Math.exp(-dt * 1.6);
+    }
+    /* il sogno */
+    fermo += dt;
+    if (!calmo && fermo > 3.5) {
+      if (!fantasma.attivo) { fantasma.attivo = true; fantasma.x = cursore ? cursore.x : W / 2; fantasma.y = cursore ? cursore.y : H / 2; fantasma.timer = 0.8; }
+      fantasma.x += (fantasma.tx - fantasma.x) * (1 - Math.exp(-dt * 4));
+      fantasma.y += (fantasma.ty - fantasma.y) * (1 - Math.exp(-dt * 4));
+      fantasma.timer -= dt;
+      if (fantasma.timer <= 0) {
+        if (semi.length < 16) pianta(fantasma.tx, fantasma.ty, 0.45 + Math.random() * 0.4, true);
+        var passi = [-3, -2, -2, -1, -1, -1, 1, 1, 1, 2, 2, 3], n = corde();
+        fantasma.d = Math.max(2, Math.min(n - 3, fantasma.d + passi[(Math.random() * 12) | 0]));
+        fantasma.tx = Math.max(LEFT + 20, Math.min(RIGHT - 20, fantasma.tx + (Math.random() - 0.5) * 220));
+        fantasma.ty = yCorda(fantasma.d);
+        fantasma.timer = semi.length < 5 ? 0.9 + Math.random() * 1.4 : 1.6 + Math.random() * 2.4;
+      }
+    }
+
+    ctx.setTransform(2, 0, 0, 2, 0, 0);
+    ctx.globalCompositeOperation = "source-over";
+    ctx.globalAlpha = 1;
+    if (cieloT < 1 && cieloDa !== null) {
+      cieloT = Math.min(1, cieloT + dt / 1.2);
+      ctx.drawImage(cieli[cieloDa], 0, 0);
+      ctx.globalAlpha = cieloT; ctx.drawImage(cieli[umore], 0, 0); ctx.globalAlpha = 1;
+    } else ctx.drawImage(cieli[umore], 0, 0);
+    ctx.globalCompositeOperation = "lighter";
+
+    var u = UMORI[umore], n = corde();
+    for (var d = 0; d < n; d++) {
+      var y = yCorda(d), tonica = d % u.scala.length === 0;
+      fili[d] = (fili[d] || 0) * Math.exp(-dt * 2.2);
+      ctx.fillStyle = css(colore((BOT - y) / (BOT - TOP)), (tonica ? 0.11 : 0.05) + 0.35 * fili[d]);
+      ctx.fillRect(LEFT, y - 0.5, RIGHT - LEFT, 1);
+    }
+    var cp = rgb(u.c[2]);
+    polline.forEach(function (p) {
+      if (!calmo) { p.y -= p.v * dt; p.f += dt; p.x += Math.sin(p.f) * 5 * dt; if (p.y < 0) { p.y = H; p.x = Math.random() * W; } }
+      bagliore(p.x, p.y, p.r * 2.4, cp, 0.10 + 0.08 * Math.sin(p.f * 2));
+    });
+    semi.forEach(function (s) {
+      var y = yCorda(Math.min(s.d, n - 1)), x = LEFT + s.x * (RIGHT - LEFT), col = colore((BOT - y) / (BOT - TOP)), vita = 1 - s.fatti / (MEMORIA + 1);
+      bagliore(x, y, 10 + 12 * s.luce, col, 0.14 + 0.25 * vita + 0.3 * s.luce);
+      bagliore(x, y, 2.6, mix(col, bianco, 0.5), 0.6);
+    });
+    for (var k = fiori.length - 1; k >= 0; k--) {
+      var f = fiori[k];
+      f.eta += dt;
+      var q = f.eta / f.vita;
+      if (q >= 1) { fiori.splice(k, 1); continue; }
+      var w = 1 - q, e = 1 - w * w * w, r = 6 + (24 + 58 * f.s) * e;
+      anello(f.x, f.y, r, 0.8 + 1.6 * w, f.col, Math.pow(w, 1.6) * (0.3 + 0.45 * f.s));
+      bagliore(f.x, f.y, (14 + 22 * f.s) * (1 - 0.45 * q), f.col, w * w * (0.45 + 0.4 * f.s));
+      bagliore(f.x, f.y, 4 + 4 * f.s, mix(f.col, bianco, 0.6), w * w * w);
+      var pr = (14 + 30 * f.s) * (0.35 + 0.65 * e), pc = mix(f.col, bianco, 0.18);
+      for (var p2 = 0; p2 < f.petali; p2++) {
+        var ang = f.rot + 6.2832 * p2 / f.petali + q * 0.5, ca = Math.cos(ang), sa = Math.sin(ang);
+        bagliore(f.x + ca * pr * 0.38, f.y + sa * pr * 0.38, 7 * (0.6 + 0.8 * f.s) * (0.5 + 0.5 * w), pc, w * w * 0.3);
+        bagliore(f.x + ca * pr * 0.66, f.y + sa * pr * 0.66, 5.5 * (0.6 + 0.8 * f.s) * (0.5 + 0.5 * w), pc, w * w * 0.36);
+        bagliore(f.x + ca * pr * 0.9, f.y + sa * pr * 0.9, 3.6 * (0.6 + 0.8 * f.s) * (0.5 + 0.5 * w), pc, w * w * 0.3);
+      }
+    }
+    if (fantasma.attivo) anello(fantasma.x, fantasma.y, 11, 1.3, rgb(u.c[1]), 0.4);
+    if (cursore) {
+      anello(cursore.x, yCorda(cordaY(cursore.y)), 12, 1.8, cp, 0.8);
+      bagliore(cursore.x, yCorda(cordaY(cursore.y)), 16, cp, 0.12);
+    }
+    requestAnimationFrame(passo);
+  }
+
+  if ("IntersectionObserver" in window) {
+    new IntersectionObserver(function (v) { visibile = v[0].isIntersecting; }).observe(cv);
+  }
+  /* un giardino gia' iniziato: qualche fiore sparso, per chi arriva */
+  [[0.2, 0.62], [0.42, 0.3], [0.63, 0.55], [0.8, 0.22], [0.3, 0.82]].forEach(function (p, i) {
+    var x = LEFT + p[0] * (RIGHT - LEFT), y = TOP + p[1] * (BOT - TOP), d = cordaY(y);
+    semi.push({ d: d, x: p[0], vel: 0.7, prossimo: ora() + 0.8 + i * 1.6, fatti: 0, luce: 0.3, sogno: true });
+  });
+  requestAnimationFrame(passo);
+})();
+</script>
+</body>
+</html>

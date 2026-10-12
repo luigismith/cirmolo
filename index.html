@@ -93,6 +93,8 @@ p { margin: 0; }
 .scheda a.manuale { font-weight: 600; font-size: 0.92rem; }
 .scheda.speciale { border-color: var(--oro); background: linear-gradient(160deg, rgba(242, 196, 92, 0.1), var(--pannello) 60%); }
 .scheda.speciale h3 { color: var(--oro); }
+.scheda.speciale.fiore { border-color: #c9b8fb; background: linear-gradient(160deg, rgba(255, 138, 166, 0.12), rgba(155, 123, 240, 0.08) 45%, var(--pannello) 75%); }
+.scheda.speciale.fiore h3 { color: #c9b8fb; }
 
 .manuale-vetrina { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(24px, 4vw, 52px); align-items: center;
   background: var(--pannello); border: 1px solid var(--filo); border-radius: 22px; padding: clamp(18px, 3vw, 32px); }
@@ -153,6 +155,7 @@ p { margin: 0; }
       <div class="bottoni">
         <a class="bottone primo" href="https://github.com/luigismith/cirmolo/releases">Scarica l'ultima versione</a>
         <a class="bottone" href="openorc/">Manuale di OpenOrc</a>
+        <a class="bottone" href="fioritura/">Fioritura</a>
         <a class="bottone" href="https://github.com/luigismith/cirmolo">Codice su GitHub</a>
       </div>
       <p class="stato">In sviluppo, provato solo sulla Miyoo Flip. Lo usi a tuo rischio, come spruceOS. English: see the <a href="https://github.com/luigismith/cirmolo#readme">README</a>.</p>
@@ -188,11 +191,11 @@ p { margin: 0; }
     </div>
     <div class="schede">
       <div class="scheda speciale"><h3>OpenOrc</h3><p>Sintetizzatore di accordi ispirato all'Orchid, per la Akai MPK mini IV o i tasti della Flip. Sette motori (anche un coro di voci), 28 suoni in stereo con shimmer, nastro e pompa, i tuoi suoni salvati, looper a strati.</p><a class="manuale" href="openorc/">Leggi il manuale illustrato</a></div>
+      <div class="scheda speciale fiore"><h3>Fioritura</h3><p>Un giardino di suoni e luci: pianti una nota, fiorisce e torna a ogni respiro sempre più piano; se lo lasci stare, sogna da solo. Lucciole che rimbalzano in una griglia, sei atmosfere, Launchpad con i LED a colori.</p><a class="manuale" href="fioritura/">Scoprila e provala nel browser</a></div>
       <div class="scheda"><h3>Cirmolo Synth</h3><p>Otto voci con filtro risonante, batteria e sequencer a 16 passi, arpeggiatore, preset e registrazione in WAV.</p><span class="cartella">App/CirmoloSynth</span></div>
       <div class="scheda"><h3>Cirmolo Sampler</h3><p>Campionatore a pad con sequencer, registrazione dal microfono USB, libreria dei campioni ed esportazione in WAV.</p><span class="cartella">App/CirmoloSampler</span></div>
       <div class="scheda"><h3>Cirmolo Piano</h3><p>Strumento General MIDI con il SoundFont GeneralUser GS: 287 preset da suonare con la tastiera MIDI.</p><span class="cartella">App/CirmoloPiano</span></div>
       <div class="scheda"><h3>Diapason</h3><p>Accordatore, note di riferimento e metronomo.</p><span class="cartella">App/Diapason</span></div>
-      <div class="scheda"><h3>LittleGPTracker</h3><p>Il tracker a campioni nato per i gamepad, nella build ufficiale con la mappatura del pad della Flip.</p><span class="cartella">App/LittleGPTracker</span></div>
     </div>
   </div>
 </section>
@@ -230,6 +233,8 @@ p { margin: 0; }
         <div class="bottoni" style="margin-top:4px"><a class="bottone primo" href="openorc/">Apri il manuale</a></div>
         <ul class="altri">
           <li><a href="openorc/prontuario/">Prontuario di OpenOrc</a><span>tutti i comandi in una pagina</span></li>
+          <li><a href="fioritura/">Fioritura</a><span>il giardino, le lucciole, il Launchpad</span></li>
+          <li><a href="https://github.com/luigismith/cirmolo/blob/cirmolo/App/Fioritura/MANUAL.it.md">Manuale di Fioritura, versione testo</a><span>anche in inglese</span></li>
           <li><a href="https://github.com/luigismith/cirmolo/blob/cirmolo/App/OpenOrc/MANUAL.it.md">Manuale di OpenOrc, versione testo</a><span>anche in inglese</span></li>
           <li><a href="https://github.com/luigismith/cirmolo/blob/cirmolo/App/OpenOrc/tastiere/akai-mpk-mini-iv.it.md">Scheda della Akai MPK mini IV</a><span>come collegarla e configurarla</span></li>
         </ul>

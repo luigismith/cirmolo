@@ -20,6 +20,7 @@
 #include "voice.h"
 #include "gfx.h"
 #include "json.h"
+#include "mdtext.h"
 #include "platform.h"
 
 #ifdef _WIN32
@@ -1023,6 +1024,28 @@ static void test_tools(const char *outdir)
     chat_destroy(a);
 }
 
+/* Segni del Markdown in linea: grassetto e corsivo spariscono, i conti e i nomi con _ restano. */
+static void test_markdown(void)
+{
+    static const struct { const char *src, *want; } cases[] = {
+        { "Un *corsivo* e un _altro_.", "Un corsivo e un altro." },
+        { "Un **grassetto**, un ***misto*** e __sottolineato__.", "Un grassetto, un misto e sottolineato." },
+        { "(*Zelda*) e *Metroid*!", "(Zelda) e Metroid!" },
+        { "2 * 3 * 4 = 24", "2 * 3 * 4 = 24" },
+        { "5*3=15 e 2*4=8", "5*3=15 e 2*4=8" },
+        { "il file nome_del_salvataggio_1.srm", "il file nome_del_salvataggio_1.srm" },
+        { "`*args* e a_b_c` restano, *questo no*", "*args* e a_b_c restano, questo no" },
+        { "una *stella sola", "una *stella sola" },
+        { "*così* è più *bello*", "così è più bello" },
+    };
+    for (size_t k = 0; k < sizeof(cases) / sizeof(cases[0]); k++) {
+        Wrap w = { 0 };
+        wrap_text(&w, cases[k].src, 600);
+        CHECK(!strcmp(w.disp.p, cases[k].want), "markdown: \"%s\" -> \"%s\"", cases[k].src, w.disp.p);
+        wrap_free(&w);
+    }
+}
+
 int main(int argc, char **argv)
 {
     setvbuf(stdout, NULL, _IONBF, 0);             /* se una prova va in crash, si vede fin dove e' arrivata */
@@ -1049,6 +1072,8 @@ int main(int argc, char **argv)
     printf("strumenti: %d controlli, %d errori\n", checks, fails);
     test_i18n(outdir);
     printf("traduzioni: %d controlli, %d errori\n", checks, fails);
+    test_markdown();
+    printf("markdown: %d controlli, %d errori\n", checks, fails);
     test_ui(outdir, langdir);
     printf("interfaccia: %d controlli, %d errori\n", checks, fails);
     printf("TOTALE: %d controlli, %d errori\n", checks, fails);

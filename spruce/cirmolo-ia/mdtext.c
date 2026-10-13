@@ -73,14 +73,36 @@ static void wrap_para(Wrap *w, int start, int end, int style, int first_indent, 
     if (pos > ls || ls == start) add_line(w, ls, pos - ls, style, cur_indent, lw);
 }
 
-/* Copia una riga di testo togliendo i segni del Markdown in linea (grassetto, codice). */
+static int is_word(unsigned char c) { return isalnum(c) || c >= 0x80; }
+
+/* Copia una riga di testo togliendo i segni del Markdown in linea (grassetto, corsivo, codice). Il testo tra
+   backtick resta com'e'. Un * o _ singolo e' corsivo solo se apre a inizio parola e chiude a fine parola sulla
+   stessa riga, cosi' "2 * 3", "5*3" e "nome_del_file" restano intatti. */
 static void add_inline(Buf *d, const char *p, int len)
 {
+    char *mark = calloc((size_t)len + 1, 1);   /* 1 = segno da togliere, 2 = dentro il codice */
+    if (!mark) abort();
+    int code = 0;
     for (int i = 0; i < len; i++) {
-        if ((p[i] == '*' || p[i] == '_') && i + 1 < len && p[i + 1] == p[i]) { i++; continue; }
-        if (p[i] == '`') continue;
-        buf_add(d, p + i, 1);
+        if (p[i] == '`') { mark[i] = 1; code = !code; continue; }
+        if (code) { mark[i] = 2; continue; }
+        if ((p[i] == '*' || p[i] == '_') && i + 1 < len && p[i + 1] == p[i]) { mark[i] = mark[i + 1] = 1; i++; }
     }
+    for (int i = 0; i < len; i++) {
+        char c = p[i];
+        if ((c != '*' && c != '_') || mark[i]) continue;
+        if (i + 1 >= len || p[i + 1] == ' ' || (i > 0 && is_word((unsigned char)p[i - 1]))) continue;
+        for (int j = i + 2; j < len; j++) {
+            if (mark[j] == 2) continue;
+            if (p[j] != c || mark[j] || p[j - 1] == ' ' || (j + 1 < len && is_word((unsigned char)p[j + 1]))) continue;
+            mark[i] = mark[j] = 1;
+            i = j;
+            break;
+        }
+    }
+    for (int i = 0; i < len; i++)
+        if (mark[i] != 1) buf_add(d, p + i, 1);
+    free(mark);
 }
 
 void wrap_text(Wrap *w, const char *src, int avail)

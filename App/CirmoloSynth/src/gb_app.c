@@ -1481,7 +1481,13 @@ static void knob_set(App *a, int k, float t, int relative)
         if (param_fraction(&ps[i], base) < 0) continue;
         if (c++ == k) { idx = i; break; }
     }
-    if (idx < 0) return;
+    if (idx < 0) {                                    /* batterie: l'ottava manopola e' la mandata al riverbero */
+        if (k != 7 || is_melodic(a->snd_track)) return;
+        GbMix *m = gb_mix(a->g, a->snd_track);
+        m->reverb_send = clampf(relative ? m->reverb_send + t : t, 0, 1);
+        changed(a);
+        return;
+    }
     float v = relative ? param_fraction(&ps[idx], base) + t : t;
     param_set_fraction(&ps[idx], base, v);
     a->snd_sel = idx;
@@ -1744,14 +1750,21 @@ static void draw_editor(App *a, Canvas *c)
 {
     int f[MAX_FIELDS], n = editor_fields(a, f);
     int x = 300, y = 52, w = 330, rh = 21;
-    int h = 38 + n * rh;
+    /* le tracce melodiche hanno 20 campi: oltre 17 righe la lista scorre e tiene in vista quello scelto */
+    int vis = n < 17 ? n : 17, first = 0;
+    if (n > vis) first = clampi(a->ed_sel - vis / 2, 0, n - vis);
+    int h = 38 + vis * rh;
     panel(c, x, y, w, h, 14, C_PANEL_HI);
     gfx_round_frame(c, x, y, w, h, 14, 1.5f, track_color(a, a->cy), 1.0f);
     char t[96];
     snprintf(t, sizeof(t), "Passo %d · %s", a->cx + 1, track_label(a, a->cy));
     gfx_text(c, FONT_BOLD, x + 14, y + 25, t, C_TEXT);
-    for (int i = 0; i < n; i++) {
-        int yy = y + 34 + i * rh;
+    for (int k = 0; k < 5; k++) {                     /* triangolini: c'e' altro sopra / sotto */
+        if (first > 0) gfx_rect(c, x + w - 40 - k, y + 12 + k, 1 + 2 * k, 1, C_MUTED);
+        if (first + vis < n) gfx_rect(c, x + w - 24 - k, y + 20 - k, 1 + 2 * k, 1, C_MUTED);
+    }
+    for (int i = first; i < first + vis; i++) {
+        int yy = y + 34 + (i - first) * rh;
         if (f[i] == F_HEADER) {
             gfx_rect(c, x + 14, yy + 10, w - 28, 1, C_LINE);
             gfx_rect(c, x + 14, yy + 3, gfx_text_width(FONT_SMALL, "Traccia") + 10, 14, C_PANEL_HI);

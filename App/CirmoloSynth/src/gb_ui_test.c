@@ -121,6 +121,10 @@ int main(int argc, char **argv)
     press(a, PAD_UP);
     app_button(a, PAD_B, 0);
     CHECK(ac->note == note + 1, "B + su alza la nota dell'acido (%d -> %d)", note, ac->note);
+    press(a, PAD_X);                          /* scheda dell'acido: 20 campi, la lista scorre */
+    for (int i = 0; i < 18; i++) press(a, PAD_DOWN);
+    shot(a, &c, out, "ritmo-scheda-acido");
+    press(a, PAD_B);
     app_set_cursor(a, 2, 1);
     press(a, PAD_X);
     press(a, PAD_DOWN);                       /* probabilita' (dopo dinamica) */

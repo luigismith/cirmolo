@@ -4,9 +4,9 @@
 # con spruce/cirmolo. RELEASE_VERSION resta la base spruce (spruce/spruce), per le versioni senza questo campo.
 # RELEASE_LINK/RELEASE_CHECKSUM (md5)/RELEASE_SIZE_IN_MB = pacchetto completo della release su GitHub.
 # Va aggiornato a ogni release pubblicata.
-CIRMOLO_VERSION=0.2.0
-RELEASE_VERSION=4.5.2
-RELEASE_CHECKSUM=09c8062c560384dc7e313e90df152f18
-RELEASE_SIZE_IN_MB=1456
-RELEASE_LINK=https://github.com/luigismith/cirmolo/releases/download/v0.2.0/cirmolo-0.2.0.7z
-RELEASE_INFO=https://github.com/luigismith/cirmolo/releases/tag/v0.2.0
+CIRMOLO_VERSION=0.3.0
+RELEASE_VERSION=4.5.3
+RELEASE_CHECKSUM=c7569905289383e7db76d214c6c52814
+RELEASE_SIZE_IN_MB=1562
+RELEASE_LINK=https://github.com/luigismith/cirmolo/releases/download/v0.3.0/cirmolo-0.3.0.7z
+RELEASE_INFO=https://github.com/luigismith/cirmolo/releases/tag/v0.3.0

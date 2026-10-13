@@ -2,6 +2,6 @@
   "label": "Cirmolo Synth",
   "icon": "cirmolosynth.png",
   "launch": "launch.sh",
-  "description": "Synthesizer, drum machine and 16-step sequencer",
+  "description": "Groovebox: 26 synthesized drum kits, acid bass, West Coast synth, sequencer",
   "devices": ["MIYOO_FLIP"]
 }

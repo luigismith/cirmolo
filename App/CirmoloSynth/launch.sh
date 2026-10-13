@@ -1,5 +1,6 @@
 #!/bin/sh
-# Cirmolo Synth: sintetizzatore, batteria e sequencer (sorgenti in src/).
+# Cirmolo Synth: groovebox con 26 batterie sintetizzate, basso acido, synth West Coast e sequencer
+# (sorgenti in src/). Stato e registrazioni in /mnt/SDCARD/Saves/cirmolo-synth.
 
 . /mnt/SDCARD/spruce/scripts/helperFunctions.sh
 

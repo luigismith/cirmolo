@@ -62,6 +62,9 @@ typedef struct {
        oppure un tasto di modifica (utf8 vuoto). Facoltativa: con questa il kit attiva l'inserimento di
        testo di SDL e i tasti della tastiera non fanno piu' da tasti della Flip. */
     void (*text_input)(void *app, const char *utf8, int special);
+    /* Campioni per blocco dell'uscita audio (0 = 1024, 21 ms). Meno campioni = meno ritardo fra un tasto e
+       il suono, ma il calcolo di ogni blocco deve stare nel tempo del blocco. Facoltativa. */
+    int audio_samples;
 } CirmoloApp;
 
 enum { TEXT_CHARS, TEXT_BACKSPACE, TEXT_ENTER, TEXT_LEFT, TEXT_RIGHT, TEXT_UP, TEXT_DOWN, TEXT_DELETE };

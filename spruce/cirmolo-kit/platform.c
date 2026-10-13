@@ -53,7 +53,8 @@ _Static_assert(PAD_A == 4 && PAD_SELECT == 12 && PAD_COUNT == 17, "nomi dei tast
     X(SDL_CloseAudioDevice) X(SDL_Delay) X(SDL_GetTicks) X(SDL_ShowCursor) X(SDL_NumJoysticks) \
     X(SDL_IsGameController) X(SDL_GameControllerOpen) X(SDL_GetRendererInfo) \
     X(SDL_SetHint) X(SDL_GetCurrentDisplayMode) X(SDL_GetNumAudioDevices) X(SDL_GetAudioDeviceName) \
-    X(SDL_StartTextInput) X(SDL_ConvertSurfaceFormat) X(SDL_FreeSurface)
+    X(SDL_StartTextInput) X(SDL_ConvertSurfaceFormat) X(SDL_FreeSurface) \
+    X(SDL_GetPerformanceCounter) X(SDL_GetPerformanceFrequency)
 
 #define DECL(f) static __typeof__(f) *p_##f;
 SDL_FUNCS(DECL)
@@ -155,12 +156,25 @@ int cirmolo_load_image(const char *path, int maxw, int maxh, uint32_t **px, int 
 static const CirmoloApp *g_desc;
 static void *g_app;
 
+/* Tempi per il registro (vedi il ciclo principale): blocchi audio arrivati tardi e tempo di calcolo. */
+static double g_audio_period;          /* secondi per blocco, impostato all'apertura */
+static Uint64 g_audio_prev;
+static int g_audio_late, g_audio_blocks;
+static double g_audio_busy;            /* secondi spesi nel calcolo dell'audio */
+
 static void audio_cb(void *ud, Uint8 *stream, int len)
 {
     (void)ud;
+    Uint64 t0 = p_SDL_GetPerformanceCounter();
+    double f = (double)p_SDL_GetPerformanceFrequency();
+    if (g_audio_prev && g_audio_period > 0 && (t0 - g_audio_prev) / f > g_audio_period * 1.6)
+        __atomic_add_fetch(&g_audio_late, 1, __ATOMIC_RELAXED);
+    g_audio_prev = t0;
     void *app = __atomic_load_n(&g_app, __ATOMIC_ACQUIRE);
     if (app) g_desc->audio(app, (float *)stream, len / (int)(2 * sizeof(float)));
     else memset(stream, 0, (size_t)len);
+    g_audio_busy += (p_SDL_GetPerformanceCounter() - t0) / f;
+    __atomic_add_fetch(&g_audio_blocks, 1, __ATOMIC_RELAXED);
 }
 
 static void capture_cb(void *ud, Uint8 *stream, int len)
@@ -550,7 +564,8 @@ int main(int argc, char **argv)
     want.freq = 48000;
     want.format = AUDIO_F32SYS;
     want.channels = 2;
-    want.samples = 1024;              /* con 512 ALSA segnalava qualche underrun sulla Flip */
+    want.samples = g_desc->audio_samples > 0 ? g_desc->audio_samples : 1024;   /* 1024: con 512 ALSA segnalava
+                                                       qualche underrun sulla Flip (app con molto calcolo) */
     want.callback = audio_cb;
     const char *out_name = g_desc->usb_output ? usb_output_name() : NULL;
     SDL_AudioDeviceID dev = p_SDL_OpenAudioDevice(out_name, 0, &want, &have, SDL_AUDIO_ALLOW_FREQUENCY_CHANGE);
@@ -559,6 +574,7 @@ int main(int argc, char **argv)
     float rate = dev ? (float)have.freq : 48000.0f;
     if (!dev) fprintf(stderr, "audio non disponibile: %s\n", p_SDL_GetError());
     else fprintf(stderr, "audio: %d Hz, %d campioni per blocco\n", have.freq, have.samples);
+    if (dev && have.freq > 0) g_audio_period = (double)have.samples / have.freq;
     void *app = g_desc->create(rate, state);
     if (!app) { fprintf(stderr, "l'app non e' partita\n"); p_SDL_Quit(); return 1; }
     __atomic_store_n(&g_app, app, __ATOMIC_RELEASE);
@@ -604,6 +620,10 @@ int main(int argc, char **argv)
     (void)l2p; (void)r2p;
     uint32_t last = p_SDL_GetTicks();
     int frames = 0, running = 1;
+    /* registro dei tempi ogni 30 s: fotogrammi, disegno (app + texture + presentazione), audio */
+    uint32_t stat_t = last;
+    int stat_frames = 0, stat_draws = 0;
+    double stat_draw = 0, stat_draw_max = 0, pf = (double)p_SDL_GetPerformanceFrequency();
 
     while (running) {
         SDL_Event e;
@@ -686,11 +706,29 @@ int main(int argc, char **argv)
 
         int fresh = frames < 2 || !g_desc->needs_draw || g_desc->needs_draw(app);
         if (fresh) {
+            Uint64 d0 = p_SDL_GetPerformanceCounter();
             g_desc->draw(app, &canvas);
             p_SDL_UpdateTexture(tex, NULL, px, W * 4);
+            double dd = (p_SDL_GetPerformanceCounter() - d0) / pf * 1000.0;
+            stat_draw += dd;
+            if (dd > stat_draw_max) stat_draw_max = dd;
+            stat_draws++;
             p_SDL_RenderClear(ren);
             p_SDL_RenderCopy(ren, tex, NULL, NULL);
             p_SDL_RenderPresent(ren);
+        }
+        stat_frames++;
+        if (now - stat_t >= 30000) {
+            int blocks = __atomic_exchange_n(&g_audio_blocks, 0, __ATOMIC_RELAXED);
+            int late = __atomic_exchange_n(&g_audio_late, 0, __ATOMIC_RELAXED);
+            double busy = g_audio_busy;
+            g_audio_busy = 0;
+            fprintf(stderr, "tempi: %.1f giri/s, %d disegni (medio %.1f ms, massimo %.1f ms), audio %.0f%% del tempo, %d blocchi in ritardo su %d\n",
+                    stat_frames * 1000.0 / (now - stat_t), stat_draws, stat_draws ? stat_draw / stat_draws : 0.0, stat_draw_max,
+                    blocks && g_audio_period > 0 ? busy / (blocks * g_audio_period) * 100.0 : 0.0, late, blocks);
+            stat_t = now;
+            stat_frames = stat_draws = 0;
+            stat_draw = stat_draw_max = 0;
         }
         if (!vsync || !fresh) {                   /* senza presentazione non c'e' il vsync ad aspettare */
             uint32_t spent = p_SDL_GetTicks() - now;

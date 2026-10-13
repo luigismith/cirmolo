@@ -19,6 +19,9 @@ void app_button(App *a, int button, int pressed);
 void app_axes(App *a, float lx, float ly, float rx, float ry, float l2, float r2);
 /* Tastiera MIDI USB (spruce/cirmolo-kit/midi.h): un messaggio completo; nome del dispositivo o NULL. */
 void app_midi(App *a, const unsigned char *msg, int len);
+/* Lo stesso dalla porta data (0 = la prima): dalle altre porte solo le manopole (la MPK mini IV le manda
+   sulla seconda, dove ripete anche pad e tasti). */
+void app_midi_port(App *a, int port, const unsigned char *msg, int len);
 void app_midi_status(App *a, const char *device);
 void app_update(App *a, float dt);
 void app_draw(App *a, Canvas *c);

@@ -614,6 +614,37 @@ int main(int argc, char **argv)
         check(fabsf(vol_cc - 0.756f) < 0.01f && fabsf(pitch_cc - 12.0f) < 0.01f && bpm_cc == 240.0f && fabsf(swing_cc - 0.6f) < 0.01f && fabsf(master_cc - 0.504f) < 0.01f, "le manopole CC70-77 non agiscono");
         check(bank_pc == 1 && pat_pc == 2, "il program change non cambia banco o pattern");
         check(started && fabsf(bpm_clock - 140.0f) <= 1.0f && stopped, "il clock MIDI non sincronizza il sequencer");
+        /* MPK mini IV: manopole CC 24-31 sulla porta 2, relative; pad e tasti ripetuti sulla porta 2 */
+        app_select_pad(a, 0);
+        sampler_set_tempo(s, 120.0f);
+        midi3p(1, 0xB0, 28, 5);                          /* K5 a destra di 5 scatti */
+        float bpm_up = sampler_tempo(s);
+        midi3p(1, 0xB0, 28, 125);                        /* e a sinistra di 3 */
+        float bpm_down = sampler_tempo(s);
+        sampler_pad(s, 0)->volume = 0.75f;
+        midi3p(1, 0xB0, 24, 127);                        /* K1 a sinistra di 1 */
+        float vol_rel = sampler_pad(s, 0)->volume;
+        uint32_t f_dup = sampler_slot_flash(s, 0);
+        midi3p(1, 0x99, 36, 100);                        /* il doppione del pad dalla porta 2 */
+        midi3p(1, 0x89, 36, 0);
+        run(0.1f);
+        int dup_hits = (int)(sampler_slot_flash(s, 0) - f_dup);
+        midi3p(1, 0xB0, 30, 64);                         /* K7 a meta' corsa: la tastiera e' in modo assoluto */
+        float master_abs = sampler_volume(s);
+        midi3p(1, 0xB0, 30, 5);
+        float master_abs_low = sampler_volume(s);
+        app_midi_status(a, NULL);
+        app_midi_status(a, "MPKminiIV");                 /* tastiera ricollegata: di nuovo relative */
+        midi3p(1, 0xB0, 30, 2);
+        float master_rel = sampler_volume(s);
+        midi3(0xB0, 76, 102);
+        printf("MPK mini IV: K5 120 -> %.0f -> %.0f BPM, K1 0.75 -> %.3f, pad dalla porta 2 %d colpi, K7 assoluta %.3f %.3f, ricollegata %.3f\n",
+               bpm_up, bpm_down, vol_rel, dup_hits, master_abs, master_abs_low, master_rel);
+        check(bpm_up == 125.0f && bpm_down == 122.0f, "le manopole relative della MPK mini IV non cambiano il tempo");
+        check(fabsf(vol_rel - (0.75f - 1.5f / 127.0f)) < 0.002f, "la manopola relativa K1 non agisce sul pad scelto");
+        check(dup_hits == 0, "i pad ripetuti sulla porta 2 suonano due volte");
+        check(fabsf(master_abs - 64 / 127.0f) < 0.002f && fabsf(master_abs_low - 5 / 127.0f) < 0.002f, "le manopole assolute CC 24-31 non agiscono");
+        check(fabsf(master_rel - 7 / 127.0f) < 0.002f, "ricollegando la tastiera le manopole non tornano relative");
         app_midi_status(a, NULL);
         shot(out, "2-modifica.bmp", &c);
     }

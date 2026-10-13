@@ -206,6 +206,7 @@ struct App {
     char midi_name[64];
     float midi_bend, midi_mod;
     int midi_sustain, midi_held[128], midi_sustained[128];
+    int knobs_abs;                      /* manopole CC 24-31 assolute (MPK mini IV con KnobM su Abs) */
     int sel;
     float scroll;
     int audition;
@@ -916,6 +917,7 @@ void app_axes(App *a, float lx, float ly, float rx, float ry, float l2, float r2
 void app_midi_status(App *a, const char *device)
 {
     snprintf(a->midi_name, sizeof(a->midi_name), "%s", device ? device : "");
+    a->knobs_abs = 0;                     /* ogni tastiera si riconosce da capo */
     if (!device) {                                     /* scollegata: niente note appese */
         for (int n = 0; n < 128; n++)
             if (a->midi_held[n] || a->midi_sustained[n]) synth_note_off(a->s, n);
@@ -931,24 +933,59 @@ void app_midi_status(App *a, const char *device)
     }
 }
 
-/* Manopole della MPK Mini (CC 70-77 nel programma predefinito): parametri principali del suono. */
-static void midi_knob(App *a, int cc, int v)
+/* Le otto manopole: K1 filtro, K2 risonanza, K3 inviluppo del filtro, K4 attacco, K5 rilascio,
+   K6 velocita' dell'LFO, K7 eco, K8 riverbero. Ognuna come valore 0..1, da leggere e da scrivere. */
+static float knob_get(App *a, int k)
 {
     SynthPatch *p = synth_patch(a->s);
     FxParams *fx = synth_fx(a->s);
-    float t = v / 127.0f;
-    switch (cc) {
-    case 70: p->cutoff = t; break;
-    case 71: p->resonance = t * 0.97f; break;
-    case 72: p->env_amount = t * 2.0f - 1.0f; break;
-    case 73: p->a_attack = 0.001f * powf(5000.0f, t); break;           /* 1 ms .. 5 s */
-    case 74: p->a_release = 0.005f * powf(1600.0f, t); break;          /* 5 ms .. 8 s */
-    case 75: p->lfo_rate = 0.05f * powf(400.0f, t); break;             /* 0,05 .. 20 Hz */
-    case 76: fx->delay_mix = t; break;
-    case 77: fx->reverb_mix = t; break;
-    default: return;
+    switch (k) {
+    case 0: return p->cutoff;
+    case 1: return p->resonance / 0.97f;
+    case 2: return (p->env_amount + 1.0f) * 0.5f;
+    case 3: return logf(p->a_attack / 0.001f) / logf(5000.0f);
+    case 4: return logf(p->a_release / 0.005f) / logf(1600.0f);
+    case 5: return logf(p->lfo_rate / 0.05f) / logf(400.0f);
+    case 6: return fx->delay_mix;
+    default: return fx->reverb_mix;
+    }
+}
+
+static void knob_set(App *a, int k, float t)
+{
+    SynthPatch *p = synth_patch(a->s);
+    FxParams *fx = synth_fx(a->s);
+    t = fminf(1.0f, fmaxf(0.0f, t));
+    switch (k) {
+    case 0: p->cutoff = t; break;
+    case 1: p->resonance = t * 0.97f; break;
+    case 2: p->env_amount = t * 2.0f - 1.0f; break;
+    case 3: p->a_attack = 0.001f * powf(5000.0f, t); break;            /* 1 ms .. 5 s */
+    case 4: p->a_release = 0.005f * powf(1600.0f, t); break;           /* 5 ms .. 8 s */
+    case 5: p->lfo_rate = 0.05f * powf(400.0f, t); break;              /* 0,05 .. 20 Hz */
+    case 6: fx->delay_mix = t; break;
+    default: fx->reverb_mix = t; break;
     }
     a->modified = 1;
+}
+
+/* Manopole: CC 70-77 assolute (MPK mini 3); CC 24-31 della MPK mini IV, di fabbrica relative (1-63 a
+   destra, 65-127 a sinistra, misurato sulla Flip l'11/10/2026). Girando, i passi relativi restano vicini
+   a 0 o a 128: un valore a meta' corsa vuol dire che arrivano assolute (KnobM su Abs). */
+static void midi_knob(App *a, int cc, int v)
+{
+    if (cc >= 70 && cc <= 77) { knob_set(a, cc - 70, v / 127.0f); return; }
+    if (cc < 24 || cc > 31) return;
+    int k = cc - 24;
+    if (!a->knobs_abs && v >= 16 && v <= 111) a->knobs_abs = 1;
+    if (a->knobs_abs) knob_set(a, k, v / 127.0f);
+    else if (v != 0 && v != 64) knob_set(a, k, knob_get(a, k) + (v < 64 ? v : v - 128) / 127.0f);
+}
+
+void app_midi_port(App *a, int port, const unsigned char *m, int len)
+{
+    if (port == 0) { app_midi(a, m, len); return; }
+    if (len == 3 && (m[0] & 0xF0) == 0xB0) midi_knob(a, m[1], m[2]);
 }
 
 void app_midi(App *a, const unsigned char *m, int len)

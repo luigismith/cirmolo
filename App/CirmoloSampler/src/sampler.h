@@ -93,6 +93,7 @@ void sampler_release_all(Sampler *s);
 void sampler_set_sustain(Sampler *s, int on);            /* CC64: i rilasci dei pad tenuti aspettano */
 void sampler_set_bend(Sampler *s, float semitones);      /* pitch bend su tutte le voci */
 void sampler_set_cutoff(Sampler *s, float v);            /* filtro passa-basso sull'uscita, 0..1 (1 = aperto) */
+float sampler_cutoff(const Sampler *s);
 void  sampler_set_volume(Sampler *s, float v);
 float sampler_volume(const Sampler *s);
 

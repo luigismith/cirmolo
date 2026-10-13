@@ -97,6 +97,7 @@ struct App {
     char midi_name[64];
     float midi_flash;
     int sustain;
+    int knobs_abs;                        /* manopole CC 24-31 assolute (MPK mini IV con KnobM su Abs) */
     int chrom_slot[128];                  /* slot su cui suona ogni nota cromatica, -1 */
     int clock_ticks;
     float clock_start, clock_seen, clock_bpm;
@@ -891,6 +892,7 @@ void app_midi_status(App *a, const char *device)
 {
     int was = a->midi_name[0] != 0;
     snprintf(a->midi_name, sizeof(a->midi_name), "%s", device ? device : "");
+    a->knobs_abs = 0;                     /* ogni tastiera si riconosce da capo */
     if (!device) {
         if (a->lp.connected) lp_disconnect(&a->lp);
         if (was) { release_all(a); toast(a, "MIDI scollegato"); }
@@ -1023,20 +1025,58 @@ static void realtime(App *a, int st)
     }
 }
 
-static void midi_cc(App *a, int cc, int v)
+/* Le otto manopole: K1 volume del pad scelto, K2 intonazione, K3 inizio, K4 fine, K5 tempo, K6 swing,
+   K7 volume generale, K8 filtro. Ognuna come valore 0..1, da leggere (modo relativo) e da scrivere. */
+static float knob_get(App *a, int k)
 {
     PadParams *p = sampler_pad(a->s, a->sel);
+    switch (k) {
+    case 0: return p->volume / 1.5f;
+    case 1: return (p->pitch + 12.0f) / 24.0f;
+    case 2: return p->start;
+    case 3: return p->end;
+    case 4: return (sampler_tempo(a->s) - 40.0f) / 200.0f;
+    case 5: return sampler_swing(a->s) / 0.6f;
+    case 6: return sampler_volume(a->s);
+    default: return sampler_cutoff(a->s);
+    }
+}
+
+static void knob_set(App *a, int k, float x)
+{
+    PadParams *p = sampler_pad(a->s, a->sel);
+    x = clampf(x, 0.0f, 1.0f);
+    switch (k) {
+    case 0: p->volume = x * 1.5f; break;
+    case 1: p->pitch = roundf((x * 24.0f - 12.0f) * 10.0f) / 10.0f; break;
+    case 2: p->start = clampf(x, 0.0f, 0.99f); if (p->end < p->start + 0.01f) p->end = p->start + 0.01f; break;
+    case 3: p->end = clampf(x, 0.01f, 1.0f); if (p->start > p->end - 0.01f) p->start = p->end - 0.01f; break;
+    case 4: sampler_set_tempo(a->s, 40.0f + roundf(x * 200.0f)); break;
+    case 5: sampler_set_swing(a->s, x * 0.6f); break;
+    case 6: sampler_set_volume(a->s, x); break;
+    default: sampler_set_cutoff(a->s, x); break;
+    }
+}
+
+static void midi_cc(App *a, int cc, int v)
+{
+    if (cc >= 70 && cc <= 77) { knob_set(a, cc - 70, v / 127.0f); return; }   /* MPK mini 3: assolute */
+    if (cc >= 24 && cc <= 31) {
+        /* MPK mini IV di fabbrica: relative, 1-63 a destra e 65-127 a sinistra (misurato sulla Flip
+           l'11/10/2026). Girando, i passi restano vicini a 0 o a 128: un valore a meta' corsa vuol dire
+           che la tastiera manda valori assoluti (KnobM su Abs), e da li' in poi li si legge cosi'. */
+        int k = cc - 24;
+        if (!a->knobs_abs && v >= 16 && v <= 111) a->knobs_abs = 1;
+        if (a->knobs_abs) knob_set(a, k, v / 127.0f);
+        else if (v != 0 && v != 64) {
+            float step = k == 4 ? 1.0f / 200.0f : 1.0f / 127.0f;   /* il tempo a 1 BPM per scatto */
+            knob_set(a, k, knob_get(a, k) + (v < 64 ? v : v - 128) * step);
+        }
+        return;
+    }
     switch (cc) {
     case 64: a->sustain = v >= 64; sampler_set_sustain(a->s, a->sustain); break;
     case 7: sampler_set_volume(a->s, v / 127.0f); break;
-    case 70: p->volume = v / 127.0f * 1.5f; break;
-    case 71: p->pitch = roundf((v / 127.0f * 24.0f - 12.0f) * 10.0f) / 10.0f; break;
-    case 72: p->start = clampf(v / 127.0f, 0.0f, 0.99f); if (p->end < p->start + 0.01f) p->end = p->start + 0.01f; break;
-    case 73: p->end = clampf(v / 127.0f, 0.01f, 1.0f); if (p->start > p->end - 0.01f) p->start = p->end - 0.01f; break;
-    case 74: sampler_set_tempo(a->s, 40.0f + roundf(v / 127.0f * 200.0f)); break;
-    case 75: sampler_set_swing(a->s, v / 127.0f * 0.6f); break;
-    case 76: sampler_set_volume(a->s, v / 127.0f); break;
-    case 77: sampler_set_cutoff(a->s, v / 127.0f); break;
     case 120: case 123: release_all(a); break;
     }
 }
@@ -1057,6 +1097,9 @@ void app_midi_port(App *a, int port, const unsigned char *m, int len)
     }
     int type = MIDI_TYPE(m), ch = MIDI_CHANNEL(m);
     int d1 = len > 1 ? m[1] : 0, d2 = len > 2 ? m[2] : 0;
+    /* La MPK mini IV manda pad e tasti sia sulla porta 1 sia sulla 2, le manopole solo sulla 2: dalle
+       altre porte si prendono solo i CC, altrimenti ogni pad suonerebbe due volte. */
+    if (port > 0 && type != MIDI_CC) return;
     switch (type) {
     case MIDI_NOTE_ON:
     case MIDI_NOTE_OFF: {
@@ -1569,12 +1612,12 @@ static void draw_options(App *a, Canvas *c)
         "Pad canale 10, note 36-51: pad 1-16",
         "Tasti (altri canali): il pad scelto,",
         "   cromatico attorno al Do4",
-        "CC70 volume del pad scelto",
-        "CC71 intonazione del pad scelto",
-        "CC72 inizio · CC73 fine del pad",
-        "CC74 tempo (40-240 BPM)",
-        "CC75 swing · CC76 volume generale",
-        "CC77 filtro passa-basso",
+        "Manopole K1-K8 (MPK mini IV: CC24-31,",
+        "   relative o assolute; mk3: CC70-77)",
+        "K1 volume · K2 intonazione del pad",
+        "K3 inizio · K4 fine del pad",
+        "K5 tempo · K6 swing · K7 volume",
+        "K8 filtro passa-basso",
         "CC64 sustain: tiene i pad tenuti",
         "CC7 volume · CC120/123 tutto spento",
         "Pitch bend: ±2 semitoni",

@@ -292,6 +292,7 @@ void sampler_release_all(Sampler *s) { push(s, (Event){ EV_ALL_OFF, 0, 0, 0.0f, 
 void sampler_set_sustain(Sampler *s, int on) { push(s, (Event){ EV_SUSTAIN, 0, on != 0, 0.0f, 0.0f, NULL }); }
 void sampler_set_bend(Sampler *s, float semitones) { s->bend = clampf(semitones, -24.0f, 24.0f); }
 void sampler_set_cutoff(Sampler *s, float v) { s->cutoff = clampf(v, 0.0f, 1.0f); }
+float sampler_cutoff(const Sampler *s) { return s->cutoff; }
 void  sampler_set_volume(Sampler *s, float v) { s->volume = clampf(v, 0.0f, 1.0f); }
 float sampler_volume(const Sampler *s) { return s->volume; }
 

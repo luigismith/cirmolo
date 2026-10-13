@@ -248,6 +248,27 @@ int main(int argc, char **argv)
             fprintf(stderr, "ERRORE: MIDI non gestito come previsto\n");
             fail = 1;
         }
+        /* MPK mini IV: manopole CC 24-31 sulla porta 2, relative; note ripetute sulla porta 2 */
+        const unsigned char k1_right[3] = { 0xB0, 24, 10 }, k1_left[3] = { 0xB0, 24, 124 }, k8_abs[3] = { 0xB0, 31, 64 };
+        const unsigned char note2[3] = { 0x90, 64, 100 };
+        synth_patch(s)->cutoff = 0.5f;
+        app_midi_port(a, 1, k1_right, 3);
+        float cut_up = synth_patch(s)->cutoff;
+        app_midi_port(a, 1, k1_left, 3);
+        float cut_down = synth_patch(s)->cutoff;
+        run(a, s, 0.1f, wav, &pos, cap);
+        int v0 = synth_active_voices(s);
+        app_midi_port(a, 1, note2, 3);                                 /* il doppione dalla porta 2 */
+        run(a, s, 0.1f, wav, &pos, cap);
+        int v_dup = synth_active_voices(s) - v0;
+        app_midi_port(a, 1, k8_abs, 3);                                /* a meta' corsa: modo assoluto */
+        float rev_abs = synth_fx(s)->reverb_mix;
+        printf("MPK mini IV: taglio 0.50 -> %.3f -> %.3f, voci dalla porta 2 %d, riverbero assoluto %.3f\n", cut_up, cut_down, v_dup, rev_abs);
+        if (fabsf(cut_up - (0.5f + 10 / 127.0f)) > 0.002f || fabsf(cut_down - (0.5f + 6 / 127.0f)) > 0.002f ||
+            v_dup != 0 || fabsf(rev_abs - 64 / 127.0f) > 0.002f) {
+            fprintf(stderr, "ERRORE: manopole della MPK mini IV non gestite come previsto\n");
+            fail = 1;
+        }
         app_draw(a, &c);
         snprintf(out, sizeof(out), "%s/7-midi.bmp", argv[2]);
         write_bmp(out, &c);

@@ -52,7 +52,7 @@ Written in C for the Flip on a shared kit ([`spruce/cirmolo-kit`](spruce/cirmolo
 
 ## Branches and versions
 - **`cirmolo`** (default): Cirmolo development.
-- **`release/0.2`**: the published version, see the [releases](https://github.com/luigismith/cirmolo/releases); `release/0.1` stays as it was for 0.1.0.
+- **`release/0.3`**: the published version, see the [releases](https://github.com/luigismith/cirmolo/releases); `release/0.1` and `release/0.2` stay as they were for 0.1.0 and 0.2.0.
 - **`Development`**: an exact mirror of spruceOS, used to pull in upstream updates. The other branches come from spruceOS.
 
 ## Credits and license

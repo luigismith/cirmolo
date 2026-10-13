@@ -227,6 +227,7 @@
   "RetroArch non ha mandato la schermata.": "RetroArch n-a trimis ecranul.",
   "Nessun testo da tradurre in questa schermata.": "Niciun text de tradus pe acest ecran.",
   "Traduzione in %ld s con %s · SELECT + giù per continuare": "Tradus în %ld s cu %s · SELECT + jos pentru a continua",
+  "Traduzione di prova con %s · SELECT + giù per continuare": "Traducere de probă cu %s · SELECT + jos pentru a continua",
   "Errore di rete (curl %d)%s%s": "Eroare de rețea (curl %d)%s%s",
   "In attesa della risposta": "Se așteaptă răspunsul",
   "Sta pensando": "Se gândește",

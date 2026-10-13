@@ -178,6 +178,13 @@ static unsigned char *render_overlay(const char *title, const char *text, int er
 }
 
 /* ------------------------------------------------------------------ traduzione */
+static long long now_ms(void)
+{
+    struct timespec ts;
+    if (timespec_get(&ts, TIME_UTC) != TIME_UTC) return (long long)time(NULL) * 1000;
+    return (long long)ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
+}
+
 static void log_translation(const char *game, const char *model, const char *text)
 {
     char dir[480], path[700], name[200];
@@ -240,7 +247,7 @@ static char *translate(const char *query, const char *body, size_t body_len)
                  game[0] ? game : "unknown", sys[0] ? " (" : "", sys, sys[0] ? ")" : "",
                  sname ? sname : "detect it (it is often Japanese)", tname);
         AskSpec q = { sysmsg, prompt, image, "image/png", 2048, "low" };
-        time_t t0 = time(NULL);
+        long long t0 = now_ms();
         const char *fake = getenv("CIRMOLO_RISPOSTA_FINTA");     /* prove senza rete */
         text = fake ? strdup(fake) : ask_blocking(p, m, key, &q, 90, err, sizeof(err));
         if (text) {
@@ -249,7 +256,11 @@ static char *translate(const char *query, const char *body, size_t body_len)
             if (!strncmp(s, "NO_TEXT", 7)) { free(text); text = NULL; snprintf(err, sizeof(err), "%s", tr("Nessun testo da tradurre in questa schermata.")); }
             else {
                 error = 0;
-                snprintf(title, sizeof(title), tr("Traduzione in %ld s con %s · SELECT + giù per continuare"), (long)(time(NULL) - t0), m->name);
+                /* secondi arrotondati, almeno 1: time() contava solo i secondi interi e un modello veloce
+                   (o la risposta finta delle prove) dava "Traduzione in 0 s" */
+                long secs = (long)((now_ms() - t0 + 500) / 1000);
+                if (fake) snprintf(title, sizeof(title), tr("Traduzione di prova con %s · SELECT + giù per continuare"), m->name);
+                else snprintf(title, sizeof(title), tr("Traduzione in %ld s con %s · SELECT + giù per continuare"), secs < 1 ? 1 : secs, m->name);
                 log_translation(game, m->id, text);
             }
         }

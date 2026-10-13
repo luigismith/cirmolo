@@ -227,6 +227,7 @@
   "RetroArch non ha mandato la schermata.": "RetroArch no ha enviat la pantalla.",
   "Nessun testo da tradurre in questa schermata.": "Cap text per traduir en aquesta pantalla.",
   "Traduzione in %ld s con %s · SELECT + giù per continuare": "Traduït en %ld s amb %s · SELECT + avall per continuar",
+  "Traduzione di prova con %s · SELECT + giù per continuare": "Traducció de prova amb %s · SELECT + avall per continuar",
   "Errore di rete (curl %d)%s%s": "Error de xarxa (curl %d)%s%s",
   "In attesa della risposta": "Esperant la resposta",
   "Sta pensando": "Pensant",

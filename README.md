@@ -47,6 +47,7 @@ Written in C for the Flip on a shared kit ([`spruce/cirmolo-kit`](spruce/cirmolo
   - **Game card**: from a game's menu in PyUI (MENU, "Game card (AI)"), a card with box art: summary, story, how to play, tips and trivia, to read or listen to. It is saved, so the next time it opens instantly.
   - **Play diary**: at the end of every session it records the game, the playing time and the last screen; with AI also where you left off, shown as a reminder when you reopen the game and in the game card.
 - **What should I play?** ([`App/CosaGioco`](App/CosaGioco)): three questions (time, mood, new or unfinished) and the model picks four games from your SD card, taking the diary into account; A starts the game.
+- **Install Stame** ([`App/StameInstaller`](App/StameInstaller)): downloads from GitHub and installs (or updates) [Stame](https://github.com/luigismith/stame), a chord instrument for the Akai MPK mini IV and the macro pad, which then sits in Music. It is a separate project: only the installer lives here. Wi-Fi needed.
 
 **Coming next:** more apps and improvements to the interface and performance on the Flip.
 

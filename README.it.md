@@ -46,6 +46,7 @@ Scritte in C per la Flip, con un kit comune ([`spruce/cirmolo-kit`](spruce/cirmo
   - **Scheda del gioco**: dal menu di un gioco in PyUI (MENU, «Scheda del gioco (IA)»), una scheda con copertina: in breve, di cosa parla, come si gioca, consigli e curiosità, da leggere o ascoltare. Si salva e la volta dopo si legge subito.
   - **Diario delle partite**: a ogni fine partita si annotano gioco, durata e ultima schermata; con l'IA anche dove eri rimasto, che compare in un promemoria quando riapri il gioco e nella scheda.
 - **Cosa gioco?** ([`App/CosaGioco`](App/CosaGioco)): tre domande (tempo, voglia, nuovo o da riprendere) e il modello sceglie quattro giochi tra quelli sulla SD, tenendo conto del diario; A avvia il gioco.
+- **Installa Stame** ([`App/StameInstaller`](App/StameInstaller)): scarica da GitHub e installa (o aggiorna) [Stame](https://github.com/luigismith/stame), uno strumento ad accordi per la Akai MPK mini IV e il macro pad, che poi si trova in Musica. È un progetto a parte: qui c'è solo l'installatore. Serve il Wi-Fi.
 
 **In arrivo:** altre app, miglioramenti dell'interfaccia e delle prestazioni sulla Flip.
 

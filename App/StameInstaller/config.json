@@ -1,0 +1,7 @@
+{
+  "label": "Install Stame",
+  "icon": "icon.png",
+  "launch": "launch.sh",
+  "description": "Download and install (or update) Stame, the chord instrument for the MPK mini IV and the macro pad. Wi-Fi needed.",
+  "devices": ["MIYOO_FLIP"]
+}

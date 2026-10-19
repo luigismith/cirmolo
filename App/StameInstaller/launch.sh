@@ -1,17 +1,18 @@
 #!/bin/sh
 # Install Stame: downloads the latest release of Stame (github.com/luigismith/stame), a chord
 # instrument for the Akai MPK mini IV and the macro pad, and installs it in App/Stame, in the Music
-# area. Stame is a separate project: Cirmolo holds only this installer. Run it again to update; the
-# saves in Saves/stame are left alone.
+# area. Stame is a separate project: Cirmolo holds only this installer. The saves in Saves/stame are
+# left alone.
+#
+# The entry stays in Music only while there is something to do: after a successful install, or when
+# Stame is already up to date, it hides itself; checkUpdate.sh (run at boot) shows it again as
+# "Install Stame" when App/Stame is missing, or as "Update Stame" when GitHub has a newer release.
 
 . /mnt/SDCARD/spruce/scripts/helperFunctions.sh
+. "$(cd "$(dirname "$0")" && pwd)/installerFunctions.sh"
 
-APP_DIR="$(cd "$(dirname "$0")" && pwd)"
 IMG="$APP_DIR/icon.png"
-REPO=luigismith/stame
-DEST=/mnt/SDCARD/App/Stame
-TMP=/mnt/SDCARD/Saves/stame-install
-LOGF=/mnt/SDCARD/Saves/spruce/stame-install.log
+HIDES="This entry hides itself until a new version comes out."
 
 show() { display_image_and_text "$IMG" 35 20 "$1" 75; }
 
@@ -20,28 +21,25 @@ finish() {    # $1 = message, $2 = seconds on screen, $3 = exit code
     show "$1"
     sleep "${2:-4}"
     rm -rf "$TMP"
-    display_kill
+    kill_pyui_message_writer
     exit "${3:-0}"
 }
 
-get() {       # $1 = URL, $2 = file; without certificate checks only if TLS fails, as the OTA does
-    curl -sSfL -m 900 -o "$2" "$1" 2>>"$LOGF" && return 0
-    curl -ksSfL -m 900 -o "$2" "$1" 2>>"$LOGF"
-}
-
-mkdir -p "$TMP" "$(dirname "$LOGF")"
+# PyUI has already quit when a script runs from the menu: a message reaches the screen only through
+# the listener started here and closed in finish, as the OTA app does.
+start_pyui_message_writer
 show "Looking for the latest Stame..."
 ping -c 2 -W 2 api.github.com > /dev/null 2>&1 || finish "No connection: turn on Wi-Fi and try again." 5 1
-get "https://api.github.com/repos/$REPO/releases/latest" "$TMP/release.json" ||
-    finish "Could not reach GitHub. Try again later." 5 1
-VER="$(jq -r '.tag_name // empty' "$TMP/release.json" | sed 's/^[vV]//')"
-URL="$(jq -r '.assets[] | select(.name | endswith(".7z")) | .browser_download_url' "$TMP/release.json" | head -n 1)"
-SUM="$(jq -r '.assets[] | select(.name | endswith(".7z.sha256")) | .browser_download_url' "$TMP/release.json" | head -n 1)"
-[ -n "$VER" ] && [ -n "$URL" ] || finish "No Stame release found on GitHub." 5 1
+fetch_release
+case $? in
+    1) finish "Could not reach GitHub. Try again later." 5 1 ;;
+    2) finish "No Stame release found on GitHub." 5 1 ;;
+esac
 
-HAVE="$(cat "$DEST/VERSION" 2>/dev/null)"
-if [ -n "$HAVE" ] && [ -f "$DEST/stame" ] && ! version_older_than "$HAVE" "$VER"; then
-    finish "Stame $HAVE is already installed: you find it in Music." 4
+HAVE="$(installed_version)"
+if [ -n "$HAVE" ] && ! version_older_than "$HAVE" "$VER"; then
+    hide_entry
+    finish "Stame $HAVE is already installed: you find it in Music. $HIDES" 6
 fi
 
 show "Downloading Stame $VER (about 70 MB)..."
@@ -64,4 +62,5 @@ else
 fi
 chmod +x "$DEST/launch.sh" "$DEST/stame" 2>/dev/null
 sync
-finish "Stame $VER installed: you find it in Music." 5
+hide_entry
+finish "Stame $VER installed: you find it in Music. $HIDES" 6

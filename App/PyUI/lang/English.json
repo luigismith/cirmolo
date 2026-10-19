@@ -745,6 +745,7 @@
         "Gray": "Gray"
     },
     "appLabels": {
+        "Update Stame": "Update Stame",
         "Install Stame": "Install Stame",
         "A Firmware Update Is Available": "A Firmware Update Is Available",
         "Activity Tracker": "Activity Tracker",
@@ -780,6 +781,7 @@
         "Cirmolo Sampler": "Cirmolo Sampler"
     },
     "appDescriptions": {
+        "A new version of Stame is available: download and install it. Wi-Fi needed.": "A new version of Stame is available: download and install it. Wi-Fi needed.",
         "Download and install (or update) Stame, the chord instrument for the MPK mini IV and the macro pad. Wi-Fi needed.": "Download and install (or update) Stame, the chord instrument for the MPK mini IV and the macro pad. Wi-Fi needed.",
         "32-bit RetroArch frontend": "32-bit RetroArch frontend",
         "A music player": "A music player",
@@ -879,11 +881,12 @@
         "System": "System"
     },
     "scriptMessages": {
+        "Stame {version} is already installed: you find it in Music. This entry hides itself until a new version comes out.": "Stame {version} is already installed: you find it in Music. This entry hides itself until a new version comes out.",
+        "Stame {version} installed: you find it in Music. This entry hides itself until a new version comes out.": "Stame {version} installed: you find it in Music. This entry hides itself until a new version comes out.",
         "Looking for the latest Stame...": "Looking for the latest Stame...",
         "No connection: turn on Wi-Fi and try again.": "No connection: turn on Wi-Fi and try again.",
         "Could not reach GitHub. Try again later.": "Could not reach GitHub. Try again later.",
         "No Stame release found on GitHub.": "No Stame release found on GitHub.",
-        "Stame {version} is already installed: you find it in Music.": "Stame {version} is already installed: you find it in Music.",
         "Downloading Stame {version} (about 70 MB)...": "Downloading Stame {version} (about 70 MB)...",
         "Download failed. Try again.": "Download failed. Try again.",
         "The download is damaged. Try again.": "The download is damaged. Try again.",
@@ -891,7 +894,6 @@
         "Could not unpack Stame. Is the SD card full?": "Could not unpack Stame. Is the SD card full?",
         "The package is not complete.": "The package is not complete.",
         "Could not install Stame.": "Could not install Stame.",
-        "Stame {version} installed: you find it in Music.": "Stame {version} installed: you find it in Music.",
         "A firmware update from {brand} is ready for your device. We'll check your device's status and prepare the {brand2} update file. Once set up, the {brand3} firmware updater will install it. Press A to proceed.": "A firmware update from {brand} is ready for your device. We'll check your device's status and prepare the {brand2} update file. Once set up, the {brand3} firmware updater will install it. Press A to proceed.",
         "Applying upgrades to your system...": "Applying upgrades to your system...",
         "As a precaution, please charge your {platform} to at least 15% capacity, then try again.": "As a precaution, please charge your {platform} to at least 15% capacity, then try again.",

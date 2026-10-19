@@ -745,6 +745,7 @@
         "Gray": "Grigio"
     },
     "appLabels": {
+        "Update Stame": "Aggiorna Stame",
         "Install Stame": "Installa Stame",
         "A Firmware Update Is Available": "Aggiornamento firmware disponibile",
         "Activity Tracker": "Monitoraggio attività",
@@ -780,6 +781,7 @@
         "Cirmolo Sampler": "Cirmolo Sampler"
     },
     "appDescriptions": {
+        "A new version of Stame is available: download and install it. Wi-Fi needed.": "C'è una versione nuova di Stame: scaricala e installala. Serve il Wi-Fi.",
         "Download and install (or update) Stame, the chord instrument for the MPK mini IV and the macro pad. Wi-Fi needed.": "Scarica e installa (o aggiorna) Stame, lo strumento ad accordi per la MPK mini IV e il macro pad. Serve il Wi-Fi.",
         "32-bit RetroArch frontend": "RetroArch a 32 bit",
         "A music player": "Lettore musicale",
@@ -879,11 +881,12 @@
         "System": "Sistema"
     },
     "scriptMessages": {
+        "Stame {version} is already installed: you find it in Music. This entry hides itself until a new version comes out.": "Stame {version} è già installato: lo trovi in Musica. Questa voce si nasconde finché non esce una versione nuova.",
+        "Stame {version} installed: you find it in Music. This entry hides itself until a new version comes out.": "Stame {version} installato: lo trovi in Musica. Questa voce si nasconde finché non esce una versione nuova.",
         "Looking for the latest Stame...": "Cerco l'ultima versione di Stame...",
         "No connection: turn on Wi-Fi and try again.": "Nessuna connessione: accendi il Wi-Fi e riprova.",
         "Could not reach GitHub. Try again later.": "GitHub non risponde. Riprova più tardi.",
         "No Stame release found on GitHub.": "Su GitHub non c'è nessuna versione di Stame.",
-        "Stame {version} is already installed: you find it in Music.": "Stame {version} è già installato: lo trovi in Musica.",
         "Downloading Stame {version} (about 70 MB)...": "Scarico Stame {version} (circa 70 MB)...",
         "Download failed. Try again.": "Lo scaricamento non è riuscito. Riprova.",
         "The download is damaged. Try again.": "Il file scaricato è rovinato. Riprova.",
@@ -891,7 +894,6 @@
         "Could not unpack Stame. Is the SD card full?": "Non riesco a scompattare Stame. La scheda SD è piena?",
         "The package is not complete.": "Il pacchetto non è completo.",
         "Could not install Stame.": "Non riesco a installare Stame.",
-        "Stame {version} installed: you find it in Music.": "Stame {version} installato: lo trovi in Musica.",
         "A firmware update from {brand} is ready for your device. We'll check your device's status and prepare the {brand2} update file. Once set up, the {brand3} firmware updater will install it. Press A to proceed.": "È pronto un aggiornamento del firmware {brand} per la tua console. Controlliamo lo stato della console e prepariamo il file di aggiornamento {brand2}, poi lo installerà il programma di aggiornamento {brand3}. Premi A per procedere.",
         "Applying upgrades to your system...": "Applicazione degli aggiornamenti in corso...",
         "As a precaution, please charge your {platform} to at least 15% capacity, then try again.": "Per sicurezza, carica la {platform} almeno al 15% e riprova.",

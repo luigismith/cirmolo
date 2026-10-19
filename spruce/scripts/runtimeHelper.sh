@@ -287,6 +287,11 @@ check_for_update() {
 update_checker(){
     sleep 20
     check_for_update
+    # Cirmolo: an app installed from its own GitHub releases keeps a checkUpdate.sh next to its
+    # config.json and shows or hides its own entry (App/StameInstaller/checkUpdate.sh).
+    for app_check in /mnt/SDCARD/App/*/checkUpdate.sh; do
+        [ -f "$app_check" ] && sh "$app_check"
+    done
 }
 
 check_for_update_file() {

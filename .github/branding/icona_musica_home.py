@@ -3,7 +3,8 @@
 icone della Home del tema SPRUCE: 100x140 trasparente, disegno nei 100x100 in alto, tratto di 6 px.
 Come l'icona App (un cerchio con dentro tre righe) e' un cerchio, con dentro due crome unite.
 Scrive le versioni SPRUCE (grigio caldo, oro quando e' scelta) e le stesse ricolorate per il tema
-Cirmolo con la funzione di tema_cirmolo.py.
+Cirmolo con la funzione di tema_cirmolo.py. Il tema STAME la prende da SPRUCE: dopo, va rigenerato
+con tema_stame.py.
 
 Uso: python -I .github/branding/icona_musica_home.py
 """

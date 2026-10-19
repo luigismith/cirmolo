@@ -1,0 +1,7 @@
+track.new {"kind": "instrument", "name": "Granello", "instrument": "subtractive_synth"}
+mix.instrument {"track": "Granello", "plugin": "subtractive_synth", "params": {"osc1_wave": 3, "osc2_wave": 2, "osc2_semitones": 12, "osc2_detune": 4, "osc_mix": 38, "cutoff": 2600, "resonance": 8, "filter_env_amount": 35, "amp_attack": 2, "amp_decay": 70, "amp_sustain": 0, "amp_release": 45, "filter_attack": 1, "filter_decay": 45, "filter_sustain": 0, "filter_release": 40, "glide": 0, "velocity": 65, "level": -9}}
+mix.insert {"track": "Granello", "slot": 0, "plugin": "chorus", "params": {"rate": 0.33, "depth": 28, "delay": 14, "feedback": 0, "mix": 28, "spread": 100}}
+mix.insert {"track": "Granello", "slot": 1, "plugin": "plate_reverb", "params": {"mix": 14, "pre_delay": 8, "decay": 0.5, "size": 40, "damping": 6500, "diffusion": 88, "width": 100, "low_cut": 160}}
+midi.new_clip {"track": "Granello", "start": 0, "length": 48000}
+midi.note_add {"clip": 2, "pitch": 76, "start_ticks": 0, "length_ticks": 96, "velocity": 52}
+file.bounce_mix {"path": "granello.wav", "format": "wav", "bit_depth": 16, "start": 0, "end": 9600, "normalize": true}

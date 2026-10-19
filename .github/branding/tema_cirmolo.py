@@ -68,18 +68,20 @@ FONDO_ALTO = np.array([27, 30, 43], np.float32)
 FONDO_BASSO = np.array([18, 20, 29], np.float32)
 
 
-def _segmenti():
-    s = np.array([p[0] for p in PALETTE], np.float32)
-    t = np.array([p[1] for p in PALETTE], np.float32)
+def segmenti(palette):
+    """Le coppie di colori di una palette (origine, arrivo) come segmenti per ricolora()."""
+    s = np.array([p[0] for p in palette], np.float32)
+    t = np.array([p[1] for p in palette], np.float32)
     ii, jj = np.triu_indices(len(s), 0)          # coppie i<=j: i==j e' il colore singolo
     return s[ii], s[jj], t[ii], t[jj]
 
 
-SA, SB, TA, TB = _segmenti()
+SEGMENTI = segmenti(PALETTE)
 
 
-def ricolora_colori(c):
-    """c: N x 3 float. Restituisce i colori di Cirmolo corrispondenti."""
+def ricolora_colori(c, seg=SEGMENTI):
+    """c: N x 3 float. Restituisce i colori corrispondenti (di Cirmolo, se seg non dice altro)."""
+    SA, SB, TA, TB = seg
     d = SB - SA                                   # P x 3
     dd = (d * d).sum(1)
     dd[dd == 0] = 1
@@ -94,12 +96,12 @@ def ricolora_colori(c):
     return np.clip(TA[k] + tk * (TB[k] - TA[k]) + resto, 0, 255)
 
 
-def ricolora(im):
+def ricolora(im, seg=SEGMENTI):
     im = im.convert('RGBA')
     a = np.asarray(im).copy()
     rgb = a[..., :3].reshape(-1, 3)
     unici, inv = np.unique(rgb, axis=0, return_inverse=True)
-    nuovi = np.round(ricolora_colori(unici.astype(np.float32))).astype(np.uint8)
+    nuovi = np.round(ricolora_colori(unici.astype(np.float32), seg)).astype(np.uint8)
     a[..., :3] = nuovi[inv.reshape(-1)].reshape(a.shape[:2] + (3,))
     return Image.fromarray(a, 'RGBA')
 
@@ -292,7 +294,7 @@ def genera():
         f.write(CREDITI + crediti)
     config(os.path.join(ORIGINE, 'config.json'), os.path.join(DESTINAZIONE, 'config.json'))
     # anteprima nella scelta del tema: una schermata vera del menu principale, presa dalla Flip
-    shutil.copy2(os.path.join(QUI, 'schermate', 'menu.png'), os.path.join(DESTINAZIONE, 'preview.png'))
+    shutil.copy2(os.path.join(QUI, 'schermate', 'cirmolo_menu.png'), os.path.join(DESTINAZIONE, 'preview.png'))
 
     n = 0
     for cartella in ('skin', 'icons'):

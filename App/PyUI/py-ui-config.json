@@ -1,7 +1,7 @@
 {
     "language": "Italian",
     "use24HourClock": true,
-    "theme": "Cirmolo",
+    "theme": "STAME",
     "themeDir": "/mnt/SDCARD/Themes/",
     "turboDelayMs": 250,
     "enableButtonWatchers": false,

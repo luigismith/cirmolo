@@ -1,0 +1,96 @@
+{
+    "name": "STAME",
+    "author": "Cirmolo (dal tema Spruce di tenlevels, con i colori e i caratteri di Stame)",
+    "description": "STAME theme for the Miyoo Flip: the reflective LCD of the Stame chord synth",
+    "batteryPercentage": {
+        "color": "#424C47",
+        "font": "stame-spleen-12x24.ttf",
+        "size": 24
+    },
+    "title": {
+        "font": "stame-matrice.ttf",
+        "size": 44,
+        "color": "#141B18"
+    },
+    "hint": {
+        "font": "stame-spleen-12x24.ttf",
+        "size": 24,
+        "color": "#424C47"
+    },
+    "currentpage": {
+        "font": "stame-spleen-12x24.ttf",
+        "size": 24,
+        "color": "#424C47"
+    },
+    "total": {
+        "font": "stame-spleen-12x24.ttf",
+        "size": 24,
+        "color": "#005A51"
+    },
+    "grid": {
+        "font": "stame-spleen-12x24.ttf",
+        "grid1x4": 24,
+        "grid3x4": 16,
+        "color": "#424C47",
+        "selectedcolor": "#285C00"
+    },
+    "list": {
+        "font": "stame-spleen-12x24.ttf",
+        "size": 24,
+        "color": "#141B18",
+        "selectedcolor": "#141B18"
+    },
+    "bindOverMiyooTheme": true,
+    "recentsEnabled": false,
+    "topBarInitialXOffset": 60,
+    "setTopBarTextToGameSelection": false,
+    "fullScreenGridGameMenuResizeType": "FIT",
+    "displayVolumeNumbers": true,
+    "screensaver": {
+        "bgColor": "#CED4C2",
+        "bgImage": "screensaver.png",
+        "overlayOpacity": 0,
+        "screensaverTimeoutSec": 60,
+        "widgets": [
+            {
+                "type": "text",
+                "value": "██:██",
+                "x": 0.5,
+                "y": 0.56,
+                "fontSize": 88,
+                "color": "#C1C8B4",
+                "font": "stame-matrice.ttf"
+            },
+            {
+                "type": "clock",
+                "x": 0.5,
+                "y": 0.56,
+                "fontSize": 88,
+                "color": "#005A51",
+                "enabled": true,
+                "font": "stame-matrice.ttf"
+            },
+            {
+                "type": "date",
+                "x": 0.5,
+                "y": 0.76,
+                "fontSize": 24,
+                "color": "#424C47",
+                "font": "stame-spleen-12x24.ttf"
+            },
+            {
+                "type": "battery",
+                "x": 0.5,
+                "y": 0.86,
+                "fontSize": 16,
+                "color": "#879180",
+                "font": "stame-spleen-8x16.ttf"
+            }
+        ]
+    },
+    "topBarFont": "stame-matrice.ttf",
+    "topBarFontSize": 44,
+    "gridMultiRowFont": "stame-spleen-8x16.ttf",
+    "descriptionFont": "stame-spleen-8x16.ttf",
+    "descriptionFontSize": 16
+}

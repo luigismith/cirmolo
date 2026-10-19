@@ -527,11 +527,30 @@ class Theme():
         else:
             return cls._icon("sel",system + ".qoi")
 
+    # Optional font file per purpose, named like the size keys in get_font_size (topBarFontSize ->
+    # topBarFont). A theme that sets none of them keeps the list/grid/shadowed fonts below.
+    _FONT_FILE_KEYS = {
+        FontPurpose.TOP_BAR_TEXT: "topBarFont",
+        FontPurpose.BATTERY_PERCENT: "batteryPercentFont",
+        FontPurpose.GRID_ONE_ROW: "gridSingleRowFont",
+        FontPurpose.GRID_MULTI_ROW: "gridMultiRowFont",
+        FontPurpose.LIST: "listFont",
+        FontPurpose.DESCRIPTIVE_LIST_TITLE: "descListFont",
+        FontPurpose.MESSAGE: "messageFont",
+        FontPurpose.DESCRIPTIVE_LIST_DESCRIPTION: "descriptionFont",
+        FontPurpose.LIST_INDEX: "indexSelectedFont",
+        FontPurpose.LIST_TOTAL: "indexTotalFont",
+    }
+
     @classmethod
     def get_font(cls, font_purpose : FontPurpose):
         language_font = Language.get_font_for_purpose(font_purpose)
         if language_font:
             return language_font
+
+        override = cls._data.get(cls._FONT_FILE_KEYS.get(font_purpose, ""))
+        if override and os.path.exists(os.path.join(cls._path, override)):
+            return os.path.join(cls._path, override)
 
         try:
             match font_purpose:

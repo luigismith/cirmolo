@@ -111,6 +111,18 @@ if [ ! -f "$CIRMOLO_TEMA_FATTO" ] && [ -d /mnt/SDCARD/Themes/Cirmolo ]; then
     mkdir -p /mnt/SDCARD/Saves/spruce && touch "$CIRMOLO_TEMA_FATTO"
 fi
 
+# Cirmolo 0.4: il tema STAME diventa quello di serie. Chi aggiorna ha ancora Cirmolo, il predefinito di
+# prima (chi arriva dalla 0.1 ci e' appena passato qui sopra): lo si passa a STAME una volta sola. Chi
+# aveva scelto un altro tema, SPRUCE compreso, lo tiene.
+CIRMOLO_STAME_FATTO="/mnt/SDCARD/Saves/spruce/cirmolo-tema-stame-0.4"
+if [ ! -f "$CIRMOLO_STAME_FATTO" ] && [ -d /mnt/SDCARD/Themes/STAME ]; then
+    if [ -f "$SYSTEM_JSON" ] && grep -q '"theme"[[:space:]]*:[[:space:]]*"Cirmolo"' "$SYSTEM_JSON"; then
+        sed -i 's/"theme"[[:space:]]*:[[:space:]]*"Cirmolo"/"theme": "STAME"/' "$SYSTEM_JSON"
+        log_message "Cirmolo: theme Cirmolo -> STAME (one-time, 0.4)"
+    fi
+    mkdir -p /mnt/SDCARD/Saves/spruce && touch "$CIRMOLO_STAME_FATTO"
+fi
+
 /mnt/SDCARD/spruce/scripts/set_up_swap.sh &
 
 launch_startup_watchdogs

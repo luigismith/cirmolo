@@ -30,6 +30,7 @@ Solo la risoluzione base 640x480 (quella della Flip): sugli altri schermi PyUI c
 
 Serve fontTools (python -m pip install fonttools).
 Uso:  python -I .github/branding/tema_stame.py [--stame ../stame] [--anteprima foglio.png]
+      [--campionario .github/branding/schermate/caratteri.png]
 """
 import argparse
 import ast
@@ -907,14 +908,42 @@ def anteprima(out):
     foglio.save(out)
 
 
+def campionario(out):
+    """Tavola dei caratteri del tema, per il sito: Matrice e Spleen sul vetro, alle misure esatte
+    usate sulla console, scritti con i TTF del tema."""
+    t = lambda p: os.path.join(DESTINAZIONE, p)  # noqa: E731
+    img = vetro(640, 480)
+    squadre(img, rgbf('ghost'))
+    img[268, 40:600] = rgbf('line')
+    im = Image.fromarray(np.clip(np.round(img), 0, 255).astype(np.uint8), 'RGB')
+    d = ImageDraw.Draw(im)
+    matrice = lambda px: ImageFont.truetype(t(MATRICE_TTF), px)  # noqa: E731
+    grande = ImageFont.truetype(t(SPLEEN_GRANDE), 24)
+    piccolo = ImageFont.truetype(t(SPLEEN_PICCOLO), 16)
+    d.text((20, 14), 'TAB. II', font=piccolo, fill=rgb('dim'))
+    d.text((320, 128), 'Matrice', font=matrice(88), fill=rgb('treble'), anchor='ms')
+    d.text((320, 166), 'il carattere a punti di Stame, 5×7', font=piccolo, fill=rgb('dim'), anchor='ms')
+    d.text((320, 236), 'Cirmolo 15:02', font=matrice(44), fill=rgb('text'), anchor='ms')
+    d.text((40, 306), 'Spleen 12×24', font=piccolo, fill=rgb('dim'), anchor='ls')
+    d.text((40, 336), "Pranzo d'acqua fa volti sghembi", font=grande, fill=rgb('text'), anchor='ls')
+    d.text((40, 382), 'Spleen 8×16', font=piccolo, fill=rgb('dim'), anchor='ls')
+    d.text((40, 406), 'Lunedì 19 ottobre · «Più forte» · 0123456789', font=piccolo, fill=rgb('text'), anchor='ls')
+    d.text((40, 430), 'e i nomi in altre scritture: ドラゴンクエスト · Тетрис', font=piccolo, fill=rgb('text'),
+           anchor='ls')
+    im.save(out, optimize=True)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--stame', default=STAME, help='cartella del repository di Stame (predefinita: ../stame)')
     ap.add_argument('--anteprima')
+    ap.add_argument('--campionario', help='tavola dei caratteri per il sito (PNG 640x480)')
     args = ap.parse_args()
     genera(os.path.abspath(args.stame))
     if args.anteprima:
         anteprima(args.anteprima)
+    if args.campionario:
+        campionario(args.campionario)
 
 
 if __name__ == '__main__':

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="App/BootLogo/Imgs/Cirmolo.png" alt="Logo di Cirmolo: la pigna viola del pino cembro tra due ciuffi di aghi" width="420">
+  <img src=".github/branding/schermate/copertina.png" alt="Cirmolo: la pigna del pino cembro disegnata a inchiostro e il nome in Matrice, il carattere a punti di Stame" width="600">
 </p>
 
 # Cirmolo
@@ -14,12 +14,12 @@ Il nome viene dal cirmolo, il pino cembro delle Dolomiti: un legno profumato e r
 > **Stato:** in sviluppo, testato solo sulla Miyoo Flip. Lo usi a tuo rischio, come spruceOS.
 
 <p align="center">
-  <img src=".github/branding/schermate/menu.png" width="32%" alt="Menu principale">
+  <img src=".github/branding/schermate/menu.png" width="32%" alt="Menu principale, tema STAME">
   <img src=".github/branding/schermate/app.png" width="32%" alt="App divise in aree">
   <img src=".github/branding/schermate/musica.png" width="32%" alt="Area Musica">
   <img src=".github/branding/schermate/giochi.png" width="32%" alt="Giochi">
-  <img src=".github/branding/schermate/synth.png" width="32%" alt="Cirmolo Synth">
-  <img src=".github/branding/schermate/openorc.png" width="32%" alt="OpenOrc">
+  <img src=".github/branding/schermate/salvaschermo.png" width="32%" alt="Salvaschermo: il marchio di Stame e l'orologio in Matrice, con i punti spenti">
+  <img src=".github/branding/schermate/caratteri.png" width="32%" alt="I caratteri del tema: Matrice e Spleen">
 </p>
 
 ## Cosa cambia rispetto a spruceOS
@@ -29,7 +29,7 @@ Il nome viene dal cirmolo, il pino cembro delle Dolomiti: un legno profumato e r
 - **Segnalazioni di bug:** il report resta sulla SD e si allega alle [issue di Cirmolo](https://github.com/luigismith/cirmolo/issues), invece di andare al server del team spruce.
 - **Versione di Cirmolo** in Impostazioni → Informazioni.
 - **Logo di avvio di Cirmolo** (la pigna viola del cirmolo) e **cambio del logo più sicuro sulla Flip:** prima di riscrivere la memoria interna, l'app «Logo di avvio» controlla la batteria, copia sulla SD tutta la memoria interna con i checksum, verifica la partizione di avvio e, se la scrittura fallisce, rimette da sola la copia.
-- **Tema STAME**, predefinito: l'LCD riflettente di [Stame](https://github.com/luigismith/stame), il sintetizzatore ad accordi, su tutta la console. Vetro grigio-verde con la sua maglia e inchiostri scuri, ogni colore con un ruolo; Matrice, il carattere a punti di Stame, nella testata e nell'orologio del salvaschermo (con i punti spenti in vista, come sui display degli anni Settanta); il carattere bitmap Spleen in tutto il resto; le console disegnate a inchiostro; il marchio dei tre stami, con le antere che si accendono una alla volta mentre un'app si carica; e il «granello di Stame» come suono dei tasti, il Mi5 del logo sonoro di Stame fatto con SoundCraft. Lo genera [`.github/branding/tema_stame.py`](.github/branding/tema_stame.py) dal tema Spruce di tenlevels e dalle risorse di Stame.
+- **Tema STAME**, predefinito: l'LCD riflettente di [Stame](https://github.com/luigismith/stame), il sintetizzatore ad accordi, su tutta la console. Vetro grigio-verde con la sua maglia e inchiostri scuri, ogni colore con un ruolo; Matrice, il carattere a punti di Stame, nella testata e nell'orologio del salvaschermo (con i punti spenti in vista, come sui display degli anni Settanta); il carattere bitmap Spleen in tutto il resto; le console disegnate a inchiostro; il marchio dei tre stami nella testata e nel salvaschermo; e il «granello di Stame» come suono dei tasti, il Mi5 del logo sonoro di Stame fatto con SoundCraft. Lo genera [`.github/branding/tema_stame.py`](.github/branding/tema_stame.py) dal tema Spruce di tenlevels e dalle risorse di Stame. Lo veste anche il [sito](https://luigismith.github.io/cirmolo/): caratteri e immagini vengono da [`.github/branding/sito_stame.py`](.github/branding/sito_stame.py).
 - **Tema Cirmolo**: i colori del logo (notte, viola della pigna, verde degli aghi) nei menu, nelle icone delle app e delle aree, nelle animazioni di caricamento e di ricarica e nelle schermate di sistema, con la pigna al posto dell'albero di spruce. È ricavato dal tema Spruce di tenlevels ([`.github/branding/tema_cirmolo.py`](.github/branding/tema_cirmolo.py)). Tutti e due restano in Impostazioni → Tema, insieme a Spruce.
 - **App raggruppate in cartelle** (Musica, Giochi, Sistema, Altro...). Musica è anche la prima icona della Home e apre direttamente le app musicali.
 

@@ -101,8 +101,11 @@ def ombra_pigna(img, cx, cy, rx, ry):
     img *= 1 - 0.62 * a
 
 
-def pigna(img, cx, cy, rx, ry):
-    """Pigna di cembro: ovoide piu' largo in basso, squame a losanga in rilievo, luce dall'alto a sinistra."""
+def forma_pigna(cx, cy, rx, ry):
+    """La forma della pigna, senza luce: il riquadro (ya, yb, xa, xb) in pixel del disegno e, per ogni
+    pixel, la normale dell'ovoide, il reticolo delle squame, la piastra (1 sulla squama, 0 nei solchi),
+    la verticale dentro la squama e la copertura del contorno dentellato. La usa anche il sito
+    (sito_stame.py), che la disegna a inchiostro."""
     cx, cy, rx, ry = cx * SS, (cy + DY) * SS, rx * SS, ry * SS
     ya, yb = int(cy - ry - 3), int(cy + ry + 4)
     xa, xb = int(cx - rx * 1.15 - 3), int(cx + rx * 1.15 + 4)
@@ -129,6 +132,16 @@ def pigna(img, cx, cy, rx, ry):
     piastra = np.clip((0.5 - m) / 0.13, 0, 1)
     piastra = piastra * piastra * (3 - 2 * piastra)
     lv = (fa - fb) / 2                                    # verticale dentro la squama (-0.5 su, +0.5 giu')
+
+    # profilo dentellato: vicino al bordo i solchi tra le squame incidono il contorno
+    bordo = (1 - r) * np.minimum(rxy, ry) - (1 - piastra) * 1.8 * SS * np.clip((r - 0.86) / 0.14, 0, 1)
+    alfa = np.clip(bordo + 0.5, 0, 1)[..., None]
+    return (ya, yb, xa, xb), nx, ny, nz, ka, kb, m, piastra, lv, alfa
+
+
+def pigna(img, cx, cy, rx, ry):
+    """Pigna di cembro: ovoide piu' largo in basso, squame a losanga in rilievo, luce dall'alto a sinistra."""
+    (ya, yb, xa, xb), nx, ny, nz, ka, kb, m, piastra, lv, alfa = forma_pigna(cx, cy, rx, ry)
     cupola = 1 - (m / 0.5) ** 2
     carena = np.exp(-(lv / 0.07) ** 2)
     h = piastra * (0.72 + 0.20 * cupola + 0.10 * carena)
@@ -163,10 +176,6 @@ def pigna(img, cx, cy, rx, ry):
     col = col * (1 - solco) + SOLCO * solco
     bianco = np.array([255, 238, 255], np.float32)
     col = col + bianco * (0.14 * lucido + 0.12 * spec * (piastra > 0.5))[..., None]
-
-    # profilo dentellato: vicino al bordo i solchi tra le squame incidono il contorno
-    bordo = (1 - r) * np.minimum(rxy, ry) - (1 - piastra) * 1.8 * SS * np.clip((r - 0.86) / 0.14, 0, 1)
-    alfa = np.clip(bordo + 0.5, 0, 1)[..., None]
     sub = img[ya:yb, xa:xb]
     sub[:] = sub * (1 - alfa) + np.clip(col, 0, 255) * alfa
 

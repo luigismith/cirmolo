@@ -9,19 +9,22 @@
 <meta property="og:description" content="SELECT + giù traduce il testo sullo schermo, ogni gioco ha la sua scheda, e la console ricorda dove eri rimasto.">
 <meta property="og:image" content="https://luigismith.github.io/cirmolo/ia-giochi/img/traduzione.png">
 <meta property="og:type" content="article">
-<meta name="theme-color" content="#0d1017">
+<meta name="theme-color" content="#D9DECE">
 <link rel="icon" type="image/png" href="../favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=Be+Vietnam+Pro:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<link rel="preload" href="../fonts/matrice.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../fonts/spleen-8x16.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../stame.css">
 <link rel="stylesheet" href="../app.css">
 <style>
-:root { --accento: #f2c45c; --su-accento: #1a1406; }
+:root { --accento: var(--active); }
 .prima-dopo { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
 .prima-dopo figure { margin: 0; display: grid; gap: 8px; }
-.prima-dopo img { border-radius: 12px; border: 1px solid var(--filo); width: 100%; height: auto; aspect-ratio: 4 / 3; image-rendering: pixelated; }
-.prima-dopo figcaption { font-size: 0.86rem; color: var(--tenue); }
-.prima-dopo figcaption b { color: var(--testo); font-weight: 600; }
+.prima-dopo img { border-radius: 4px; border: clamp(5px, 0.8vw, 8px) solid var(--text); background: var(--text); width: 100%; height: auto; aspect-ratio: 4 / 3; image-rendering: pixelated; }
+.prima-dopo figcaption { font-size: 0.86rem; color: var(--dim); }
+.prima-dopo figcaption b { color: var(--text); font-weight: 600; }
 @media (max-width: 560px) { .prima-dopo { grid-template-columns: minmax(0, 1fr); } }
 </style>
 </head>
@@ -29,7 +32,7 @@
 
 <header class="barra">
   <div class="contenitore">
-    <a class="marchio" href="../"><img src="../favicon.png" alt="" width="30" height="30"><span>Cirmolo</span> <small>· L'IA nei giochi</small></a>
+    <a class="marchio" href="../"><img src="../img/pigna-piccola.png" alt="" width="49" height="28"><span>Cirmolo</span> <small>· L'IA nei giochi</small></a>
     <nav aria-label="Sezioni">
       <a href="#traduttore">Traduttore</a>
       <a href="#scheda">Scheda</a>
@@ -72,8 +75,8 @@
     </div>
     <div class="schede tre blocco-sotto">
       <div class="scheda"><h3>Un modello che vede</h3><p>Serve un modello che legge le immagini: Claude, GPT, Gemini, Qwen-VL o GLM-4.6V-Flash, che è gratuito.</p></div>
-      <div class="scheda" style="--c: var(--aghi)"><h3>Anche ad alta voce</h3><p>Con «Leggi la traduzione» il riquadro viene anche letto, con la sintesi vocale scelta in Chiedi all'IA.</p></div>
-      <div class="scheda" style="--c: #78aaff"><h3>Le traduzioni restano</h3><p>Ogni traduzione si aggiunge a un file per gioco in <code>Saves/claude/traduzioni</code>.</p></div>
+      <div class="scheda" style="--c: var(--focus)"><h3>Anche ad alta voce</h3><p>Con «Leggi la traduzione» il riquadro viene anche letto, con la sintesi vocale scelta in Chiedi all'IA.</p></div>
+      <div class="scheda" style="--c: var(--treble)"><h3>Le traduzioni restano</h3><p>Ogni traduzione si aggiunge a un file per gioco in <code>Saves/claude/traduzioni</code>.</p></div>
     </div>
     <p class="nota blocco-sotto">Il traduttore è un piccolo server per il servizio IA di RetroArch: parte e si ferma con il gioco, e risponde sempre con un'immagine, perché RetroArch sulla Flip non mostra il testo da solo. Funziona solo nei giochi aperti con RetroArch.</p>
   </div>
@@ -118,8 +121,8 @@
     </div>
     <div class="schede tre blocco-sotto">
       <div class="scheda"><h3>Senza IA</h3><p>Data e durata delle partite si annotano comunque, anche con il diario con l'IA spento.</p></div>
-      <div class="scheda" style="--c: var(--aghi)"><h3>Chi lo legge</h3><p><a href="../cosa-gioco/">Cosa gioco?</a> lo usa per proporti i giochi da riprendere, e in <a href="../chiedi-ia/#azioni">Chiedi all'IA</a> il modello può consultarlo.</p></div>
-      <div class="scheda" style="--c: #78aaff"><h3>Un file solo</h3><p>Tutto sta in <code>Saves/claude/diario/diario.jsonl</code>, una riga per partita.</p></div>
+      <div class="scheda" style="--c: var(--focus)"><h3>Chi lo legge</h3><p><a href="../cosa-gioco/">Cosa gioco?</a> lo usa per proporti i giochi da riprendere, e in <a href="../chiedi-ia/#azioni">Chiedi all'IA</a> il modello può consultarlo.</p></div>
+      <div class="scheda" style="--c: var(--treble)"><h3>Un file solo</h3><p>Tutto sta in <code>Saves/claude/diario/diario.jsonl</code>, una riga per partita.</p></div>
     </div>
   </div>
 </section>

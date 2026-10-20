@@ -1,0 +1,97 @@
+/* stame.css — la base di tutte le pagine del sito di Cirmolo: il tema STAME della console, cioe' il
+   tema Giorno di Stame (https://luigismith.github.io/stame/), un LCD riflettente. Vetro grigio-verde con
+   la maglia di punti, inchiostri scuri, ogni colore con un ruolo. Matrice (il carattere a punti di Stame)
+   per il nome e i titoli, Spleen (bitmap) per etichette, menu e tasti, alle misure esatte: 16 e 24 px.
+   Caratteri e immagini comuni li genera .github/branding/sito_stame.py, sul ramo cirmolo. */
+@font-face { font-family: "Matrice"; src: url("fonts/matrice.woff2") format("woff2"); font-display: swap; }
+@font-face { font-family: "Spleen"; src: url("fonts/spleen-8x16.woff2") format("woff2"); font-display: swap; }
+@font-face { font-family: "Spleen 24"; src: url("fonts/spleen-12x24.woff2") format("woff2"); font-display: swap; }
+
+:root {
+  /* tema Giorno di Stame (docs/identita/README.md, par. 3.3) */
+  --bg: #CED4C2; --mesh: #C8CEBB; --panel: #D9DECE; --line: #A2AA95; --seg-off: #C1C8B4; --bar: #B5BDA7;
+  --ghost: #879180; --text: #141B18; --dim: #424C47; --carta: #E3E7D8;
+  --treble: #005A51; --bass: #853A00; --loop: #4A2894; --focus: #285C00; --active: #634A00; --warn: #9E160C;
+  --accento: var(--treble);
+  --su-accento: var(--carta);
+  --f-matrice: "Matrice", "Spleen 24", ui-monospace, monospace;
+  --f-spleen: "Spleen", ui-monospace, Consolas, monospace;
+  --f-spleen-24: "Spleen 24", "Spleen", ui-monospace, monospace;
+  --f-testo: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 72px; }
+body {
+  margin: 0; color: var(--text); font-family: var(--f-testo); font-size: 16.5px; line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+  /* la maglia del vetro: un punto ogni 4 px, a righe sfalsate, come sulla console */
+  background: var(--bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='8'%3E%3Cpath fill='%23C8CEBB' d='M0 0h1v1H0zM2 4h1v1H2z'/%3E%3C/svg%3E");
+}
+img { max-width: 100%; display: block; }
+a { color: var(--accento); text-underline-offset: 3px; }
+a:hover { color: var(--focus); }
+a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+h1, h2, h3 { margin: 0; text-wrap: balance; }
+h1 { font-family: var(--f-testo); font-weight: 600; letter-spacing: -0.02em; line-height: 1.08; }
+h2 { font-family: var(--f-matrice); font-weight: 400; font-size: clamp(1.9rem, 4vw, 2.75rem); line-height: 1.12; letter-spacing: 0; }
+h3 { font-family: var(--f-testo); font-size: 1.05rem; font-weight: 600; line-height: 1.3; }
+p { margin: 0; }
+b, strong { font-weight: 600; }
+code { font-family: var(--f-mono); font-size: 0.86em; color: var(--text); background: var(--panel); border: 1px solid var(--line); border-radius: 2px; padding: 0 5px; overflow-wrap: anywhere; }
+pre { font-family: var(--f-mono); }
+::selection { background: var(--bar); color: var(--text); }
+.contenitore { max-width: 1160px; margin: 0 auto; padding-inline: clamp(16px, 4vw, 40px); }
+/* Spleen solo a 16 o 24 px, senza spaziatura frazionaria: cosi' i pixel restano netti */
+.etichetta, .testata .etichetta { font-family: var(--f-spleen); font-size: 16px; line-height: 20px; letter-spacing: 1px; text-transform: uppercase; color: var(--accento); }
+.tasto {
+  display: inline-block; font-family: var(--f-mono); font-size: 0.8em; font-weight: 500; line-height: 1.5;
+  padding: 0 0.45em; border-radius: 2px; background: var(--text); color: var(--carta); white-space: nowrap;
+}
+
+/* la barra in alto: il pannello della testata della console, con il filo sotto */
+.barra { position: sticky; top: 0; z-index: 10; background: color-mix(in srgb, var(--panel) 94%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+.barra .contenitore { display: flex; align-items: center; gap: 16px; padding-block: 8px; }
+.marchio { display: flex; align-items: center; gap: 10px; flex: none; text-decoration: none; color: var(--text); }
+.marchio img { width: 49px; height: 28px; }
+.marchio span { font-family: var(--f-matrice); font-size: 33px; line-height: 1; color: var(--text); }
+.marchio small { font-family: var(--f-spleen); font-size: 16px; color: var(--dim); }
+.marchio:hover span { color: var(--focus); }
+.barra nav { display: flex; gap: 2px; margin-left: auto; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.barra nav::-webkit-scrollbar { display: none; }
+.barra nav a { flex: none; color: var(--dim); text-decoration: none; font-family: var(--f-spleen); font-size: 16px; line-height: 20px; padding: 6px 10px; }
+/* la voce scelta come sulla console: la cella scura e il segno del fuoco a sinistra */
+.barra nav a:hover, .barra nav a.attivo { color: var(--text); background: var(--bar); box-shadow: inset 3px 0 0 var(--focus); }
+
+/* i bottoni: tasti stampati */
+.bottoni { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 26px; }
+.bottone { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; font-family: var(--f-spleen); font-size: 16px; line-height: 20px;
+  padding: 10px 16px; border-radius: 2px; border: 1px solid var(--line); color: var(--text); background: var(--panel); }
+.bottone:hover { color: var(--text); background: var(--bar); border-color: var(--bar); box-shadow: inset 3px 0 0 var(--focus); }
+.bottone.primo { background: var(--accento); border-color: var(--accento); color: var(--su-accento); }
+.bottone.primo:hover { color: var(--su-accento); box-shadow: inset 3px 0 0 var(--focus), 0 0 0 1px var(--focus); }
+
+/* lo schermo della Flip: la schermata dentro la mascherina scura */
+.schermo { margin: 0; display: grid; gap: 10px; }
+.schermo img, img.schermo { width: 100%; height: auto; aspect-ratio: 4 / 3; border: clamp(6px, 1.2vw, 12px) solid var(--text); border-radius: 6px; background: var(--text); }
+.schermo figcaption { font-size: 0.86rem; color: var(--dim); }
+
+/* le squadre agli angoli, come su una tavola botanica (e sul salvaschermo) */
+.tavola { position: relative; }
+.tavola::before, .tavola::after { content: ""; position: absolute; width: 16px; height: 16px; border: 1px solid var(--ghost); pointer-events: none; }
+.tavola::before { left: 0; top: 0; border-right: 0; border-bottom: 0; }
+.tavola::after { right: 0; bottom: 0; border-left: 0; border-top: 0; }
+
+.piede { padding-block: 40px 56px; color: var(--dim); font-size: 0.92rem; }
+.piede .contenitore { display: grid; gap: 14px; }
+.piede .link { display: flex; flex-wrap: wrap; gap: 6px 20px; font-family: var(--f-spleen); font-size: 16px; }
+.piede .link a { color: var(--dim); }
+.piede .link a:hover { color: var(--focus); }
+
+@media (max-width: 560px) {
+  body { font-size: 15.5px; }
+  .marchio span { font-size: 28px; }
+  .barra .marchio small { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }

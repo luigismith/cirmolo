@@ -9,25 +9,28 @@
 <meta property="og:description" content="Claude e altri undici fornitori, anche con modelli gratuiti. Si scrive con i tasti o si parla tenendo premuto R2.">
 <meta property="og:image" content="https://luigismith.github.io/cirmolo/chiedi-ia/img/risposta.png">
 <meta property="og:type" content="article">
-<meta name="theme-color" content="#0d1017">
+<meta name="theme-color" content="#D9DECE">
 <link rel="icon" type="image/png" href="../favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=Be+Vietnam+Pro:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<link rel="preload" href="../fonts/matrice.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../fonts/spleen-8x16.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../stame.css">
 <link rel="stylesheet" href="../app.css">
 <style>
-:root { --accento: #f2c45c; --su-accento: #1a1406; }
+:root { --accento: var(--active); }
 .fornitori { display: flex; flex-wrap: wrap; gap: 8px; }
-.fornitori span { font-size: 0.9rem; padding: 6px 12px; border-radius: 999px; background: var(--pannello); border: 1px solid var(--filo); color: var(--chiaro); }
-.fornitori span.primo { border-color: var(--accento); color: var(--testo); }
-.fornitori span small { color: var(--aghi); font-size: 0.78rem; margin-left: 6px; }
+.fornitori span { font-size: 0.9rem; padding: 6px 12px; border-radius: 2px; background: var(--panel); border: 1px solid var(--line); color: var(--text); }
+.fornitori span.primo { border-color: var(--accento); color: var(--text); }
+.fornitori span small { color: var(--focus); font-size: 0.78rem; margin-left: 6px; }
 </style>
 </head>
 <body>
 
 <header class="barra">
   <div class="contenitore">
-    <a class="marchio" href="../"><img src="../favicon.png" alt="" width="30" height="30"><span>Cirmolo</span> <small>· Chiedi all'IA</small></a>
+    <a class="marchio" href="../"><img src="../img/pigna-piccola.png" alt="" width="49" height="28"><span>Cirmolo</span> <small>· Chiedi all'IA</small></a>
     <nav aria-label="Sezioni">
       <a href="#scrivere">Scrivere</a>
       <a href="#voce">A voce</a>
@@ -107,7 +110,7 @@
       </figure>
       <div class="schede una">
         <div class="scheda"><h3>Domande veloci</h3><p>Continua, spiegamelo in modo più semplice, fammi un esempio, riassumi in tre punti, traducilo in inglese, grazie. E «Rileggi l'ultima risposta ad alta voce».</p></div>
-        <div class="scheda" style="--c: var(--aghi)"><h3>Una conversazione alla volta</h3><p>La conversazione resta anche quando esci. Nelle impostazioni, «Nuova conversazione» la archivia in un file di testo e ne apre una nuova.</p></div>
+        <div class="scheda" style="--c: var(--focus)"><h3>Una conversazione alla volta</h3><p>La conversazione resta anche quando esci. Nelle impostazioni, «Nuova conversazione» la archivia in un file di testo e ne apre una nuova.</p></div>
       </div>
     </div>
   </div>
@@ -172,8 +175,8 @@
     </div>
     <div class="schede tre blocco-sotto">
       <div class="scheda"><h3>La chiave API</h3><p>Si crea sul sito del fornitore. Si mette dal PC nel file <code>Saves/claude/chiavi/&lt;fornitore&gt;.txt</code> della SD, oppure dall'app: SELECT, «Chiave API», A, la scrivi e START.</p></div>
-      <div class="scheda" style="--c: var(--aghi)"><h3>Server tuoi</h3><p>Il file <code>Saves/claude/fornitori.json</code> aggiunge qualunque server compatibile con OpenAI, per esempio Ollama sul PC di casa.</p></div>
-      <div class="scheda" style="--c: #9b7bf0"><h3>Impegno e stile</h3><p>L'impegno, solo per Claude, è quanto ragiona prima di rispondere. Lo stile «Brevi» dà risposte corte, adatte allo schermo piccolo.</p></div>
+      <div class="scheda" style="--c: var(--focus)"><h3>Server tuoi</h3><p>Il file <code>Saves/claude/fornitori.json</code> aggiunge qualunque server compatibile con OpenAI, per esempio Ollama sul PC di casa.</p></div>
+      <div class="scheda" style="--c: var(--loop)"><h3>Impegno e stile</h3><p>L'impegno, solo per Claude, è quanto ragiona prima di rispondere. Lo stile «Brevi» dà risposte corte, adatte allo schermo piccolo.</p></div>
     </div>
     <p class="avviso blocco-sotto">Le chiavi restano sulla scheda SD e vanno solo al loro fornitore. Il login con l'abbonamento a claude.ai non vale per le app come questa: serve una chiave API.</p>
   </div>
@@ -188,11 +191,11 @@
     </div>
     <div class="schede tre">
       <div class="scheda"><h3>Stato</h3><p>Batteria e ricarica, data e ora, rete Wi-Fi, spazio libero sulla SD, temperatura, volume e luminosità.</p></div>
-      <div class="scheda" style="--c: var(--aghi)"><h3>Volume e luminosità</h3><p>«Abbassa il volume», «più luce»: il volume va da 0 a 20, la luminosità da 0 a 10.</p></div>
-      <div class="scheda" style="--c: #78aaff"><h3>Cerca e avvia</h3><p>Cerca i giochi sulla SD per titolo e sistema; se gli chiedi di aprirne uno, la chat si chiude e il gioco parte.</p></div>
-      <div class="scheda" style="--c: #9b7bf0"><h3>Diario delle partite</h3><p>Legge le ultime partite: a cosa hai giocato, per quanto e dove eri rimasto.</p></div>
-      <div class="scheda" style="--c: var(--rosso)"><h3>Traduttore e schede</h3><p>La scheda Console delle impostazioni accende il traduttore dei giochi, il diario e il promemoria: sono nella pagina <a href="../ia-giochi/">L'IA nei giochi</a>.</p></div>
-      <div class="scheda" style="--c: var(--oro)"><h3>Cosa gioco?</h3><p>Per farti consigliare un gioco della tua collezione c'è un'app apposta: <a href="../cosa-gioco/">Cosa gioco?</a></p></div>
+      <div class="scheda" style="--c: var(--focus)"><h3>Volume e luminosità</h3><p>«Abbassa il volume», «più luce»: il volume va da 0 a 20, la luminosità da 0 a 10.</p></div>
+      <div class="scheda" style="--c: var(--treble)"><h3>Cerca e avvia</h3><p>Cerca i giochi sulla SD per titolo e sistema; se gli chiedi di aprirne uno, la chat si chiude e il gioco parte.</p></div>
+      <div class="scheda" style="--c: var(--loop)"><h3>Diario delle partite</h3><p>Legge le ultime partite: a cosa hai giocato, per quanto e dove eri rimasto.</p></div>
+      <div class="scheda" style="--c: var(--warn)"><h3>Traduttore e schede</h3><p>La scheda Console delle impostazioni accende il traduttore dei giochi, il diario e il promemoria: sono nella pagina <a href="../ia-giochi/">L'IA nei giochi</a>.</p></div>
+      <div class="scheda" style="--c: var(--active)"><h3>Cosa gioco?</h3><p>Per farti consigliare un gioco della tua collezione c'è un'app apposta: <a href="../cosa-gioco/">Cosa gioco?</a></p></div>
     </div>
   </div>
 </section>

@@ -7,133 +7,84 @@
 <meta name="description" content="Cirmolo: il sistema per la Miyoo Flip in italiano, con app musicali e intelligenza artificiale. Fork di spruceOS.">
 <meta property="og:title" content="Cirmolo · AI &amp; Music OS for handhelds">
 <meta property="og:description" content="Il sistema per la Miyoo Flip in italiano, con app musicali e intelligenza artificiale.">
-<meta property="og:image" content="https://luigismith.github.io/cirmolo/img/logo.png">
+<meta property="og:image" content="https://luigismith.github.io/cirmolo/img/copertina.png">
 <meta property="og:type" content="website">
-<meta name="theme-color" content="#0d1017">
+<meta name="theme-color" content="#D9DECE">
 <link rel="icon" type="image/png" href="favicon.png">
+<link rel="preload" href="fonts/matrice.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/spleen-8x16.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=Be+Vietnam+Pro:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<link rel="stylesheet" href="stame.css">
 <style>
-/* Home di Cirmolo: la notte delle Dolomiti, il viola della pigna, il verde degli aghi. Copertina con il
-   logo vero della console, poi schermate, app e manuali. */
-:root {
-  --notte: #0d1017;
-  --notte-2: #11151e;
-  --pannello: #161c27;
-  --pannello-2: #1d2532;
-  --filo: #2b3446;
-  --testo: #edebf4;
-  --tenue: #9a9fb5;
-  --viola: #9b7bf0;
-  --viola-scuro: #4a3a86;
-  --aghi: #4fbf86;
-  --oro: #f2c45c;
-  --f-titolo: "Unbounded", "Arial Black", system-ui, sans-serif;
-  --f-testo: "Be Vietnam Pro", "Segoe UI", system-ui, sans-serif;
-  --f-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
-  color-scheme: dark;
-}
-* { box-sizing: border-box; }
-html { scroll-behavior: smooth; scroll-padding-top: 70px; }
-body {
-  margin: 0; background: var(--notte); color: var(--testo); font-family: var(--f-testo);
-  font-size: 16.5px; line-height: 1.6; -webkit-font-smoothing: antialiased;
-}
-img { max-width: 100%; display: block; }
-a { color: var(--viola); text-underline-offset: 3px; }
-a:focus-visible { outline: 2px solid var(--viola); outline-offset: 3px; border-radius: 6px; }
-h1, h2, h3 { font-family: var(--f-titolo); margin: 0; text-wrap: balance; letter-spacing: -0.01em; }
-h2 { font-size: clamp(1.7rem, 3.4vw, 2.5rem); font-weight: 700; line-height: 1.1; }
-h3 { font-size: 1.02rem; font-weight: 700; line-height: 1.25; }
-p { margin: 0; }
-.contenitore { max-width: 1160px; margin: 0 auto; padding-inline: clamp(16px, 4vw, 40px); }
-.etichetta { font-family: var(--f-mono); font-size: 0.74rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--aghi); }
+/* Home di Cirmolo. Copertina: la targa con la pigna a inchiostro e il nome in Matrice, accanto la Home
+   vera della Flip; poi il tema, le app, l'IA, i manuali. */
+.copertina { border-bottom: 1px solid var(--line); }
+.copertina .contenitore { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 28px clamp(28px, 5vw, 60px); align-items: center; padding-block: clamp(28px, 5vw, 64px); }
+.targa { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 10px clamp(14px, 3vw, 28px); padding: 26px clamp(16px, 3vw, 28px) 20px; }
+.targa .pigna { width: clamp(120px, 16vw, 190px); height: auto; flex: none; }
+.targa .motto { margin: 0 0 0 auto; align-self: end; text-align: right; }
+.targa .nome { font-family: var(--f-matrice); font-size: clamp(52px, 7vw, 88px); line-height: 1; color: var(--treble); }
+.targa .specie { font-family: var(--f-spleen); font-size: 16px; line-height: 20px; color: var(--dim); margin-top: 10px; }
+.targa .tab { position: absolute; left: 22px; top: 2px; font-family: var(--f-spleen); font-size: 16px; color: var(--dim); }
+.motto { font-family: var(--f-spleen-24); font-size: 24px; line-height: 28px; color: var(--treble); }
+.copertina h1 { font-size: clamp(1.75rem, 3vw, 2.35rem); }
+.copertina h1 em { font-style: normal; color: var(--treble); }
+.copertina .intro { max-width: 54ch; margin-top: 16px; font-size: 1.06rem; }
+.stato { margin-top: 18px; font-size: 0.88rem; color: var(--dim); }
 
-/* barra in alto */
-.barra { position: sticky; top: 0; z-index: 10; background: rgba(13, 16, 23, 0.9); backdrop-filter: blur(10px); border-bottom: 1px solid var(--filo); }
-.barra .contenitore { display: flex; align-items: center; gap: 18px; padding-block: 10px; }
-.marchio { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--testo); font-family: var(--f-titolo); font-weight: 700; font-size: 1.05rem; }
-.marchio img { width: 30px; height: 30px; border-radius: 8px; }
-.barra nav { display: flex; gap: 4px; margin-left: auto; overflow-x: auto; scrollbar-width: none; }
-.barra nav::-webkit-scrollbar { display: none; }
-.barra nav a { flex: none; color: var(--tenue); text-decoration: none; font-size: 0.9rem; padding: 6px 12px; border-radius: 999px; }
-.barra nav a:hover { color: var(--testo); background: var(--pannello); }
+.sezione { padding-block: clamp(52px, 7.5vw, 96px); border-bottom: 1px solid var(--line); }
+.sezione:nth-of-type(even) { background: color-mix(in srgb, var(--panel) 55%, transparent); }
+.testata { display: grid; gap: 12px; max-width: 780px; margin-bottom: clamp(26px, 4vw, 42px); }
+.testata p { color: var(--dim); font-size: 1.05rem; }
 
-/* copertina */
-.copertina { position: relative; overflow: hidden; border-bottom: 1px solid var(--filo);
-  background: radial-gradient(60% 80% at 75% 40%, rgba(155, 123, 240, 0.16), transparent 70%), var(--notte); }
-.copertina .contenitore { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr); gap: clamp(28px, 5vw, 60px); align-items: center; padding-block: clamp(44px, 7vw, 92px); }
-.copertina h1 { font-size: clamp(2.3rem, 5vw, 3.9rem); font-weight: 800; line-height: 1.02; letter-spacing: -0.03em; }
-.copertina h1 em { font-style: normal; color: var(--viola); }
-.motto { font-family: var(--f-mono); color: var(--aghi); font-size: 0.95rem; margin-bottom: 18px; }
-.copertina .intro { color: #c9cbd8; max-width: 52ch; margin-top: 18px; font-size: 1.05rem; }
-.bottoni { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px; }
-.bottone { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; font-weight: 600; padding: 11px 20px; border-radius: 999px; border: 1px solid var(--filo); color: var(--testo); background: var(--pannello); }
-.bottone.primo { background: var(--viola); border-color: var(--viola); color: #140f24; }
-.bottone:hover { border-color: var(--viola); }
-.stato { margin-top: 18px; font-size: 0.86rem; color: var(--tenue); }
-.pigna { justify-self: center; width: min(100%, 440px); filter: drop-shadow(0 30px 60px rgba(155, 123, 240, 0.25)); border-radius: 28px; }
+.galleria { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px 18px; }
 
-/* sezioni */
-.sezione { padding-block: clamp(56px, 8vw, 100px); border-bottom: 1px solid var(--filo); }
-.sezione:nth-of-type(even) { background: var(--notte-2); }
-.testata { display: grid; gap: 12px; max-width: 760px; margin-bottom: clamp(26px, 4vw, 42px); }
-.testata p { color: var(--tenue); font-size: 1.05rem; }
+.schede { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.scheda { background: var(--panel); border: 1px solid var(--line); border-radius: 2px; padding: 18px 20px; display: grid; gap: 8px; align-content: start; }
+.scheda h3 { color: var(--c, var(--treble)); }
+.scheda p { font-size: 0.94rem; }
+.scheda a.manuale { font-weight: 500; font-size: 0.92rem; color: var(--c, var(--treble)); }
+.scheda a.manuale:hover { color: var(--focus); }
+.scheda.speciale { box-shadow: inset 0 3px 0 var(--c); border-top-color: var(--c); }
+/* Stame, il progetto gemello: il suo marchio sul vetro, con le squadre */
+.scheda.stame { grid-column: 1 / -1; grid-template-columns: auto minmax(0, 1fr); gap: 8px 24px; align-items: center; background: transparent; border-color: transparent; padding: 26px 28px; }
+.scheda.stame img { width: 61px; height: 64px; }
+.scheda.stame > div { display: grid; gap: 8px; }
+.scheda.stame h3 { font-family: var(--f-matrice); font-weight: 400; font-size: 33px; line-height: 1; }
 
-.galleria { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
-.galleria figure { margin: 0; display: grid; gap: 8px; }
-.galleria img { border-radius: 12px; border: 1px solid var(--filo); aspect-ratio: 4 / 3; width: 100%; height: auto; background: var(--pannello); }
-.galleria figcaption { font-size: 0.86rem; color: var(--tenue); }
-
-.schede { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
-.scheda { background: var(--pannello); border: 1px solid var(--filo); border-radius: 16px; padding: 20px; display: grid; gap: 8px; align-content: start; }
-.scheda p { color: #c9cbd8; font-size: 0.94rem; }
-.scheda .cartella { font-family: var(--f-mono); font-size: 0.74rem; color: var(--tenue); }
-.scheda a.manuale { font-weight: 600; font-size: 0.92rem; }
-.scheda.speciale { border-color: var(--oro); background: linear-gradient(160deg, rgba(242, 196, 92, 0.1), var(--pannello) 60%); }
-.scheda.speciale h3 { color: var(--oro); }
-.scheda.speciale.fiore { border-color: #c9b8fb; background: linear-gradient(160deg, rgba(255, 138, 166, 0.12), rgba(155, 123, 240, 0.08) 45%, var(--pannello) 75%); }
-.scheda.speciale.fiore h3 { color: #c9b8fb; }
-
-.manuale-vetrina { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(24px, 4vw, 52px); align-items: center;
-  background: var(--pannello); border: 1px solid var(--filo); border-radius: 22px; padding: clamp(18px, 3vw, 32px); }
+.manuale-vetrina { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(24px, 4vw, 52px); align-items: start;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 2px; padding: clamp(18px, 3vw, 32px); }
 .manuale-vetrina > * { min-width: 0; }
-.manuale-vetrina img { border-radius: 12px; border: 1px solid var(--filo); width: 100%; height: auto; }
 .manuale-vetrina .testo { display: grid; gap: 14px; }
-.manuale-vetrina h3 { font-size: clamp(1.3rem, 2.4vw, 1.8rem); }
-.manuale-vetrina p { color: #c9cbd8; }
-.altri { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; border-top: 1px solid var(--filo); }
-.altri li { padding-block: 10px; border-bottom: 1px solid var(--filo); display: flex; flex-wrap: wrap; gap: 4px 12px; justify-content: space-between; }
-.altri li span { color: var(--tenue); font-size: 0.9rem; }
+.manuale-vetrina h3 { font-size: clamp(1.3rem, 2.4vw, 1.7rem); }
+.altri { list-style: none; margin: 0; padding: 0; display: grid; border-top: 1px solid var(--line); }
+.altri li { padding-block: 10px; border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 4px 12px; justify-content: space-between; }
+.altri li span { color: var(--dim); font-size: 0.9rem; }
 
 .passi { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; counter-reset: passo; }
-.passo { background: var(--pannello); border: 1px solid var(--filo); border-radius: 16px; padding: 20px; display: grid; gap: 8px; align-content: start; }
-.passo::before { counter-increment: passo; content: counter(passo); font-family: var(--f-titolo); font-weight: 800; font-size: 2rem; color: var(--viola); line-height: 1; }
-.passo p { color: #c9cbd8; font-size: 0.94rem; }
-.avviso { margin-top: 20px; border-left: 3px solid var(--oro); padding: 10px 14px; background: rgba(242, 196, 92, 0.07); border-radius: 0 10px 10px 0; color: #e8dcbc; font-size: 0.95rem; }
-
-.piede { padding-block: 44px 60px; color: var(--tenue); font-size: 0.92rem; }
-.piede .contenitore { display: grid; gap: 14px; }
-.piede .link { display: flex; flex-wrap: wrap; gap: 10px 22px; }
+.passo { background: var(--panel); border: 1px solid var(--line); border-radius: 2px; padding: 20px; display: grid; gap: 8px; align-content: start; }
+.passo::before { counter-increment: passo; content: counter(passo); font-family: var(--f-matrice); font-size: 44px; line-height: 1; color: var(--treble); }
+.passo p { font-size: 0.94rem; }
+.avviso { margin-top: 20px; border-left: 3px solid var(--active); padding: 10px 14px; background: color-mix(in srgb, var(--active) 7%, var(--panel)); font-size: 0.95rem; }
 
 @media (max-width: 900px) {
   .copertina .contenitore, .manuale-vetrina { grid-template-columns: minmax(0, 1fr); }
   .galleria, .schede, .passi { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .pigna { width: min(100%, 360px); }
 }
 @media (max-width: 560px) {
   .galleria, .schede, .passi { grid-template-columns: minmax(0, 1fr); }
-  .barra .marchio span { display: none; }
+  .scheda.stame { grid-template-columns: minmax(0, 1fr); padding: 24px 20px; }
+  .targa .motto { margin: 0; text-align: left; }
 }
-@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 </style>
 </head>
 <body>
 
 <header class="barra">
   <div class="contenitore">
-    <a class="marchio" href="./"><img src="favicon.png" alt="" width="30" height="30"><span>Cirmolo</span></a>
+    <a class="marchio" href="./"><img src="img/pigna-piccola.png" alt="" width="49" height="28"><span>Cirmolo</span></a>
     <nav aria-label="Sezioni">
       <a href="#schermate">Schermate</a>
       <a href="#musica">Musica</a>
@@ -148,8 +99,16 @@ p { margin: 0; }
 <main>
 <section class="copertina">
   <div class="contenitore">
+    <div class="targa tavola">
+      <span class="tab" aria-hidden="true">TAB. I</span>
+      <img class="pigna" src="img/pigna.png" width="561" height="320" alt="Il logo di Cirmolo a inchiostro: la pigna del pino cembro tra due ciuffi di aghi">
+      <div>
+        <p class="nome">Cirmolo</p>
+        <p class="specie">Pinus cembra L.</p>
+      </div>
+      <p class="motto">AI &amp; Music OS<br>for handhelds</p>
+    </div>
     <div>
-      <p class="motto">AI &amp; Music OS for handhelds</p>
       <h1>La Miyoo Flip, <em>in italiano</em>, con la musica e l'intelligenza artificiale dentro.</h1>
       <p class="intro">Cirmolo è un fork di spruceOS pensato per la Miyoo Flip. Interfaccia tutta in italiano, sintetizzatori e campionatori da suonare con una tastiera MIDI USB, un'IA che traduce i giochi e consiglia cosa giocare. Il nome viene dal cirmolo, il pino cembro delle Dolomiti, parente dell'abete rosso: <i>spruce</i>.</p>
       <div class="bottoni">
@@ -160,7 +119,10 @@ p { margin: 0; }
       </div>
       <p class="stato">In sviluppo, provato solo sulla Miyoo Flip. Lo usi a tuo rischio, come spruceOS. English: see the <a href="https://github.com/luigismith/cirmolo#readme">README</a>.</p>
     </div>
-    <img class="pigna" src="img/logo-centro.png" width="280" height="290" alt="Il logo di Cirmolo: la pigna viola del pino cembro tra due ciuffi di aghi verdi">
+    <figure class="schermo">
+      <img src="img/menu.png" width="640" height="480" alt="La Home di Cirmolo sulla Flip, con il tema STAME: in testata il marchio dei tre stami, l'ora, il titolo Cirmolo nel carattere a punti e la batteria; sotto Musica, App, Preferiti, Giochi, Impostazioni">
+      <figcaption>La Home sulla Flip, con il tema STAME.</figcaption>
+    </figure>
   </div>
 </section>
 
@@ -168,16 +130,17 @@ p { margin: 0; }
   <div class="contenitore">
     <div class="testata">
       <p class="etichetta">Sulla console</p>
-      <h2>Il tema Cirmolo: notte, pigna e aghi</h2>
-      <p>Menu, icone, animazioni e schermate di sistema nei colori del logo. Musica è la prima icona della Home e apre direttamente le app musicali; le altre app sono divise in cartelle: Giochi, Sistema, Altro.</p>
+      <h2>Il tema STAME</h2>
+      <p>Dalla versione 0.4 la console si veste come <a href="https://luigismith.github.io/stame/">Stame</a>, lo strumento ad accordi nato sulla Flip: il suo tema Giorno, un LCD riflettente. Vetro grigio-verde con la maglia di punti, inchiostri scuri e ogni colore con un ruolo; Matrice, il carattere a punti di Stame, nella testata e nell'orologio del salvaschermo, con i punti spenti in vista; Spleen, un carattere bitmap, in tutto il resto. Le console sono disegnate a inchiostro e i tasti suonano il «granello di Stame», una nota del suo logo sonoro.</p>
+      <p>Musica è la prima icona della Home e apre direttamente le app musicali; le altre app sono divise in cartelle: Giochi, Sistema, Altro. Il tema Cirmolo (notte, pigna e aghi) resta in Impostazioni › Tema, insieme a Spruce.</p>
     </div>
     <div class="galleria">
-      <figure><img src="img/menu.png" width="640" height="480" loading="lazy" alt="La Home di Cirmolo: Musica, App, Preferiti, Giochi, Impostazioni"><figcaption>La Home, con Musica per prima</figcaption></figure>
-      <figure><img src="img/app.png" width="640" height="480" loading="lazy" alt="Le app divise in aree"><figcaption>Le app divise in aree</figcaption></figure>
-      <figure><img src="img/musica.png" width="640" height="480" loading="lazy" alt="L'area Musica: Cirmolo Piano, Sampler, Synth, Diapason, Fioritura"><figcaption>Musica, dalla Home</figcaption></figure>
-      <figure><img src="img/giochi.png" width="640" height="480" loading="lazy" alt="L'elenco dei giochi"><figcaption>I giochi</figcaption></figure>
-      <figure><img src="img/synth.png" width="640" height="480" loading="lazy" alt="Cirmolo Synth: la griglia della pagina Ritmo con 12 batterie, Acido e Piega"><figcaption>Cirmolo Synth</figcaption></figure>
-      <figure><img src="img/openorc.png" width="640" height="480" loading="lazy" alt="OpenOrc"><figcaption>OpenOrc</figcaption></figure>
+      <figure class="schermo"><img src="img/menu.png" width="640" height="480" loading="lazy" alt="La Home: Musica, App, Preferiti, Giochi, Impostazioni"><figcaption>La Home, con Musica per prima</figcaption></figure>
+      <figure class="schermo"><img src="img/app.png" width="640" height="480" loading="lazy" alt="Le app divise in aree: Musica, Giochi, Foto e letture, Personalizza, Sistema, Altro; la riga scelta ha il segno verde a sinistra"><figcaption>Le app divise in aree</figcaption></figure>
+      <figure class="schermo"><img src="img/musica.png" width="640" height="480" loading="lazy" alt="L'area Musica: Cirmolo Piano, Sampler, Synth, Diapason, Fioritura"><figcaption>Musica, dalla Home</figcaption></figure>
+      <figure class="schermo"><img src="img/giochi.png" width="640" height="480" loading="lazy" alt="I sistemi dei giochi, con le console disegnate a inchiostro"><figcaption>I giochi, con le console a inchiostro</figcaption></figure>
+      <figure class="schermo"><img src="img/salvaschermo.png" width="640" height="480" loading="lazy" alt="Il salvaschermo: il marchio dei tre stami, l'ora in Matrice con i punti spenti in vista, la data e la batteria"><figcaption>Il salvaschermo, con i punti spenti in vista</figcaption></figure>
+      <figure class="schermo"><img src="img/caratteri.png" width="640" height="480" loading="lazy" alt="La tavola dei caratteri: Matrice, il carattere a punti di Stame, e Spleen 12×24 e 8×16, anche con nomi in giapponese e in cirillico"><figcaption>Matrice e Spleen, i caratteri del tema</figcaption></figure>
     </div>
   </div>
 </section>
@@ -190,12 +153,21 @@ p { margin: 0; }
       <p>App native scritte in C per la Flip, con un kit comune per grafica, tasti, audio e tastiere MIDI USB.</p>
     </div>
     <div class="schede">
-      <div class="scheda speciale"><h3>OpenOrc</h3><p>Sintetizzatore di accordi ispirato all'Orchid, per la Akai MPK mini IV o i tasti della Flip. Sette motori (anche un coro di voci), 28 suoni in stereo con shimmer, nastro e pompa, i tuoi suoni salvati, looper a strati.</p><a class="manuale" href="openorc/">Leggi il manuale illustrato</a></div>
-      <div class="scheda speciale fiore"><h3>Fioritura</h3><p>Un giardino di suoni e luci: pianti una nota, fiorisce e torna a ogni respiro sempre più piano; se lo lasci stare, sogna da solo. Lucciole che rimbalzano in una griglia, sei atmosfere, Launchpad con i LED a colori. Con un microfono ti ascolta: canti e fiorisce, soffi e passa una brezza, batti le mani e passa una lucciola.</p><a class="manuale" href="fioritura/">Scoprila e provala nel browser</a></div>
-      <div class="scheda"><h3>Cirmolo Synth</h3><p>Groovebox tutta sintetizzata: 12 batterie da 26 kit, un basso acido alla 303 e Piega, un synth West Coast. Sequencer fino a 64 passi con probabilità e condizioni, 33 ritmi pronti, pagina Live, filtro DJ e stutter, clock MIDI.</p><a class="manuale" href="synth/">Scopri Cirmolo Synth</a></div>
-      <div class="scheda"><h3>Cirmolo Sampler</h3><p>Campionatore a 16 pad con sequencer, registrazione dal microfono USB, libreria dei campioni, esportazione in WAV e Launchpad.</p><a class="manuale" href="sampler/">Scopri Cirmolo Sampler</a></div>
-      <div class="scheda"><h3>Cirmolo Piano</h3><p>Strumento General MIDI con il SoundFont GeneralUser GS: 287 preset da suonare con la tastiera MIDI.</p><a class="manuale" href="piano/">Scopri Cirmolo Piano</a></div>
-      <div class="scheda"><h3>Diapason</h3><p>Accordatore per chitarra, basso, ukulele e violino, note di riferimento e metronomo.</p><a class="manuale" href="diapason/">Scopri Diapason</a></div>
+      <div class="scheda speciale" style="--c: var(--active)"><h3>OpenOrc</h3><p>Sintetizzatore di accordi ispirato all'Orchid, per la Akai MPK mini IV o i tasti della Flip. Sette motori (anche un coro di voci), 28 suoni in stereo con shimmer, nastro e pompa, i tuoi suoni salvati, looper a strati.</p><a class="manuale" href="openorc/">Leggi il manuale illustrato</a></div>
+      <div class="scheda speciale" style="--c: var(--warn)"><h3>Fioritura</h3><p>Un giardino di suoni e luci: pianti una nota, fiorisce e torna a ogni respiro sempre più piano; se lo lasci stare, sogna da solo. Lucciole che rimbalzano in una griglia, sei atmosfere, Launchpad con i LED a colori. Con un microfono ti ascolta: canti e fiorisce, soffi e passa una brezza, batti le mani e passa una lucciola.</p><a class="manuale" href="fioritura/">Scoprila e provala nel browser</a></div>
+      <div class="scheda" style="--c: var(--loop)"><h3>Cirmolo Synth</h3><p>Groovebox tutta sintetizzata: 12 batterie da 26 kit, un basso acido alla 303 e Piega, un synth West Coast. Sequencer fino a 64 passi con probabilità e condizioni, 33 ritmi pronti, pagina Live, filtro DJ e stutter, clock MIDI.</p><a class="manuale" href="synth/">Scopri Cirmolo Synth</a></div>
+      <div class="scheda" style="--c: var(--bass)"><h3>Cirmolo Sampler</h3><p>Campionatore a 16 pad con sequencer, registrazione dal microfono USB, libreria dei campioni, esportazione in WAV e Launchpad.</p><a class="manuale" href="sampler/">Scopri Cirmolo Sampler</a></div>
+      <div class="scheda" style="--c: var(--treble)"><h3>Cirmolo Piano</h3><p>Strumento General MIDI con il SoundFont GeneralUser GS: 287 preset da suonare con la tastiera MIDI.</p><a class="manuale" href="piano/">Scopri Cirmolo Piano</a></div>
+      <div class="scheda" style="--c: var(--focus)"><h3>Diapason</h3><p>Accordatore per chitarra, basso, ukulele e violino, note di riferimento e metronomo.</p><a class="manuale" href="diapason/">Scopri Diapason</a></div>
+      <div class="scheda stame tavola">
+        <img src="img/stame.png" width="61" height="64" alt="Il marchio di Stame: tre stami che salgono da un solo ricettacolo">
+        <div>
+          <p class="etichetta">Il progetto gemello</p>
+          <h3>Stame</h3>
+          <p>Uno strumento ad accordi aperto, nato sulla Flip: tieni premuto un tipo di accordo, premi un tasto e ne esce l'accordo intero, con il basso. Si suona con la Akai MPK mini IV e un macro pad, ha duecento suoni, un looper e una batteria che si inventa da sola. È un progetto a parte: in Cirmolo si installa da Musica › Installa Stame, con il Wi-Fi. Il tema STAME della console viene dalla sua plancia.</p>
+          <p><a href="https://luigismith.github.io/stame/">Il sito di Stame</a> · <a href="https://luigismith.github.io/stame/manuale.html">il manuale</a> · <a href="https://github.com/luigismith/stame">il codice</a></p>
+        </div>
+      </div>
     </div>
   </div>
 </section>
@@ -208,12 +180,12 @@ p { margin: 0; }
       <p>Servono il Wi-Fi e le tue chiavi API, che restano solo sulla scheda SD. Alcuni fornitori hanno modelli gratuiti.</p>
     </div>
     <div class="schede">
-      <div class="scheda"><h3>Chiedi all'IA</h3><p>Chat con Claude e molti altri fornitori, anche a voce: tieni premuto R2 e parla, la risposta si può ascoltare.</p><a class="manuale" href="chiedi-ia/">Scopri Chiedi all'IA</a></div>
-      <div class="scheda"><h3>Traduttore dei giochi</h3><p>Nei giochi di RetroArch, SELECT + giù mette in pausa e mostra la traduzione del testo sullo schermo.</p><a class="manuale" href="ia-giochi/#traduttore">Come funziona</a></div>
-      <div class="scheda"><h3>Scheda del gioco</h3><p>Dal menu di un gioco: in breve, di cosa parla, come si gioca, consigli e curiosità.</p><a class="manuale" href="ia-giochi/#scheda">Come funziona</a></div>
-      <div class="scheda"><h3>Diario delle partite</h3><p>A fine partita annota gioco, durata e dove eri rimasto; te lo ricorda quando lo riapri.</p><a class="manuale" href="ia-giochi/#diario">Come funziona</a></div>
-      <div class="scheda"><h3>Cosa gioco?</h3><p>Tre domande e l'IA sceglie quattro giochi tra quelli sulla tua SD.</p><a class="manuale" href="cosa-gioco/">Scopri Cosa gioco?</a></div>
-      <div class="scheda"><h3>Tastiere configurate dall'IA</h3><p>Colleghi una tastiera MIDI qualsiasi a OpenOrc, muovi i controlli e l'IA gratuita sceglie dove metterli.</p><a class="manuale" href="openorc/#ia">Nel manuale di OpenOrc</a></div>
+      <div class="scheda" style="--c: var(--active)"><h3>Chiedi all'IA</h3><p>Chat con Claude e molti altri fornitori, anche a voce: tieni premuto R2 e parla, la risposta si può ascoltare.</p><a class="manuale" href="chiedi-ia/">Scopri Chiedi all'IA</a></div>
+      <div class="scheda" style="--c: var(--active)"><h3>Traduttore dei giochi</h3><p>Nei giochi di RetroArch, SELECT + giù mette in pausa e mostra la traduzione del testo sullo schermo.</p><a class="manuale" href="ia-giochi/#traduttore">Come funziona</a></div>
+      <div class="scheda" style="--c: var(--active)"><h3>Scheda del gioco</h3><p>Dal menu di un gioco: in breve, di cosa parla, come si gioca, consigli e curiosità.</p><a class="manuale" href="ia-giochi/#scheda">Come funziona</a></div>
+      <div class="scheda" style="--c: var(--active)"><h3>Diario delle partite</h3><p>A fine partita annota gioco, durata e dove eri rimasto; te lo ricorda quando lo riapri.</p><a class="manuale" href="ia-giochi/#diario">Come funziona</a></div>
+      <div class="scheda" style="--c: var(--active)"><h3>Cosa gioco?</h3><p>Tre domande e l'IA sceglie quattro giochi tra quelli sulla tua SD.</p><a class="manuale" href="cosa-gioco/">Scopri Cosa gioco?</a></div>
+      <div class="scheda" style="--c: var(--active)"><h3>Tastiere configurate dall'IA</h3><p>Colleghi una tastiera MIDI qualsiasi a OpenOrc, muovi i controlli e l'IA gratuita sceglie dove metterli.</p><a class="manuale" href="openorc/#ia">Nel manuale di OpenOrc</a></div>
     </div>
   </div>
 </section>
@@ -225,7 +197,7 @@ p { margin: 0; }
       <h2>Da leggere, o da tenere aperti mentre suoni</h2>
     </div>
     <div class="manuale-vetrina">
-      <a href="openorc/"><img src="openorc/img/01-suona.png" width="640" height="480" loading="lazy" alt="La pagina Suona di OpenOrc"></a>
+      <a class="schermo" href="openorc/"><img src="openorc/img/01-suona.png" width="640" height="480" loading="lazy" alt="La pagina Suona di OpenOrc"></a>
       <div class="testo">
         <p class="etichetta">Manuale illustrato</p>
         <h3>OpenOrc, un tasto un accordo</h3>
@@ -241,6 +213,7 @@ p { margin: 0; }
           <li><a href="chiedi-ia/">Chiedi all'IA</a><span>chat, voce, fornitori, azioni</span></li>
           <li><a href="cosa-gioco/">Cosa gioco?</a><span>tre domande, quattro consigli</span></li>
           <li><a href="ia-giochi/">L'IA nei giochi</a><span>traduttore, scheda, diario</span></li>
+          <li><a href="https://luigismith.github.io/stame/manuale.html">Manuale di Stame</a><span>sul sito di Stame</span></li>
           <li><a href="https://github.com/luigismith/cirmolo/blob/cirmolo/App/Fioritura/MANUAL.it.md">Manuale di Fioritura, versione testo</a><span>anche in inglese</span></li>
           <li><a href="https://github.com/luigismith/cirmolo/blob/cirmolo/App/OpenOrc/MANUAL.it.md">Manuale di OpenOrc, versione testo</a><span>anche in inglese</span></li>
           <li><a href="https://github.com/luigismith/cirmolo/blob/cirmolo/App/CirmoloSynth/MANUAL.it.md">Manuale di Cirmolo Synth, versione testo</a><span>anche in inglese</span></li>
@@ -269,12 +242,13 @@ p { margin: 0; }
 
 <footer class="piede">
   <div class="contenitore">
-    <p>Cirmolo esiste grazie al lavoro del team <a href="https://github.com/spruceUI/spruceOS">spruceUI</a> e dei contributori di spruceOS: il merito della base è tutto loro. Come spruceOS è distribuito con licenza <b>CC BY-NC 4.0</b>, uso non commerciale con attribuzione. I componenti di terze parti mantengono le loro licenze.</p>
+    <p>Cirmolo esiste grazie al lavoro del team <a href="https://github.com/spruceUI/spruceOS">spruceUI</a> e dei contributori di spruceOS: il merito della base è tutto loro. Come spruceOS è distribuito con licenza <b>CC BY-NC 4.0</b>, uso non commerciale con attribuzione. I componenti di terze parti mantengono le loro licenze. Il tema e questo sito usano i colori e i caratteri di <a href="https://luigismith.github.io/stame/">Stame</a>: Matrice e Spleen (di Frederic Cambus, licenza BSD), con le <a href="fonts/LICENSE-fonts.txt">licenze dei caratteri</a>.</p>
     <div class="link">
       <a href="https://github.com/luigismith/cirmolo">Codice</a>
       <a href="https://github.com/luigismith/cirmolo/releases">Release</a>
       <a href="https://github.com/luigismith/cirmolo/issues">Segnala un problema</a>
       <a href="https://github.com/luigismith/cirmolo/blob/cirmolo/LICENSE">Licenza</a>
+      <a href="https://github.com/luigismith/stame">Stame</a>
     </div>
   </div>
 </footer>

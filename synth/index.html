@@ -9,19 +9,22 @@
 <meta property="og:description" content="14 tracce tutte sintetizzate: 12 batterie, un basso acido e Piega, un synth West Coast. 26 kit, 33 ritmi pronti, 16 pattern in catena, filtro DJ e stutter sulle levette, clock MIDI.">
 <meta property="og:image" content="https://luigismith.github.io/cirmolo/synth/img/ritmo.png">
 <meta property="og:type" content="article">
-<meta name="theme-color" content="#0d1017">
+<meta name="theme-color" content="#D9DECE">
 <link rel="icon" type="image/png" href="../favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=Be+Vietnam+Pro:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<link rel="preload" href="../fonts/matrice.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../fonts/spleen-8x16.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../stame.css">
 <link rel="stylesheet" href="../app.css">
-<style>:root { --accento: #9b7bf0; --su-accento: #140f24; }</style>
+<style>:root { --accento: var(--loop); }</style>
 </head>
 <body>
 
 <header class="barra">
   <div class="contenitore">
-    <a class="marchio" href="../"><img src="../favicon.png" alt="" width="30" height="30"><span>Cirmolo</span> <small>· Synth</small></a>
+    <a class="marchio" href="../"><img src="../img/pigna-piccola.png" alt="" width="49" height="28"><span>Cirmolo</span> <small>· Synth</small></a>
     <nav aria-label="Sezioni">
       <a href="#inizia">Inizia</a>
       <a href="#ritmo">Ritmo</a>
@@ -164,8 +167,8 @@
       </figure>
       <div class="schede una">
         <div class="scheda"><h3>Probabilità e condizioni</h3><p>Un charleston al 50% suona un giro sì e uno no, a caso. «1° giro su 2» e «2° giro su 2» fanno di una battuta una frase di due; «Solo nel fill» prepara rullate che senti solo quando tieni la levetta destra in giù.</p></div>
-        <div class="scheda" style="--c: var(--oro)"><h3>Lunghezze e velocità</h3><p>Ogni traccia gira con la sua lunghezza: 12 passi contro 16 tornano a combaciare solo ogni 48. La velocità può essere doppia, metà o in terzine.</p></div>
-        <div class="scheda" style="--c: var(--aghi)"><h3>Euclideo</h3><p>Distribuisce N colpi su una lunghezza nel modo più regolare: 3 su 8 è il tresillo, 5 su 8 il cinquillo. La rotazione sposta l'inizio.</p></div>
+        <div class="scheda" style="--c: var(--active)"><h3>Lunghezze e velocità</h3><p>Ogni traccia gira con la sua lunghezza: 12 passi contro 16 tornano a combaciare solo ogni 48. La velocità può essere doppia, metà o in terzine.</p></div>
+        <div class="scheda" style="--c: var(--focus)"><h3>Euclideo</h3><p>Distribuisce N colpi su una lunghezza nel modo più regolare: 3 su 8 è il tresillo, 5 su 8 il cinquillo. La rotazione sposta l'inizio.</p></div>
       </div>
     </div>
   </div>
@@ -206,11 +209,11 @@
     </div>
     <div class="schede tre blocco-sotto">
       <div class="scheda"><h3>Casse e rullanti</h3><p>Cassa 808, 909, acustica, FM e gabber; rullante 808, 909, acustico e spazzola; rim, battimani, schiocco di dita.</p></div>
-      <div class="scheda" style="--c: #5cc8e2"><h3>Charleston e piatti</h3><p>Charleston chiuso, aperto e FM, piatto crash e ride; shaker, tamburello, triangolo.</p></div>
-      <div class="scheda" style="--c: var(--aghi)"><h3>Tom e pelli</h3><p>Tom, tom elettronico alla Simmons, conga, bongo e tabla con la caduta d'altezza.</p></div>
-      <div class="scheda" style="--c: #ec78c4"><h3>Percussioni</h3><p>Campanaccio, claves, legnetto.</p></div>
-      <div class="scheda" style="--c: var(--oro)"><h3>8 bit</h3><p>Cassa, rullante e charleston con il rumore delle console di una volta.</p></div>
-      <div class="scheda" style="--c: var(--rosso)"><h3>Effetti</h3><p>Zap, glitch e soffio.</p></div>
+      <div class="scheda" style="--c: var(--treble)"><h3>Charleston e piatti</h3><p>Charleston chiuso, aperto e FM, piatto crash e ride; shaker, tamburello, triangolo.</p></div>
+      <div class="scheda" style="--c: var(--focus)"><h3>Tom e pelli</h3><p>Tom, tom elettronico alla Simmons, conga, bongo e tabla con la caduta d'altezza.</p></div>
+      <div class="scheda" style="--c: var(--warn)"><h3>Percussioni</h3><p>Campanaccio, claves, legnetto.</p></div>
+      <div class="scheda" style="--c: var(--active)"><h3>8 bit</h3><p>Cassa, rullante e charleston con il rumore delle console di una volta.</p></div>
+      <div class="scheda" style="--c: var(--warn)"><h3>Effetti</h3><p>Zap, glitch e soffio.</p></div>
     </div>
     <div class="tabelle blocco-sotto">
       <div class="tabella">
@@ -309,9 +312,9 @@
         <figcaption>«Suona e registra»: cassa e tom basso premuti, il filtro DJ verso i bassi e lo stutter a 1/8 dalle levette.</figcaption>
       </figure>
       <div class="schede una">
-        <div class="scheda" style="--c: var(--aghi)"><h3>Suona</h3><p>I tasti suonano gli strumenti, sopra al sequencer.</p></div>
-        <div class="scheda" style="--c: var(--rosso)"><h3>Suona e registra</h3><p>Mentre il sequencer va, ogni colpo si scrive nel pattern che suona, sul passo più vicino. Anche i pad MIDI registrano.</p></div>
-        <div class="scheda" style="--c: var(--oro)"><h3>Zittisci</h3><p>Ogni tasto accende e spegne il muto della sua traccia: si costruisce il brano togliendo e rimettendo strumenti.</p></div>
+        <div class="scheda" style="--c: var(--focus)"><h3>Suona</h3><p>I tasti suonano gli strumenti, sopra al sequencer.</p></div>
+        <div class="scheda" style="--c: var(--warn)"><h3>Suona e registra</h3><p>Mentre il sequencer va, ogni colpo si scrive nel pattern che suona, sul passo più vicino. Anche i pad MIDI registrano.</p></div>
+        <div class="scheda" style="--c: var(--active)"><h3>Zittisci</h3><p>Ogni tasto accende e spegne il muto della sua traccia: si costruisce il brano togliendo e rimettendo strumenti.</p></div>
         <p class="nota"><span class="tasto">L3</span> passa da un modo all'altro. In fondo alla pagina si vedono filtro DJ, stutter e fill delle levette.</p>
       </div>
     </div>
@@ -392,8 +395,8 @@
     </div>
     <div class="schede tre blocco-sotto">
       <div class="scheda"><h3>Catena</h3><p>I pattern suonano nell'ordine della catena, un giro ciascuno, a ripetizione; lo stesso pattern può tornare più volte. Si cambia anche mentre suona.</p></div>
-      <div class="scheda" style="--c: var(--oro)"><h3>Esportazione</h3><p><span class="tasto">R1</span> scrive un WAV senza fermare la musica: il pattern per 4 giri o la catena intera, più due secondi di coda per eco e riverbero.</p></div>
-      <div class="scheda" style="--c: var(--rosso)"><h3>Niente annulla</h3><p>Svuotare chiede B due volte. Prima di provare, copia il pattern in uno libero con Y.</p></div>
+      <div class="scheda" style="--c: var(--active)"><h3>Esportazione</h3><p><span class="tasto">R1</span> scrive un WAV senza fermare la musica: il pattern per 4 giri o la catena intera, più due secondi di coda per eco e riverbero.</p></div>
+      <div class="scheda" style="--c: var(--warn)"><h3>Niente annulla</h3><p>Svuotare chiede B due volte. Prima di provare, copia il pattern in uno libero con Y.</p></div>
     </div>
   </div>
 </section>

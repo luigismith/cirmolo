@@ -8,107 +8,90 @@
 <meta property="og:title" content="Prontuario di OpenOrc">
 <meta property="og:description" content="Tutti i comandi di OpenOrc in una pagina, da tenere a vista mentre suoni.">
 <meta property="og:image" content="https://luigismith.github.io/cirmolo/openorc/img/01-suona.png">
-<meta name="theme-color" content="#0c0f15">
+<meta name="theme-color" content="#D9DECE">
 <link rel="icon" type="image/png" href="../../favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=Be+Vietnam+Pro:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<link rel="preload" href="../../fonts/matrice.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../../fonts/spleen-8x16.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../stame.css">
 <style>
-/* Prontuario: una tavola da tenere accanto alla Flip. Schede fitte su una griglia, tasti disegnati come
-   tasti, l'oro dell'app per quello che si preme. Stessa notte del manuale; in stampa diventa chiaro. */
-:root {
-  --notte: #0c0f15;
-  --pannello: #151b25;
-  --pannello-2: #1c2431;
-  --filo: #2b3446;
-  --testo: #ecebf3;
-  --tenue: #9099ae;
-  --spento: #5f6880;
-  --oro: #f2c45c;
-  --oro-scuro: #6f5422;
-  --viola: #9a7cf4;
-  --acqua: #56c9c3;
-  --f-titolo: "Unbounded", "Arial Black", system-ui, sans-serif;
-  --f-testo: "Be Vietnam Pro", "Segoe UI", system-ui, sans-serif;
-  --f-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
-  color-scheme: dark;
-}
-* { box-sizing: border-box; }
-body { margin: 0; background: var(--notte); color: var(--testo); font-family: var(--f-testo); font-size: 14.5px; line-height: 1.45; -webkit-font-smoothing: antialiased; }
-a { color: var(--oro); text-underline-offset: 3px; }
-h1, h2 { font-family: var(--f-titolo); margin: 0; letter-spacing: -0.01em; }
-p { margin: 0; }
+/* Prontuario: una tavola da tenere accanto alla Flip, sul vetro del tema STAME (../../stame.css) come il
+   manuale. Schede fitte su una griglia, tasti disegnati come tasti, l'inchiostro dell'app (--active) per
+   quello che si preme. In stampa il vetro diventa carta bianca. */
+:root { --accento: var(--active); }
+body { font-size: 14.5px; line-height: 1.45; }
 .foglio { max-width: 1240px; margin: 0 auto; padding: 22px clamp(16px, 3vw, 32px) 40px; }
 .testa { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 18px; margin-bottom: 18px; }
-.testa h1 { font-size: clamp(1.6rem, 3.6vw, 2.4rem); font-weight: 800; }
-.testa h1 span { color: var(--oro); }
-.testa nav { margin-left: auto; display: flex; gap: 16px; font-size: 0.9rem; }
-.testa nav a { color: var(--tenue); text-decoration: none; }
-.testa nav a:hover { color: var(--testo); }
+.testa h1 { font-family: var(--f-matrice); font-weight: 400; font-size: clamp(36px, 5vw, 44px); line-height: 1.1; letter-spacing: 0; }
+.testa h1 span { color: var(--active); }
+.testa p { color: var(--dim); }
+.testa nav { margin-left: auto; display: flex; gap: 2px; }
+.testa nav a { color: var(--dim); text-decoration: none; font-family: var(--f-spleen); font-size: 16px; line-height: 20px; padding: 4px 10px; }
+.testa nav a:hover { color: var(--text); background: var(--bar); box-shadow: inset 3px 0 0 var(--focus); }
 .griglia { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 12px; }
-.scheda { background: var(--pannello); border: 1px solid var(--filo); border-radius: 14px; padding: 14px 16px; display: grid; gap: 10px; align-content: start; min-width: 0; }
-.scheda h2 { font-size: 0.8rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--oro); font-family: var(--f-mono); }
+.scheda { background: var(--panel); border: 1px solid var(--line); border-radius: 2px; padding: 14px 16px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+.scheda h2 { font-family: var(--f-spleen); font-size: 16px; line-height: 20px; letter-spacing: 1px; text-transform: uppercase; color: var(--active); }
 .s4 { grid-column: span 4; } .s5 { grid-column: span 5; } .s6 { grid-column: span 6; } .s7 { grid-column: span 7; } .s8 { grid-column: span 8; } .s12 { grid-column: span 12; }
 .k {
-  display: inline-block; font-family: var(--f-mono); font-size: 0.78rem; font-weight: 600; line-height: 1.5;
-  padding: 0 0.45em; border-radius: 5px; background: var(--pannello-2); border: 1px solid var(--filo);
-  border-bottom-width: 2px; color: var(--testo); white-space: nowrap;
+  display: inline-block; font-family: var(--f-mono); font-size: 0.78rem; font-weight: 500; line-height: 1.5;
+  padding: 0 0.45em; border-radius: 2px; background: var(--text); color: var(--carta); white-space: nowrap;
 }
 .righe { display: grid; gap: 0; }
-.righe div { display: grid; grid-template-columns: 9.5em minmax(0, 1fr); gap: 10px; padding-block: 5px; border-top: 1px solid var(--filo); align-items: baseline; }
+.righe div { display: grid; grid-template-columns: 9.5em minmax(0, 1fr); gap: 10px; padding-block: 5px; border-top: 1px solid var(--line); align-items: baseline; }
 .righe div:first-child { border-top: 0; }
-.righe span:last-child { color: #d3d5e0; }
 .stretto .righe div { grid-template-columns: 6.6em minmax(0, 1fr); }
 
 /* la croce e i tasti della Flip */
 .flip { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .croce { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(3, auto); gap: 5px; text-align: center; }
-.croce > div { background: var(--pannello-2); border: 1px solid var(--filo); border-radius: 9px; padding: 5px 2px; display: grid; }
-.croce > div b { font-family: var(--f-titolo); font-size: 0.9rem; font-weight: 600; }
-.croce > div small { font-family: var(--f-mono); font-size: 0.68rem; color: var(--tenue); }
+.croce > div { background: var(--bar); border: 1px solid var(--line); border-radius: 2px; padding: 5px 2px; display: grid; }
+.croce > div b { font-size: 0.9rem; font-weight: 600; }
+.croce > div small { font-family: var(--f-mono); font-size: 0.68rem; color: var(--dim); }
 .croce > .vuoto { background: none; border: 0; }
-.croce .centro { background: none; border: 0; color: var(--spento); font-family: var(--f-mono); font-size: 0.72rem; place-content: center; }
+.croce .centro { background: none; border: 0; color: var(--ghost); font-family: var(--f-mono); font-size: 0.72rem; place-content: center; }
 .dorsali { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; text-align: center; }
-.dorsali div { background: var(--pannello-2); border: 1px solid var(--filo); border-radius: 9px; padding: 5px 2px; display: grid; }
-.dorsali b { font-family: var(--f-mono); font-size: 0.78rem; color: var(--oro); }
-.dorsali span { font-size: 0.76rem; color: #d3d5e0; }
-.nota { font-size: 0.8rem; color: var(--tenue); }
+.dorsali div { background: var(--bar); border: 1px solid var(--line); border-radius: 2px; padding: 5px 2px; display: grid; }
+.dorsali b { font-family: var(--f-mono); font-size: 0.78rem; font-weight: 500; color: var(--active); }
+.dorsali span { font-size: 0.76rem; }
+.nota { font-size: 0.8rem; color: var(--dim); }
 
 /* pad della MPK */
 .pad { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; }
-.pad div { background: var(--pannello-2); border: 1px solid var(--filo); border-radius: 9px; padding: 6px 4px; text-align: center; display: grid; }
-.pad b { font-family: var(--f-titolo); font-size: 0.82rem; font-weight: 600; }
-.pad small { font-family: var(--f-mono); font-size: 0.66rem; color: var(--tenue); }
-.pad .q b { color: var(--oro); }
-.pad.funzioni b { font-family: var(--f-testo); font-size: 0.78rem; }
+.pad div { background: var(--bar); border: 1px solid var(--line); border-radius: 2px; padding: 6px 4px; text-align: center; display: grid; }
+.pad b { font-size: 0.82rem; font-weight: 600; }
+.pad small { font-family: var(--f-mono); font-size: 0.66rem; color: var(--dim); }
+.pad .q b { color: var(--active); }
+.pad.funzioni b { font-size: 0.78rem; }
 .manopole { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 4px; text-align: center; }
 .manopole div { display: grid; justify-items: center; gap: 2px; }
-.manopole i { width: 30px; height: 30px; border-radius: 50%; background: var(--pannello-2); border: 2px solid var(--oro-scuro); position: relative; display: block; }
-.manopole i::after { content: ""; position: absolute; left: 50%; top: 3px; width: 2px; height: 10px; margin-left: -1px; background: var(--oro); border-radius: 1px; transform-origin: 50% 11px; }
-.manopole b { font-family: var(--f-mono); font-size: 0.66rem; color: var(--oro); }
-.manopole span { font-size: 0.7rem; color: #d3d5e0; line-height: 1.1; }
+.manopole i { width: 30px; height: 30px; border-radius: 50%; background: var(--text); border: 2px solid var(--active); position: relative; display: block; }
+.manopole i::after { content: ""; position: absolute; left: 50%; top: 3px; width: 2px; height: 10px; margin-left: -1px; background: var(--carta); border-radius: 1px; transform-origin: 50% 11px; }
+.manopole b { font-family: var(--f-mono); font-size: 0.66rem; font-weight: 500; color: var(--active); }
+.manopole span { font-size: 0.7rem; line-height: 1.1; }
 
 /* esecuzioni */
 .esecuzioni { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
 .esecuzioni div { display: grid; gap: 4px; }
-.esecuzioni svg { width: 100%; height: auto; background: var(--notte); border-radius: 7px; }
+.esecuzioni svg { width: 100%; height: auto; background: var(--bg); border: 1px solid var(--line); border-radius: 2px; }
 .esecuzioni b { font-size: 0.82rem; }
-.esecuzioni span { font-family: var(--f-mono); font-size: 0.66rem; color: var(--tenue); }
+.esecuzioni span { font-family: var(--f-mono); font-size: 0.66rem; color: var(--dim); }
 
 /* looper */
 .flusso { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 0.84rem; }
-.flusso .st { border: 1px solid var(--filo); background: var(--pannello-2); border-radius: 8px; padding: 3px 9px; font-weight: 600; }
-.flusso .rec { color: #ec6068; } .flusso .play { color: var(--acqua); } .flusso .over { color: var(--oro); }
-.flusso .fr { color: var(--tenue); font-family: var(--f-mono); font-size: 0.74rem; }
+.flusso .st { border: 1px solid var(--line); background: var(--bar); border-radius: 2px; padding: 3px 9px; font-weight: 600; }
+.flusso .rec { color: var(--warn); } .flusso .play { color: var(--treble); } .flusso .over { color: var(--active); }
+.flusso .fr { color: var(--dim); font-family: var(--f-mono); font-size: 0.74rem; }
 
 /* suoni */
 .suoni { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; }
-.suoni h3 { margin: 0 0 4px; font-size: 0.78rem; font-family: var(--f-mono); color: var(--tenue); font-weight: 600; }
+.suoni h3 { margin: 0 0 4px; font-size: 0.78rem; font-family: var(--f-mono); color: var(--dim); font-weight: 500; }
 .suoni ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 2px; }
 .suoni li { display: grid; grid-template-columns: 1.9em minmax(0, 1fr); font-size: 0.84rem; }
-.suoni li b { font-family: var(--f-mono); color: var(--oro); font-weight: 600; font-size: 0.8rem; }
-.suoni li.st span::after { content: " ·st"; color: var(--acqua); font-family: var(--f-mono); font-size: 0.7rem; }
-.piede { margin-top: 16px; font-size: 0.82rem; color: var(--tenue); display: flex; flex-wrap: wrap; gap: 6px 18px; }
+.suoni li b { font-family: var(--f-mono); color: var(--active); font-weight: 500; font-size: 0.8rem; }
+.suoni li.st span::after { content: " ·st"; color: var(--treble); font-family: var(--f-mono); font-size: 0.7rem; }
+.piede { margin-top: 16px; padding: 0; font-size: 0.82rem; color: var(--dim); display: flex; flex-wrap: wrap; gap: 6px 18px; }
 
 @media (max-width: 1000px) {
   .s4, .s5, .s6, .s7, .s8 { grid-column: span 6; }
@@ -120,11 +103,12 @@ p { margin: 0; }
   .flip { grid-template-columns: minmax(0, 1fr); }
   .suoni { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .manopole { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .dorsali span { font-size: 0.68rem; }
   .testa nav { margin-left: 0; }
 }
 @media print {
-  :root { --notte: #ffffff; --pannello: #ffffff; --pannello-2: #f3f1ea; --filo: #cfcabb; --testo: #17140c; --tenue: #5b5546; --spento: #9a937f; --oro: #8a5a00; --oro-scuro: #d9b45a; --acqua: #1f7f7a; color-scheme: light; }
-  body { font-size: 11px; }
+  :root { --bg: #ffffff; --panel: #ffffff; --bar: #f1f3ec; --line: #b9bfae; --text: #141B18; --dim: #424C47; --ghost: #879180; color-scheme: light; }
+  body { font-size: 11px; background: #fff; }
   .foglio { padding: 8mm; max-width: none; }
   .testa nav, .piede a { display: none; }
   .scheda { break-inside: avoid; }
@@ -136,7 +120,7 @@ p { margin: 0; }
 <div class="foglio">
   <header class="testa">
     <h1>OpenOrc <span>prontuario</span></h1>
-    <p style="color:var(--tenue)">tutti i comandi in una pagina · console in Do maggiore</p>
+    <p>tutti i comandi in una pagina · console in Do maggiore</p>
     <nav aria-label="Collegamenti"><a href="../">Manuale illustrato</a><a href="../../">Cirmolo</a></nav>
   </header>
 
@@ -276,9 +260,9 @@ p { margin: 0; }
            ["Arpeggio", "K3 1/4…1/32", "arp"], ["Pattern", "K3 ritmo 1-4", "pattern"], ["Arpa", "K3 velocità", "arpa"]];
   function diagramma(tipo) {
     var W = 300, H = 120, righe = (tipo === "arp" || tipo === "arpa") ? 9 : 4, s = "";
-    for (var i = 0; i <= 16; i++) s += '<line x1="' + (12 + i * 17) + '" y1="8" x2="' + (12 + i * 17) + '" y2="' + (H - 8) + '" stroke="#1c2431" stroke-width="' + (i % 4 === 0 ? 1.4 : 0.7) + '"/>';
+    for (var i = 0; i <= 16; i++) s += '<line x1="' + (12 + i * 17) + '" y1="8" x2="' + (12 + i * 17) + '" y2="' + (H - 8) + '" stroke="#C1C8B4" stroke-width="' + (i % 4 === 0 ? 1.4 : 0.7) + '"/>';
     function y(r) { return H - 14 - r * ((H - 28) / (righe - 1)); }
-    function barra(x, r, l, forte) { return '<rect x="' + x + '" y="' + (y(r) - 4) + '" width="' + Math.max(3, l) + '" height="8" rx="4" fill="#f2c45c" opacity="' + (forte ? 1 : 0.62) + '"/>'; }
+    function barra(x, r, l, forte) { return '<rect x="' + x + '" y="' + (y(r) - 4) + '" width="' + Math.max(3, l) + '" height="8" rx="1" fill="#634A00" opacity="' + (forte ? 1 : 0.62) + '"/>'; }
     var fine = 284, r, k;
     if (tipo === "accordo") for (r = 0; r < 4; r++) s += barra(12, r, fine - 12, true);
     if (tipo === "strum") { for (r = 0; r < 4; r++) s += barra(12 + r * 14, r, 120 - r * 14, r === 0); for (r = 0; r < 4; r++) s += barra(150 + (3 - r) * 14, r, fine - 150 - (3 - r) * 14, r === 3); }

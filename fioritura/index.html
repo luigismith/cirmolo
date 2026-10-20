@@ -9,146 +9,90 @@
 <meta property="og:description" content="Pianti una nota, il giardino la ripete e la fa sfiorire piano. Se lo lasci stare, continua da solo.">
 <meta property="og:image" content="https://luigismith.github.io/cirmolo/fioritura/img/atmosfera-notte.png">
 <meta property="og:type" content="article">
-<meta name="theme-color" content="#0b0a18">
+<meta name="theme-color" content="#D9DECE">
 <link rel="icon" type="image/png" href="../favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=Be+Vietnam+Pro:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<link rel="preload" href="../fonts/matrice.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../fonts/spleen-8x16.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../stame.css">
 <style>
-/* Fioritura: la stessa notte del sito, con i colori dei fiori. In apertura un giardino vivo (canvas),
-   poi le schermate vere della console. */
-:root {
-  --notte: #0b0a18;
-  --notte-2: #100f20;
-  --pannello: #161528;
-  --pannello-2: #1e1c34;
-  --filo: #2c2a46;
-  --testo: #eeebf8;
-  --tenue: #a19dbd;
-  --viola: #a88cf6;
-  --lavanda: #c9b8fb;
-  --cielo: #86aaff;
-  --rosa: #ff8aa6;
-  --oro: #f2c45c;
-  --aghi: #6ec68e;
-  --f-titolo: "Unbounded", "Arial Black", system-ui, sans-serif;
-  --f-testo: "Be Vietnam Pro", "Segoe UI", system-ui, sans-serif;
-  --f-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
-  color-scheme: dark;
-}
-* { box-sizing: border-box; }
-html { scroll-behavior: smooth; scroll-padding-top: 70px; }
-body {
-  margin: 0; background: var(--notte); color: var(--testo); font-family: var(--f-testo);
-  font-size: 16.5px; line-height: 1.62; -webkit-font-smoothing: antialiased;
-}
-img { max-width: 100%; display: block; }
-a { color: var(--lavanda); text-underline-offset: 3px; }
-a:focus-visible, button:focus-visible { outline: 2px solid var(--lavanda); outline-offset: 3px; border-radius: 8px; }
-h1, h2, h3 { font-family: var(--f-titolo); margin: 0; text-wrap: balance; letter-spacing: -0.01em; }
-h2 { font-size: clamp(1.7rem, 3.4vw, 2.5rem); font-weight: 700; line-height: 1.1; }
-h3 { font-size: 1.02rem; font-weight: 700; line-height: 1.25; }
-p { margin: 0; }
-.contenitore { max-width: 1160px; margin: 0 auto; padding-inline: clamp(16px, 4vw, 40px); }
-.etichetta { font-family: var(--f-mono); font-size: 0.74rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--rosa); }
-
-/* barra */
-.barra { position: sticky; top: 0; z-index: 10; background: rgba(11, 10, 24, 0.88); backdrop-filter: blur(10px); border-bottom: 1px solid var(--filo); }
-.barra .contenitore { display: flex; align-items: center; gap: 18px; padding-block: 10px; }
-.marchio { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--testo); font-family: var(--f-titolo); font-weight: 700; font-size: 1.05rem; }
-.marchio img { width: 30px; height: 30px; border-radius: 8px; }
-.marchio small { font-family: var(--f-testo); font-weight: 500; color: var(--tenue); font-size: 0.9rem; }
-.barra nav { display: flex; gap: 4px; margin-left: auto; min-width: 0; overflow-x: auto; scrollbar-width: none; }
-.barra nav::-webkit-scrollbar { display: none; }
-.barra nav a { flex: none; color: var(--tenue); text-decoration: none; font-size: 0.9rem; padding: 6px 12px; border-radius: 999px; }
-.barra nav a:hover { color: var(--testo); background: var(--pannello); }
+/* Fioritura sul vetro del tema STAME, sopra ../stame.css: l'inchiostro della pagina e' il rosso (warn), come
+   nella home. In apertura il giardino vivo (canvas) dentro la mascherina dello schermo: i suoi colori sono
+   quelli dell'app, come nelle schermate vere della console che seguono. */
+:root { --accento: var(--warn); }
 
 /* copertina con il giardino vivo */
-.copertina { position: relative; overflow: hidden; border-bottom: 1px solid var(--filo);
-  background:
-    radial-gradient(50% 70% at 78% 45%, rgba(168, 140, 246, 0.18), transparent 70%),
-    radial-gradient(40% 50% at 10% 90%, rgba(255, 138, 166, 0.10), transparent 70%),
-    var(--notte); }
-.copertina .contenitore { display: grid; grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr); gap: clamp(28px, 5vw, 56px); align-items: center; padding-block: clamp(40px, 6vw, 84px); }
-.copertina h1 { font-size: clamp(2.6rem, 6vw, 4.4rem); font-weight: 800; line-height: 1; letter-spacing: -0.035em;
-  background: linear-gradient(100deg, #ffd9a8 0%, var(--rosa) 30%, var(--viola) 62%, var(--cielo) 100%);
-  -webkit-background-clip: text; background-clip: text; color: transparent; padding-bottom: 6px; }
-.motto { font-family: var(--f-mono); color: var(--lavanda); font-size: 0.95rem; margin-bottom: 14px; }
-.copertina .intro { color: #cfcbe2; max-width: 50ch; margin-top: 16px; font-size: 1.07rem; }
-.bottoni { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 26px; }
-.bottone { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; font: 600 1rem var(--f-testo); padding: 11px 20px; border-radius: 999px; border: 1px solid var(--filo); color: var(--testo); background: var(--pannello); cursor: pointer; }
-.bottone.primo { background: var(--viola); border-color: var(--viola); color: #160f2c; }
-.bottone:hover { border-color: var(--lavanda); }
-.nota { margin-top: 16px; font-size: 0.86rem; color: var(--tenue); }
+.copertina { border-bottom: 1px solid var(--line); }
+.copertina .contenitore { display: grid; grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr); gap: clamp(28px, 5vw, 56px); align-items: center; padding-block: clamp(36px, 6vw, 80px); }
+.copertina h1 { font-family: var(--f-matrice); font-weight: 400; font-size: clamp(52px, 7.5vw, 88px); line-height: 1.05; letter-spacing: 0; color: var(--accento); }
+.motto { font-family: var(--f-spleen); font-size: 16px; line-height: 20px; color: var(--accento); margin-bottom: 16px; }
+.copertina .intro { max-width: 52ch; margin-top: 16px; font-size: 1.06rem; }
+.nota { margin-top: 16px; font-size: 0.88rem; color: var(--dim); }
 
-.schermo { position: relative; border-radius: 22px; padding: 14px; background: linear-gradient(160deg, #24223c, #121122); border: 1px solid #36335a;
-  box-shadow: 0 40px 80px rgba(0, 0, 0, 0.45), 0 0 120px rgba(168, 140, 246, 0.16); }
-.schermo canvas { display: block; width: 100%; height: auto; aspect-ratio: 4 / 3; border-radius: 10px; background: #0b0a18; touch-action: none; cursor: crosshair; }
-.schermo .comandi-vivi { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; }
-.chip { font: 500 0.82rem var(--f-testo); color: var(--tenue); background: var(--pannello); border: 1px solid var(--filo); border-radius: 999px; padding: 5px 12px; cursor: pointer; }
-.chip[aria-pressed="true"] { color: #160f2c; background: var(--lavanda); border-color: var(--lavanda); }
-.chip.suono { margin-left: auto; color: var(--testo); }
-.chip.suono[aria-pressed="true"] { background: var(--rosa); border-color: var(--rosa); }
-.schermo .didascalia { margin-top: 8px; font-size: 0.8rem; color: var(--tenue); }
+.schermo canvas { display: block; width: 100%; height: auto; aspect-ratio: 4 / 3; border: clamp(6px, 1.2vw, 12px) solid var(--text); border-radius: 6px; background: #0b0a18; touch-action: none; cursor: crosshair; }
+.schermo .comandi-vivi { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.chip { font-family: var(--f-spleen); font-size: 16px; line-height: 20px; color: var(--dim); background: var(--panel); border: 1px solid var(--line); border-radius: 2px; padding: 5px 10px; cursor: pointer; }
+.chip:hover { color: var(--text); border-color: var(--ghost); }
+/* l'atmosfera scelta come la voce scelta della console: la cella scura e il segno del fuoco a sinistra */
+.chip[aria-pressed="true"] { color: var(--text); background: var(--bar); border-color: var(--bar); box-shadow: inset 3px 0 0 var(--focus); }
+.chip.suono { margin-left: auto; color: var(--text); }
+.chip.suono[aria-pressed="true"] { color: var(--carta); background: var(--accento); border-color: var(--accento); box-shadow: none; }
+.schermo .didascalia { font-size: 0.86rem; color: var(--dim); }
 
-/* sezioni */
-.sezione { padding-block: clamp(56px, 8vw, 100px); border-bottom: 1px solid var(--filo); }
-.sezione:nth-of-type(even) { background: var(--notte-2); }
+/* sezioni: un filo di 1 px fra l'una e l'altra, come le zone della plancia */
+.sezione { padding-block: clamp(52px, 7.5vw, 96px); border-bottom: 1px solid var(--line); }
+.sezione:nth-of-type(even) { background: color-mix(in srgb, var(--panel) 55%, transparent); }
 .testata { display: grid; gap: 12px; max-width: 780px; margin-bottom: clamp(26px, 4vw, 42px); }
-.testata p { color: var(--tenue); font-size: 1.05rem; }
+.testata p { color: var(--dim); font-size: 1.05rem; }
 
 .due { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr); gap: clamp(22px, 4vw, 48px); align-items: start; }
 .due > * { min-width: 0; }
 .foto { margin: 0; display: grid; gap: 10px; }
-.foto img { border-radius: 14px; border: 1px solid var(--filo); width: 100%; height: auto; aspect-ratio: 4 / 3; background: var(--pannello); }
-.foto figcaption { font-size: 0.86rem; color: var(--tenue); }
+.foto img { width: 100%; height: auto; aspect-ratio: 4 / 3; border: clamp(6px, 1vw, 10px) solid var(--text); border-radius: 5px; background: var(--text); }
+.foto figcaption { font-size: 0.86rem; color: var(--dim); }
 
 .schede { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
-.scheda { background: var(--pannello); border: 1px solid var(--filo); border-radius: 16px; padding: 18px 20px; display: grid; gap: 7px; align-content: start; }
-.scheda p { color: #cfcbe2; font-size: 0.94rem; }
-.scheda .valore { font-family: var(--f-mono); font-size: 0.78rem; color: var(--rosa); }
+.scheda { background: var(--panel); border: 1px solid var(--line); border-radius: 2px; padding: 18px 20px; display: grid; gap: 7px; align-content: start; }
+.scheda p { font-size: 0.94rem; }
+.scheda .valore { font-family: var(--f-mono); font-size: 0.78rem; color: var(--accento); }
 .scheda h3 { display: flex; align-items: center; gap: 10px; }
-.scheda h3::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--c, var(--viola)); box-shadow: 0 0 12px var(--c, var(--viola)); }
+/* il segmento acceso dell'inchiostro della scheda */
+.scheda h3::before { content: ""; flex: none; width: 10px; height: 10px; border-radius: 1px; background: var(--c, var(--accento)); }
 
 .regole { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; counter-reset: regola; }
-.regole li { background: var(--pannello); border: 1px solid var(--filo); border-radius: 16px; padding: 16px 18px 16px 62px; position: relative; color: #cfcbe2; }
-.regole li::before { counter-increment: regola; content: counter(regola); position: absolute; left: 18px; top: 12px; font-family: var(--f-titolo); font-weight: 800; font-size: 1.7rem; line-height: 1; color: var(--cielo); }
-.regole b { color: var(--testo); }
-.dopo { margin-top: 16px; color: var(--tenue); }
+.regole li { background: var(--panel); border: 1px solid var(--line); border-radius: 2px; padding: 16px 18px 16px 64px; position: relative; }
+.regole li::before { counter-increment: regola; content: counter(regola); position: absolute; left: 20px; top: 14px; font-family: var(--f-matrice); font-size: 44px; line-height: 1; color: var(--treble); }
+.dopo { margin-top: 16px; color: var(--dim); }
 
-.galleria { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
-.galleria figure { margin: 0; display: grid; gap: 8px; }
-.galleria img { border-radius: 12px; border: 1px solid var(--filo); aspect-ratio: 4 / 3; width: 100%; height: auto; background: var(--pannello); }
-.galleria figcaption { font-size: 0.88rem; color: var(--tenue); display: grid; gap: 2px; }
-.galleria figcaption b { color: var(--testo); font-family: var(--f-titolo); font-size: 0.98rem; display: flex; align-items: center; gap: 8px; }
-.galleria figcaption b i { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+.galleria { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px 18px; }
+.galleria figure { margin: 0; display: grid; gap: 8px; align-content: start; }
+.galleria img { width: 100%; height: auto; aspect-ratio: 4 / 3; border: clamp(5px, 0.8vw, 8px) solid var(--text); border-radius: 4px; background: var(--text); }
+.galleria figcaption { font-size: 0.88rem; color: var(--dim); display: grid; gap: 2px; }
+.galleria figcaption b { color: var(--text); font-family: var(--f-spleen); font-size: 16px; font-weight: 400; display: flex; align-items: center; gap: 8px; }
+/* il colore dell'atmosfera, con un filo per le tinte chiare sul vetro */
+.galleria figcaption b i { width: 12px; height: 12px; border-radius: 1px; display: inline-block; box-shadow: inset 0 0 0 1px rgba(20, 27, 24, 0.3); }
 
 .tabelle { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
-.tabella { background: var(--pannello); border: 1px solid var(--filo); border-radius: 18px; padding: 18px 20px; }
+.tabella { background: var(--panel); border: 1px solid var(--line); border-radius: 2px; padding: 18px 20px; min-width: 0; }
 .tabella h3 { margin-bottom: 10px; }
 table { width: 100%; border-collapse: collapse; font-size: 0.93rem; }
-td { padding: 8px 0; border-top: 1px solid var(--filo); vertical-align: top; }
-td:first-child { width: 38%; padding-right: 12px; font-family: var(--f-mono); font-size: 0.82rem; color: var(--oro); }
-td:last-child { color: #cfcbe2; }
+td { padding: 8px 0; border-top: 1px solid var(--line); vertical-align: top; }
+td:first-child { width: 38%; padding-right: 12px; font-family: var(--f-mono); font-size: 0.82rem; color: var(--active); }
 
-/* Launchpad disegnato */
+/* il Launchpad disegnato: l'oggetto vero, con i LED nei colori della Notte */
 .lp-blocco { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: clamp(22px, 4vw, 48px); align-items: center; }
 .lp-blocco > * { min-width: 0; }
-.lp { background: linear-gradient(160deg, #1d1c2c, #111018); border: 1px solid #34324c; border-radius: 22px; padding: 16px; display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 6px; box-shadow: 0 30px 60px rgba(0,0,0,0.4); max-width: 470px; }
-.lp span { aspect-ratio: 1; border-radius: 6px; background: #22212f; display: grid; place-items: center; font: 600 0.62rem var(--f-mono); color: #c7c3dc; }
+.lp { background: linear-gradient(160deg, #1d1c2c, #111018); border: 1px solid #34324c; border-radius: 22px; padding: 16px; display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 6px; box-shadow: 0 18px 36px rgba(20, 27, 24, 0.28); max-width: 470px; }
+.lp span { aspect-ratio: 1; border-radius: 6px; background: #22212f; display: grid; place-items: center; font: 500 0.62rem var(--f-mono); color: #c7c3dc; }
 .lp span.tondo { border-radius: 50%; }
 .lp span.vuoto { background: none; }
 .legenda { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
-.legenda li { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 12px; align-items: start; color: #cfcbe2; }
-.legenda li i { width: 18px; height: 18px; border-radius: 5px; margin-top: 3px; }
-.legenda b { color: var(--testo); }
+.legenda li { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 12px; align-items: start; }
+.legenda li i { width: 18px; height: 18px; border-radius: 2px; margin-top: 3px; }
 
 .file { display: grid; gap: 10px; margin-top: 16px; }
-.file code { font-family: var(--f-mono); font-size: 0.86rem; color: var(--lavanda); background: var(--pannello); border: 1px solid var(--filo); border-radius: 8px; padding: 2px 8px; }
-
-.piede { padding-block: 44px 60px; color: var(--tenue); font-size: 0.92rem; }
-.piede .contenitore { display: grid; gap: 14px; }
-.piede .link { display: flex; flex-wrap: wrap; gap: 10px 22px; }
 
 @media (max-width: 900px) {
   .copertina .contenitore, .due, .lp-blocco, .tabelle { grid-template-columns: minmax(0, 1fr); }
@@ -156,17 +100,15 @@ td:last-child { color: #cfcbe2; }
 }
 @media (max-width: 560px) {
   .galleria, .schede { grid-template-columns: minmax(0, 1fr); }
-  .barra .marchio small, .barra .marchio span { display: none; }
   .chip.suono { margin-left: 0; }
 }
-@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 </style>
 </head>
 <body>
 
 <header class="barra">
   <div class="contenitore">
-    <a class="marchio" href="../"><img src="../favicon.png" alt="" width="30" height="30"><span>Cirmolo</span> <small>· Fioritura</small></a>
+    <a class="marchio" href="../"><img src="../img/pigna-piccola.png" alt="" width="49" height="28"><span>Cirmolo</span> <small>· Fioritura</small></a>
     <nav aria-label="Sezioni">
       <a href="#giardino">Giardino</a>
       <a href="#lucciole">Lucciole</a>
@@ -222,10 +164,10 @@ td:last-child { color: #cfcbe2; }
         <figcaption>Il giardino nell'atmosfera Alba, appena toccato: in alto il modo e il numero dei fiori, in basso i comandi. Dopo qualche secondo le scritte spariscono.</figcaption>
       </figure>
       <div class="schede">
-        <div class="scheda" style="--c: var(--rosa)"><h3>Respiro</h3><p>La durata del giro. Ogni fiore torna nello stesso punto in cui l'hai piantato.</p><span class="valore">4–40 s · 14 all'inizio</span></div>
-        <div class="scheda" style="--c: var(--oro)"><h3>Memoria</h3><p>Quante volte torna un fiore, ogni volta più piano. Poi se ne va.</p><span class="valore">1–16 ritorni · o per sempre</span></div>
-        <div class="scheda" style="--c: var(--cielo)"><h3>Vento</h3><p>A ogni ritorno può spostare un fiore di una corda: la melodia cambia piano da sola.</p><span class="valore">0–100%</span></div>
-        <div class="scheda" style="--c: var(--viola)"><h3>Sogno</h3><p>Se non tocchi niente per sei secondi, un cursore fantasma cammina tra le corde e pianta da solo.</p><span class="valore">Y lo accende e lo spegne</span></div>
+        <div class="scheda" style="--c: var(--warn)"><h3>Respiro</h3><p>La durata del giro. Ogni fiore torna nello stesso punto in cui l'hai piantato.</p><span class="valore">4–40 s · 14 all'inizio</span></div>
+        <div class="scheda" style="--c: var(--active)"><h3>Memoria</h3><p>Quante volte torna un fiore, ogni volta più piano. Poi se ne va.</p><span class="valore">1–16 ritorni · o per sempre</span></div>
+        <div class="scheda" style="--c: var(--treble)"><h3>Vento</h3><p>A ogni ritorno può spostare un fiore di una corda: la melodia cambia piano da sola.</p><span class="valore">0–100%</span></div>
+        <div class="scheda" style="--c: var(--loop)"><h3>Sogno</h3><p>Se non tocchi niente per sei secondi, un cursore fantasma cammina tra le corde e pianta da solo.</p><span class="valore">Y lo accende e lo spegne</span></div>
       </div>
     </div>
     <div class="due" style="margin-top: clamp(26px, 4vw, 44px)">
@@ -234,9 +176,9 @@ td:last-child { color: #cfcbe2; }
         <figcaption>Nessuno tocca niente: nella Notte il giardino sogna, il cursore fantasma pianta fiori viola e le scritte se ne sono andate.</figcaption>
       </figure>
       <div class="schede" style="grid-template-columns: minmax(0, 1fr)">
-        <div class="scheda" style="--c: var(--lavanda)"><h3>Il bordone</h3><p>Sotto a tutto respira una nota lunga e bassa, la tonica con la sua quinta. Quando cambi atmosfera scivola sulla tonica nuova.</p></div>
-        <div class="scheda" style="--c: var(--aghi)"><h3>Spazio e shimmer</h3><p>Un riverbero lungo; con lo shimmer la sua coda risale di un'ottava, come un coro. L'eco rimbalza da sinistra a destra.</p></div>
-        <div class="scheda" style="--c: var(--oro)"><h3>A tempo davvero</h3><p>Le note si preparano un decimo di secondo prima e partono al campione esatto: ogni luce si accende quando la sua nota esce.</p></div>
+        <div class="scheda" style="--c: var(--loop)"><h3>Il bordone</h3><p>Sotto a tutto respira una nota lunga e bassa, la tonica con la sua quinta. Quando cambi atmosfera scivola sulla tonica nuova.</p></div>
+        <div class="scheda" style="--c: var(--focus)"><h3>Spazio e shimmer</h3><p>Un riverbero lungo; con lo shimmer la sua coda risale di un'ottava, come un coro. L'eco rimbalza da sinistra a destra.</p></div>
+        <div class="scheda" style="--c: var(--active)"><h3>A tempo davvero</h3><p>Le note si preparano un decimo di secondo prima e partono al campione esatto: ogni luce si accende quando la sua nota esce.</p></div>
       </div>
     </div>
   </div>
@@ -326,8 +268,8 @@ td:last-child { color: #cfcbe2; }
         <figcaption>Il pannello si apre a lato: il giardino continua a fiorire dietro.</figcaption>
       </figure>
       <div class="schede" style="grid-template-columns: minmax(0, 1fr)">
-        <div class="scheda" style="--c: var(--lavanda)"><h3>Il pannello</h3><p>Su e giù scelgono, sinistra e destra cambiano, B chiude. Atmosfera, strumento, scala (dieci, dalla pentatonica alla hirajoshi), tonica, luce, coda, respiro, memoria, vento, tempo delle lucciole, spazio, shimmer, eco, bordone, sogno, volume.</p></div>
-        <div class="scheda" style="--c: var(--rosa)"><h3>Senti subito</h3><p>Cambiando strumento, scala, tonica, luce o coda parte una nota di prova. «Ripristina l'atmosfera» rimette tutto com'era.</p></div>
+        <div class="scheda" style="--c: var(--loop)"><h3>Il pannello</h3><p>Su e giù scelgono, sinistra e destra cambiano, B chiude. Atmosfera, strumento, scala (dieci, dalla pentatonica alla hirajoshi), tonica, luce, coda, respiro, memoria, vento, tempo delle lucciole, spazio, shimmer, eco, bordone, sogno, volume.</p></div>
+        <div class="scheda" style="--c: var(--warn)"><h3>Senti subito</h3><p>Cambiando strumento, scala, tonica, luce o coda parte una nota di prova. «Ripristina l'atmosfera» rimette tutto com'era.</p></div>
       </div>
     </div>
   </div>
@@ -381,8 +323,8 @@ td:last-child { color: #cfcbe2; }
         <figcaption>Nel pannello, la riga Ascolto: in basso, il promemoria dei tre gesti.</figcaption>
       </figure>
       <div class="schede" style="grid-template-columns: minmax(0, 1fr)">
-        <div class="scheda" style="--c: var(--oro)"><h3>Non ascolta se stesso</h3><p>Confronta di continuo quello che suona con quello che sente: se il microfono segue il giardino (l'altoparlante della Flip è vicino), in pochi secondi se ne accorge, impara quanto forte gli arriva e ascolta solo quello che lo supera. Una nota che comincia subito dopo la stessa nota del giardino non conta. In cuffia ascolta tutto.</p></div>
-        <div class="scheda" style="--c: var(--viola)"><h3>Ascolto</h3><p>Nel pannello regola la sensibilità o spegne l'orecchio. In alto a destra un puntino si accende con quello che sente. Chi canta tiene sveglio il giardino: il sogno aspetta il silenzio.</p><span class="valore">10–100% · o spento</span></div>
+        <div class="scheda" style="--c: var(--active)"><h3>Non ascolta se stesso</h3><p>Confronta di continuo quello che suona con quello che sente: se il microfono segue il giardino (l'altoparlante della Flip è vicino), in pochi secondi se ne accorge, impara quanto forte gli arriva e ascolta solo quello che lo supera. Una nota che comincia subito dopo la stessa nota del giardino non conta. In cuffia ascolta tutto.</p></div>
+        <div class="scheda" style="--c: var(--loop)"><h3>Ascolto</h3><p>Nel pannello regola la sensibilità o spegne l'orecchio. In alto a destra un puntino si accende con quello che sente. Chi canta tiene sveglio il giardino: il sogno aspetta il silenzio.</p><span class="valore">10–100% · o spento</span></div>
       </div>
     </div>
   </div>

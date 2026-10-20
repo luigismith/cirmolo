@@ -8,288 +8,229 @@
 <meta property="og:description" content="Un tasto, un accordo intero: il manuale illustrato del sintetizzatore di accordi per la Miyoo Flip.">
 <meta property="og:image" content="https://luigismith.github.io/cirmolo/openorc/img/01-suona.png">
 <meta property="og:type" content="article">
-<meta name="theme-color" content="#0c0f15">
+<meta name="theme-color" content="#D9DECE">
 <link rel="icon" type="image/png" href="../favicon.png">
 <title>Manuale di OpenOrc</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=Be+Vietnam+Pro:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<link rel="preload" href="../fonts/matrice.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../fonts/spleen-8x16.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../stame.css">
 <style>
-/* Impaginazione: un manuale da strumento. Copertina con l'oscilloscopio, poi capitoli a due colonne
-   (testo | schermata vera della console), una barra dei capitoli fissa. Un solo mondo: la notte di
-   Cirmolo con l'oro e il viola dell'app, come sullo schermo della Flip. */
+/* Impaginazione: un manuale da strumento, sul vetro del tema STAME (../stame.css). Copertina con
+   l'oscilloscopio, poi capitoli a due colonne (testo | schermata vera della console nella sua
+   mascherina), una barra dei capitoli fissa come la testata della console. L'inchiostro dell'app e'
+   --active, l'oro di OpenOrc sul vetro; le schermate restano quelle vere, con i colori dell'app. */
 :root {
-  --notte: #0c0f15;
-  --notte-2: #10141c;
-  --pannello: #151b25;
-  --pannello-2: #1c2431;
-  --filo: #2b3446;
-  --testo: #ecebf3;
-  --tenue: #9099ae;
-  --spento: #5f6880;
-  --oro: #f2c45c;
-  --oro-scuro: #6f5422;
-  --viola: #9a7cf4;
-  --acqua: #56c9c3;
-  --rosso: #ec6068;
-  --f-titolo: "Unbounded", "Arial Black", system-ui, sans-serif;
-  --f-testo: "Be Vietnam Pro", "Segoe UI", system-ui, sans-serif;
-  --f-mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --accento: var(--active);
+  /* i colori dell'app sullo schermo della Flip: servono solo alla legenda dell'oscilloscopio */
+  --app-oro: #f2c45c; --app-viola: #9a7cf4; --app-acqua: #56c9c3;
   --larghezza: 1180px;
-  color-scheme: dark;
 }
-* { box-sizing: border-box; }
-html { scroll-behavior: smooth; scroll-padding-top: 72px; }
-body {
-  background: var(--notte);
-  color: var(--testo);
-  font-family: var(--f-testo);
-  font-size: 16.5px;
-  line-height: 1.6;
-  -webkit-font-smoothing: antialiased;
-}
-img { max-width: 100%; display: block; }
-a { color: var(--oro); text-underline-offset: 3px; }
-a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible {
-  outline: 2px solid var(--oro); outline-offset: 3px; border-radius: 6px;
-}
-h1, h2, h3 { font-family: var(--f-titolo); text-wrap: balance; margin: 0; letter-spacing: -0.01em; }
-h2 { font-size: clamp(1.7rem, 3.4vw, 2.6rem); font-weight: 700; line-height: 1.1; }
-h3 { font-size: 1.05rem; font-weight: 700; line-height: 1.25; }
-p { margin: 0; }
+.contenitore { max-width: var(--larghezza); }
 .mono { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
-.etichetta {
-  font-family: var(--f-mono); font-size: 0.74rem; letter-spacing: 0.14em; text-transform: uppercase;
-  color: var(--oro);
-}
-.tasto {
-  display: inline-block; font-family: var(--f-mono); font-size: 0.78em; font-weight: 600;
-  padding: 0.05em 0.5em; border-radius: 6px; background: var(--pannello-2); border: 1px solid var(--filo);
-  color: var(--testo); white-space: nowrap; line-height: 1.5;
-}
-.contenitore { max-width: var(--larghezza); margin: 0 auto; padding-inline: clamp(16px, 4vw, 40px); }
+.etichetta a { color: inherit; text-decoration: none; }
 
 /* ---------------------------------------------------------------- copertina */
-.copertina { position: relative; overflow: hidden; border-bottom: 1px solid var(--filo); }
-.copertina canvas { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0.55; pointer-events: none; }
+.copertina { position: relative; overflow: hidden; border-bottom: 1px solid var(--line); }
+.copertina canvas { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0.38; pointer-events: none; }
 .copertina .contenitore {
   position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
   gap: clamp(28px, 5vw, 64px); align-items: center; padding-block: clamp(40px, 7vw, 88px);
 }
-.copertina h1 {
-  font-size: clamp(3rem, 6.6vw, 5.3rem); font-weight: 800; padding-right: 0.04em; line-height: 0.92; letter-spacing: -0.035em;
-  background: linear-gradient(180deg, var(--testo) 30%, var(--oro) 140%);
-  -webkit-background-clip: text; background-clip: text; color: transparent;
-}
-.copertina .sottotitolo { font-size: clamp(1.1rem, 2vw, 1.35rem); color: var(--testo); max-width: 30ch; margin-top: 18px; }
-.copertina .sottotitolo em { color: var(--oro); font-style: normal; }
-.copertina .intro { color: var(--tenue); max-width: 46ch; margin-top: 14px; }
+.copertina h1 { font-family: var(--f-matrice); font-weight: 400; font-size: clamp(52px, 7.5vw, 88px); line-height: 1.05; letter-spacing: 0; color: var(--text); margin-top: 14px; }
+.copertina .sottotitolo { font-size: clamp(1.1rem, 2vw, 1.35rem); max-width: 30ch; margin-top: 18px; }
+.copertina .sottotitolo em { color: var(--active); font-style: normal; }
+.copertina .intro { color: var(--dim); max-width: 46ch; margin-top: 14px; }
 .cifre { display: grid; grid-template-columns: repeat(4, auto); justify-content: start; gap: 12px 30px; margin-top: 28px; }
-.cifre div { display: grid; }
-.cifre b { font-family: var(--f-titolo); font-size: 1.7rem; color: var(--oro); line-height: 1; }
-.cifre span { font-size: 0.82rem; color: var(--tenue); }
-.schermo {
-  border-radius: 22px; padding: 14px; background: linear-gradient(160deg, #262e3d, #12161e);
-  border: 1px solid var(--filo); box-shadow: 0 30px 80px -30px rgba(242, 196, 92, 0.28), 0 2px 0 #333d50 inset;
-}
-.schermo img { border-radius: 10px; width: 100%; height: auto; aspect-ratio: 4 / 3; image-rendering: auto; }
-.didascalia { font-size: 0.82rem; color: var(--tenue); margin-top: 10px; }
+.cifre div { display: grid; gap: 4px; }
+.cifre b { font-family: var(--f-matrice); font-weight: 400; font-size: 44px; color: var(--active); line-height: 1; }
+.cifre span { font-size: 0.82rem; color: var(--dim); }
+.didascalia { font-size: 0.82rem; color: var(--dim); margin-top: 10px; }
 
 /* ---------------------------------------------------------------- barra dei capitoli */
 .capitoli {
-  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10; background: rgba(12, 15, 21, 0.92);
-  backdrop-filter: blur(10px); border-bottom: 1px solid var(--filo);
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10; background: color-mix(in srgb, var(--panel) 94%, transparent);
+  backdrop-filter: blur(8px); border-bottom: 1px solid var(--line);
 }
-.capitoli nav { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; padding-block: 10px; }
+.capitoli nav { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; padding-block: 8px; }
 .capitoli nav::-webkit-scrollbar { display: none; }
-.capitoli a {
-  flex: none; text-decoration: none; color: var(--tenue); font-size: 0.86rem; font-weight: 500;
-  padding: 6px 13px; border-radius: 999px;
-}
-.capitoli a:hover { color: var(--testo); background: var(--pannello); }
-.capitoli a.attivo { color: #1a1406; background: var(--oro); }
+.capitoli a { flex: none; text-decoration: none; color: var(--dim); font-family: var(--f-spleen); font-size: 16px; line-height: 20px; padding: 6px 10px; }
+/* la voce scelta come sulla console: la cella scura e il segno del fuoco a sinistra */
+.capitoli a:hover, .capitoli a.attivo { color: var(--text); background: var(--bar); box-shadow: inset 3px 0 0 var(--focus); }
 
 /* ---------------------------------------------------------------- capitoli */
-.capitolo { padding-block: clamp(56px, 8vw, 104px); border-bottom: 1px solid var(--filo); }
-.capitolo:nth-of-type(even) { background: var(--notte-2); }
+.capitolo { padding-block: clamp(56px, 8vw, 104px); border-bottom: 1px solid var(--line); }
+.capitolo:nth-of-type(even) { background: color-mix(in srgb, var(--panel) 55%, transparent); }
 .testata { display: grid; gap: 12px; max-width: 760px; margin-bottom: clamp(28px, 4vw, 44px); }
-.testata p { color: var(--tenue); font-size: 1.05rem; max-width: 62ch; }
+.testata p { color: var(--dim); font-size: 1.05rem; max-width: 62ch; }
 .due { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(24px, 4vw, 52px); align-items: start; }
 .due > * { min-width: 0; }
 .testo { display: grid; gap: 16px; max-width: 62ch; }
-.testo p { color: #cfd2de; }
 .blocco { display: grid; gap: 14px; }
 
-.elenco { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--filo); }
+.elenco { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--line); }
 .elenco li {
   display: grid; grid-template-columns: minmax(118px, auto) minmax(0, 1fr); gap: 14px;
-  padding-block: 11px; border-bottom: 1px solid var(--filo); align-items: baseline;
+  padding-block: 11px; border-bottom: 1px solid var(--line); align-items: baseline;
 }
 .elenco li > :first-child { font-weight: 600; }
-.elenco li > :last-child { color: #cfd2de; }
 
 .figura { display: grid; gap: 10px; }
-.figura .schermo { padding: 10px; border-radius: 18px; }
 .figure-doppie { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; }
 .figure-doppie.tre { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 
-.nota {
-  border-left: 3px solid var(--viola); padding: 10px 14px; background: rgba(154, 124, 244, 0.08);
-  border-radius: 0 10px 10px 0; color: #d9d4f2; font-size: 0.95rem;
-}
+.nota { border-left: 3px solid var(--loop); padding: 10px 14px; background: color-mix(in srgb, var(--loop) 7%, var(--panel)); font-size: 0.95rem; }
 
 /* ---------------------------------------------------------------- per cominciare */
 .passi { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; counter-reset: passo; }
 .passi.tre { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.passo {
-  background: var(--pannello); border: 1px solid var(--filo); border-radius: 18px; padding: 20px;
-  display: grid; gap: 10px; align-content: start;
-}
-.passo::before {
-  counter-increment: passo; content: counter(passo); font-family: var(--f-titolo); font-weight: 800;
-  font-size: 2.2rem; color: var(--oro); line-height: 1;
-}
-.passo p { color: #cfd2de; font-size: 0.95rem; }
+.passo { background: var(--panel); border: 1px solid var(--line); border-radius: 2px; padding: 20px; display: grid; gap: 10px; align-content: start; }
+.passo::before { counter-increment: passo; content: counter(passo); font-family: var(--f-matrice); font-size: 44px; color: var(--active); line-height: 1; }
+.passo p { font-size: 0.95rem; }
 
 /* ---------------------------------------------------------------- la Flip disegnata */
 .flip-zona { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: clamp(24px, 4vw, 48px); align-items: start; }
 .flip-zona > * { min-width: 0; }
 .strati { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+/* i bottoni della pagina sono tasti: Spleen, cella del vetro; scelto = cella scura con il segno del fuoco */
 .strati button, .interruttori button, .banchi button {
-  font: inherit; font-size: 0.9rem; font-weight: 600; color: var(--tenue); background: var(--pannello);
-  border: 1px solid var(--filo); border-radius: 999px; padding: 7px 15px; cursor: pointer;
+  font-family: var(--f-spleen); font-size: 16px; line-height: 20px; color: var(--dim); background: var(--panel);
+  border: 1px solid var(--line); border-radius: 2px; padding: 7px 12px; cursor: pointer;
 }
-.strati button[aria-pressed="true"], .banchi button[aria-pressed="true"] { color: #1a1406; background: var(--oro); border-color: var(--oro); }
-.interruttori button[aria-pressed="true"] { color: var(--testo); background: var(--oro-scuro); border-color: var(--oro); }
+.strati button:hover, .interruttori button:hover, .banchi button:hover { color: var(--text); background: var(--bar); border-color: var(--bar); }
+.strati button[aria-pressed="true"], .banchi button[aria-pressed="true"] { color: var(--text); background: var(--bar); border-color: var(--bar); box-shadow: inset 3px 0 0 var(--focus); }
+.interruttori button[aria-pressed="true"] { color: var(--carta); background: var(--active); border-color: var(--active); }
 .regola { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; margin-top: 14px; }
-.regola label { font-size: 0.9rem; color: var(--tenue); }
+.regola label { font-size: 0.9rem; color: var(--dim); }
 select {
-  font: inherit; color: var(--testo); background: var(--pannello-2); border: 1px solid var(--filo);
-  border-radius: 10px; padding: 7px 10px;
+  font: inherit; color: var(--text); background: var(--panel); border: 1px solid var(--line);
+  border-radius: 2px; padding: 7px 10px;
 }
 .interruttori { display: flex; flex-wrap: wrap; gap: 6px; }
-.interruttori button { font-family: var(--f-mono); font-size: 0.82rem; padding: 6px 12px; }
 #flip { width: 100%; height: auto; display: block; }
-#flip .corpo { fill: url(#gradCorpo); stroke: var(--filo); stroke-width: 2; }
-#flip .chip rect { fill: #222b3a; stroke: #313b4f; stroke-width: 1; transition: fill 0.15s; }
-#flip .chip text { fill: var(--testo); font-family: var(--f-testo); font-weight: 600; font-size: 15px; text-anchor: middle; dominant-baseline: central; }
-#flip .chip.spento rect { fill: #181e29; }
-#flip .chip.spento text { fill: var(--spento); }
-#flip .chip.acceso rect { fill: var(--oro); stroke: var(--oro); }
-#flip .chip.acceso text { fill: #1a1406; }
+/* la Flip e' un oggetto: guscio grigio-verde scuro, tasti chiari come celle del vetro */
+#flip .corpo { fill: url(#gradCorpo); stroke: var(--text); stroke-width: 2; }
+#flip .chip rect { fill: var(--panel); stroke: var(--line); stroke-width: 1; transition: fill 0.15s; }
+#flip .chip text { fill: var(--text); font-family: var(--f-testo); font-weight: 600; font-size: 15px; text-anchor: middle; dominant-baseline: central; }
+#flip .chip.spento rect { fill: var(--bar); stroke: var(--bar); }
+#flip .chip.spento text { fill: var(--dim); }
+#flip .chip.acceso rect { fill: var(--active); stroke: var(--active); }
+#flip .chip.acceso text { fill: var(--carta); }
 #flip .chip { cursor: pointer; }
-#flip .lettera { fill: var(--spento); font-family: var(--f-mono); font-size: 12px; text-anchor: middle; dominant-baseline: central; }
+#flip .chip:focus-visible { outline: none; }
+#flip .chip:focus-visible rect { stroke: var(--focus); stroke-width: 3; }
+#flip .lettera { fill: var(--ghost); font-family: var(--f-mono); font-size: 12px; text-anchor: middle; dominant-baseline: central; }
 #flip .piccolo text { font-size: 12px; }
-#flip .leva { fill: #10141b; stroke: #343e52; stroke-width: 2; }
-#flip .leva-testa { fill: #262f3f; }
-#flip .nota-leva { fill: var(--tenue); font-family: var(--f-testo); font-size: 12px; text-anchor: middle; }
+#flip .leva { fill: var(--text); stroke: var(--ghost); stroke-width: 2; }
+#flip .leva-testa { fill: var(--dim); stroke: var(--ghost); stroke-width: 1; }
+#flip .nota-leva { fill: var(--carta); font-family: var(--f-testo); font-size: 12px; text-anchor: middle; }
 .lettura {
-  margin-top: 14px; background: var(--pannello); border: 1px solid var(--filo); border-radius: 14px;
+  margin-top: 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 2px;
   padding: 12px 16px; display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: baseline; min-height: 56px;
 }
-.lettura b { font-family: var(--f-titolo); font-size: 1.5rem; color: var(--oro); }
-.lettura span { color: var(--tenue); }
-.legenda { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; border-top: 1px solid var(--filo); }
-.legenda li { display: grid; grid-template-columns: 7.2em minmax(0, 1fr); gap: 12px; padding-block: 9px; border-bottom: 1px solid var(--filo); }
-.legenda li b { font-family: var(--f-mono); font-size: 0.85rem; color: var(--oro); font-weight: 600; }
-.legenda li span { color: #cfd2de; font-size: 0.95rem; }
+.lettura b { font-family: var(--f-matrice); font-weight: 400; font-size: 33px; line-height: 1; color: var(--active); }
+.lettura span { color: var(--dim); }
+.legenda { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; border-top: 1px solid var(--line); }
+.legenda li { display: grid; grid-template-columns: 7.2em minmax(0, 1fr); gap: 12px; padding-block: 9px; border-bottom: 1px solid var(--line); }
+.legenda li b { font-family: var(--f-mono); font-size: 0.85rem; color: var(--active); font-weight: 500; }
+.legenda li span { font-size: 0.95rem; }
 
 /* ---------------------------------------------------------------- schermata con i punti */
 .annotata { position: relative; }
 .annotata .punto {
   position: absolute; width: 26px; height: 26px; margin: -13px 0 0 -13px; border-radius: 50%;
-  background: var(--oro); color: #1a1406; font-family: var(--f-mono); font-weight: 600; font-size: 0.8rem;
-  display: grid; place-items: center; box-shadow: 0 0 0 4px rgba(242, 196, 92, 0.25), 0 4px 12px rgba(0, 0, 0, 0.5);
+  background: var(--active); color: var(--carta); font-family: var(--f-mono); font-weight: 500; font-size: 0.8rem;
+  display: grid; place-items: center; box-shadow: 0 0 0 2px var(--carta);
 }
 .numerata { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; counter-reset: voce; }
 .numerata li { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 12px; align-items: start; }
 .numerata li::before {
   counter-increment: voce; content: counter(voce); width: 26px; height: 26px; border-radius: 50%;
-  background: var(--oro); color: #1a1406; font-family: var(--f-mono); font-weight: 600; font-size: 0.8rem;
+  background: var(--active); color: var(--carta); font-family: var(--f-mono); font-weight: 500; font-size: 0.8rem;
   display: grid; place-items: center; margin-top: 1px;
 }
 .numerata li b { display: block; }
-.numerata li span { color: #cfd2de; font-size: 0.95rem; }
+.numerata li span { font-size: 0.95rem; }
 .colori { display: flex; flex-wrap: wrap; gap: 10px 22px; }
-.colori span { display: inline-flex; gap: 8px; align-items: center; font-size: 0.92rem; color: #cfd2de; }
-.colori i { width: 28px; height: 4px; border-radius: 2px; display: inline-block; }
+.colori span { display: inline-flex; gap: 8px; align-items: center; font-size: 0.92rem; }
+/* i colori veri dell'oscilloscopio dell'app, su un pezzetto di schermo scuro */
+.colori i { width: 28px; height: 4px; border-radius: 1px; display: inline-block; box-shadow: 0 0 0 3px var(--text); }
 
 /* ---------------------------------------------------------------- MPK */
 .pad-griglia { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; max-width: 520px; }
 .pad {
-  aspect-ratio: 1.15; border-radius: 14px; background: var(--pannello-2); border: 1px solid var(--filo);
+  aspect-ratio: 1.15; border-radius: 2px; background: var(--panel); border: 1px solid var(--line);
   display: grid; place-content: center; text-align: center; gap: 2px; padding: 6px;
 }
-.pad b { font-family: var(--f-titolo); font-size: clamp(0.82rem, 2vw, 1.05rem); font-weight: 700; }
-.pad small { font-family: var(--f-mono); font-size: 0.7rem; color: var(--tenue); }
-.pad.qualita b { color: var(--oro); }
+.pad b { font-family: var(--f-testo); font-size: clamp(0.82rem, 2vw, 1.05rem); font-weight: 600; }
+.pad small { font-family: var(--f-mono); font-size: 0.7rem; color: var(--dim); }
+.pad.qualita { background: var(--bar); border-color: var(--bar); }
+.pad.qualita b { color: var(--active); }
 .banchi { display: flex; gap: 8px; margin-bottom: 14px; }
 .manopole { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 8px; }
 .manopola { display: grid; justify-items: center; gap: 6px; text-align: center; }
 .manopola svg { width: 100%; max-width: 64px; height: auto; }
-.manopola b { font-family: var(--f-mono); font-size: 0.72rem; color: var(--oro); }
-.manopola span { font-size: 0.78rem; color: #cfd2de; line-height: 1.2; }
+.manopola b { font-family: var(--f-mono); font-size: 0.72rem; color: var(--active); font-weight: 500; }
+.manopola span { font-size: 0.78rem; line-height: 1.2; }
 
 /* ---------------------------------------------------------------- esecuzioni */
 .esecuzioni { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
-.esecuzione { background: var(--pannello); border: 1px solid var(--filo); border-radius: 16px; padding: 16px; display: grid; gap: 10px; align-content: start; }
-.esecuzione svg { width: 100%; height: auto; background: var(--notte); border-radius: 10px; }
-.esecuzione p { color: #cfd2de; font-size: 0.92rem; }
-.esecuzione .k3 { font-family: var(--f-mono); font-size: 0.78rem; color: var(--tenue); }
+.esecuzione { background: var(--panel); border: 1px solid var(--line); border-radius: 2px; padding: 16px; display: grid; gap: 10px; align-content: start; }
+.esecuzione svg { width: 100%; height: auto; background: var(--bg); border: 1px solid var(--line); border-radius: 2px; }
+.esecuzione p { font-size: 0.92rem; }
+.esecuzione .k3 { font-family: var(--f-mono); font-size: 0.78rem; color: var(--dim); }
 
 /* ---------------------------------------------------------------- motori */
 .motori { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
 .motore:last-child:nth-child(3n+1) { grid-column: 1 / -1; }
-.motore { background: var(--pannello); border: 1px solid var(--filo); border-radius: 16px; padding: 18px; display: grid; gap: 8px; align-content: start; }
+.motore { background: var(--panel); border: 1px solid var(--line); border-radius: 2px; padding: 18px; display: grid; gap: 8px; align-content: start; }
 .motore canvas { width: 100%; height: 56px; display: block; }
-.motore p { color: #cfd2de; font-size: 0.92rem; }
-.motore .carattere { font-size: 0.85rem; color: var(--tenue); }
-.motore .carattere b { color: var(--oro); font-weight: 600; }
-.nuovo { font-family: var(--f-mono); font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--viola); border: 1px solid var(--viola); border-radius: 999px; padding: 1px 8px; margin-left: 8px; vertical-align: 2px; }
+.motore p { font-size: 0.92rem; }
+.motore .carattere { font-size: 0.85rem; color: var(--dim); }
+.motore .carattere b { color: var(--active); font-weight: 600; }
+.nuovo { font-family: var(--f-spleen); font-size: 16px; font-weight: 400; line-height: 18px; letter-spacing: 1px; text-transform: uppercase; color: var(--loop); border: 1px solid var(--loop); border-radius: 2px; padding: 0 6px; margin-left: 8px; vertical-align: 2px; }
 
-.stereo-prova { background: var(--pannello); border: 1px solid var(--filo); border-radius: 16px; padding: 18px; display: grid; gap: 12px; }
+.stereo-prova { background: var(--panel); border: 1px solid var(--line); border-radius: 2px; padding: 18px; display: grid; gap: 12px; }
 .stereo-prova svg { width: 100%; height: auto; }
-.stereo-prova input[type="range"] { width: 100%; accent-color: var(--oro); }
-.stereo-prova .valore { font-family: var(--f-mono); color: var(--oro); }
+.stereo-prova input[type="range"] { width: 100%; accent-color: var(--active); }
+.stereo-prova .valore { font-family: var(--f-mono); color: var(--active); }
 
 /* ---------------------------------------------------------------- suoni */
 .suoni { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
-.categoria { background: var(--pannello); border: 1px solid var(--filo); border-radius: 16px; padding: 18px; display: grid; gap: 12px; align-content: start; }
+.categoria { background: var(--panel); border: 1px solid var(--line); border-radius: 2px; padding: 18px; display: grid; gap: 12px; align-content: start; }
 .categoria h3 { font-size: 0.95rem; }
-.categoria h3 small { font-family: var(--f-testo); font-weight: 400; color: var(--tenue); font-size: 0.82rem; margin-left: 6px; }
-.patch { display: grid; grid-template-columns: 2.2em minmax(0, 1fr); gap: 2px 10px; padding-block: 8px; border-top: 1px solid var(--filo); }
-.patch .n { font-family: var(--f-mono); color: var(--oro); font-size: 0.9rem; grid-row: span 2; }
+.categoria h3 small { font-family: var(--f-testo); font-weight: 400; color: var(--dim); font-size: 0.82rem; margin-left: 6px; }
+.patch { display: grid; grid-template-columns: 2.2em minmax(0, 1fr); gap: 2px 10px; padding-block: 8px; border-top: 1px solid var(--line); }
+.patch .n { font-family: var(--f-mono); color: var(--active); font-size: 0.9rem; grid-row: span 2; }
 .patch b { font-weight: 600; }
-.patch span { font-size: 0.82rem; color: var(--tenue); }
-.patch .st { color: var(--acqua); }
+.patch span { font-size: 0.82rem; color: var(--dim); }
+.patch .st { color: var(--treble); }
 
 /* ---------------------------------------------------------------- looper */
 .flusso { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 .stato {
-  border: 1px solid var(--filo); background: var(--pannello); border-radius: 12px; padding: 10px 14px;
+  border: 1px solid var(--line); background: var(--panel); border-radius: 2px; padding: 10px 14px;
   display: grid; gap: 2px; min-width: 120px;
 }
-.stato b { font-family: var(--f-titolo); font-size: 0.92rem; }
-.stato span { font-size: 0.8rem; color: var(--tenue); }
-.stato.rec b { color: var(--rosso); }
-.stato.play b { color: var(--acqua); }
-.stato.over b { color: var(--oro); }
-.freccia { font-family: var(--f-mono); font-size: 0.8rem; color: var(--tenue); display: grid; justify-items: center; }
+.stato b { font-family: var(--f-spleen); font-size: 16px; font-weight: 400; line-height: 20px; }
+.stato span { font-size: 0.8rem; color: var(--dim); }
+.stato.rec b { color: var(--warn); }
+.stato.play b { color: var(--treble); }
+.stato.over b { color: var(--active); }
+.freccia { font-family: var(--f-mono); font-size: 0.8rem; color: var(--dim); display: grid; justify-items: center; }
 .freccia svg { width: 42px; height: 14px; }
 
 /* ---------------------------------------------------------------- problemi */
 .problemi { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
-.problema { background: var(--pannello); border: 1px solid var(--filo); border-radius: 14px; padding: 16px 18px; display: grid; gap: 6px; }
-.problema b { color: var(--testo); }
-.problema span { color: #cfd2de; font-size: 0.95rem; }
+.problema { background: var(--panel); border: 1px solid var(--line); border-radius: 2px; padding: 16px 18px; display: grid; gap: 6px; align-content: start; }
+.problema span { font-size: 0.95rem; }
 
 pre {
-  margin: 0; font-family: var(--f-mono); font-size: 0.86rem; background: var(--notte); border: 1px solid var(--filo);
-  border-radius: 12px; padding: 14px 16px; overflow-x: auto; color: #d7dae6;
+  margin: 0; font-size: 0.86rem; background: var(--panel); border: 1px solid var(--line);
+  border-radius: 2px; padding: 14px 16px; overflow-x: auto; color: var(--text);
 }
-.piede { padding-block: 48px 64px; color: var(--tenue); font-size: 0.92rem; }
-.piede .contenitore { display: grid; gap: 18px; }
-.piede .link { display: flex; flex-wrap: wrap; gap: 10px 22px; }
 
 @media (max-width: 920px) {
   .copertina .contenitore, .due, .flip-zona { grid-template-columns: minmax(0, 1fr); }
@@ -298,7 +239,6 @@ pre {
   .figure-doppie.tre { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 560px) {
-  body { font-size: 15.5px; }
   .passi, .passi.tre, .esecuzioni, .motori, .suoni, .problemi, .figure-doppie { grid-template-columns: minmax(0, 1fr); }
   .manopole { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .elenco li { grid-template-columns: minmax(0, 1fr); gap: 2px; }
@@ -307,7 +247,6 @@ pre {
   .annotata .punto { width: 20px; height: 20px; margin: -10px 0 0 -10px; font-size: 0.68rem; }
 }
 @media (prefers-reduced-motion: reduce) {
-  html { scroll-behavior: auto; }
   #flip .chip rect { transition: none; }
 }
 </style>
@@ -395,11 +334,11 @@ pre {
         <svg id="flip" viewBox="0 0 600 340" role="img" aria-label="Schema dei comandi della Flip">
           <defs>
             <linearGradient id="gradCorpo" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stop-color="#252d3c"/>
-              <stop offset="1" stop-color="#161b25"/>
+              <stop offset="0" stop-color="#4a5550"/>
+              <stop offset="1" stop-color="#3b4540"/>
             </linearGradient>
           </defs>
-          <rect x="70" y="0" width="460" height="16" rx="8" fill="#0f131a"/>
+          <rect x="70" y="0" width="460" height="16" rx="8" fill="#141B18"/>
           <rect class="corpo" x="8" y="10" width="584" height="322" rx="40"/>
           <g id="comandi-svg"></g>
         </svg>
@@ -470,7 +409,7 @@ pre {
       <h2>Tutto quello che serve mentre suoni, in un colpo d'occhio</h2>
     </div>
     <div class="due">
-      <div class="annotata schermo" style="padding:10px">
+      <div class="annotata schermo">
         <img src="img/01-suona.png" width="640" height="480" loading="lazy" alt="La pagina Suona con i punti numerati">
         <span class="punto" style="left:47%;top:5.5%">1</span>
         <span class="punto" style="left:91%;top:5.5%">2</span>
@@ -495,9 +434,9 @@ pre {
           <li><div><b>Tasti della Flip</b><span>Ogni tasto dice l'accordo che suonerebbe adesso, dorsali compresi.</span></div></li>
         </ol>
         <div class="colori" aria-label="Colori dell'oscilloscopio">
-          <span><i style="background:var(--oro)"></i>accordo dal vivo</span>
-          <span><i style="background:var(--viola)"></i>melodia</span>
-          <span><i style="background:var(--acqua)"></i>il loop</span>
+          <span><i style="background:var(--app-oro)"></i>accordo dal vivo</span>
+          <span><i style="background:var(--app-viola)"></i>melodia</span>
+          <span><i style="background:var(--app-acqua)"></i>il loop</span>
         </div>
       </div>
     </div>
@@ -842,7 +781,7 @@ spread=2</pre>
       if (onda.width !== Math.round(r.width * dpr)) { onda.width = Math.round(r.width * dpr); onda.height = Math.round(r.height * dpr); }
       var w = onda.width, h = onda.height;
       ctx.clearRect(0, 0, w, h);
-      var linee = [[0.62, "rgba(242,196,92,", 1.0], [0.70, "rgba(154,124,244,", 0.55]];
+      var linee = [[0.62, "rgba(99,74,0,", 1.0], [0.70, "rgba(74,40,148,", 0.55]];
       for (var l = 0; l < linee.length; l++) {
         var base = h * linee[l][0], amp = h * 0.07 * linee[l][2];
         ctx.beginPath();
@@ -851,7 +790,7 @@ spread=2</pre>
           var y = base + amp * (Math.sin(u * 3 + t) + 0.5 * Math.sin(u * 4.02 + t * 1.3) + 0.33 * Math.sin(u * 5.01 - t * 0.7));
           if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
         }
-        ctx.strokeStyle = linee[l][1] + "0.12)"; ctx.lineWidth = 9 * dpr; ctx.stroke();
+        ctx.strokeStyle = linee[l][1] + "0.08)"; ctx.lineWidth = 7 * dpr; ctx.stroke();
         ctx.strokeStyle = linee[l][1] + "0.55)"; ctx.lineWidth = 1.6 * dpr; ctx.stroke();
       }
       t += 0.012;
@@ -957,8 +896,8 @@ spread=2</pre>
   faiChip("L2", 66, 34, 84, 26, true); faiChip("L1", 158, 34, 84, 26, true);
   faiChip("R1", 442, 34, 84, 26, true); faiChip("R2", 534, 34, 84, 26, true);
   /* croce */
-  el("rect", { x: 119, y: 112, width: 22, height: 56, rx: 4, fill: "#2c3546" });
-  el("rect", { x: 102, y: 129, width: 56, height: 22, rx: 4, fill: "#2c3546" });
+  el("rect", { x: 119, y: 112, width: 22, height: 56, rx: 4, fill: "#141B18" });
+  el("rect", { x: 102, y: 129, width: 56, height: 22, rx: 4, fill: "#141B18" });
   faiChip("su", 130, 82, 92, 32); faiChip("sinistra", 56, 140, 92, 32); faiChip("destra", 204, 140, 92, 32); faiChip("giu", 130, 198, 92, 32);
   /* A B X Y */
   el("text", { x: 470, y: 124, "class": "lettera" }).textContent = "X";
@@ -1106,10 +1045,10 @@ spread=2</pre>
     function p(ang, rr) { var t = (ang - 90) * Math.PI / 180; return [cx + rr * Math.cos(t), cy + rr * Math.sin(t)]; }
     var s = p(a0, 27), e = p(a, 27), big = (a - a0) > 180 ? 1 : 0, f = p(a0 + 270, 27), tip = p(a, 15);
     return '<div class="manopola"><svg viewBox="0 0 64 64" aria-hidden="true">' +
-      '<path d="M' + s[0] + " " + s[1] + " A27 27 0 1 1 " + f[0] + " " + f[1] + '" stroke="#2b3446" stroke-width="4" fill="none" stroke-linecap="round"/>' +
-      '<path d="M' + s[0] + " " + s[1] + " A27 27 0 " + big + " 1 " + e[0] + " " + e[1] + '" stroke="#f2c45c" stroke-width="4" fill="none" stroke-linecap="round"/>' +
-      '<circle cx="32" cy="32" r="' + r + '" fill="#1c2431" stroke="#343e52" stroke-width="1.5"/>' +
-      '<line x1="32" y1="32" x2="' + tip[0] + '" y2="' + tip[1] + '" stroke="#ecebf3" stroke-width="3" stroke-linecap="round"/>' +
+      '<path d="M' + s[0] + " " + s[1] + " A27 27 0 1 1 " + f[0] + " " + f[1] + '" stroke="#C1C8B4" stroke-width="4" fill="none" stroke-linecap="butt"/>' +
+      '<path d="M' + s[0] + " " + s[1] + " A27 27 0 " + big + " 1 " + e[0] + " " + e[1] + '" stroke="#634A00" stroke-width="4" fill="none" stroke-linecap="butt"/>' +
+      '<circle cx="32" cy="32" r="' + r + '" fill="#141B18" stroke="#424C47" stroke-width="1.5"/>' +
+      '<line x1="32" y1="32" x2="' + tip[0] + '" y2="' + tip[1] + '" stroke="#E3E7D8" stroke-width="3" stroke-linecap="round"/>' +
       "</svg><b>" + k[0] + "</b><span>" + k[1] + "</span></div>";
   }).join("");
 
@@ -1124,9 +1063,9 @@ spread=2</pre>
   ];
   function diagramma(tipo) {
     var W = 300, H = 132, righe = (tipo === "arp" || tipo === "arpa") ? 9 : 4, s = "";
-    for (var i = 0; i <= 16; i++) s += '<line x1="' + (12 + i * 17) + '" y1="8" x2="' + (12 + i * 17) + '" y2="' + (H - 8) + '" stroke="#1c2431" stroke-width="' + (i % 4 === 0 ? 1.4 : 0.7) + '"/>';
+    for (var i = 0; i <= 16; i++) s += '<line x1="' + (12 + i * 17) + '" y1="8" x2="' + (12 + i * 17) + '" y2="' + (H - 8) + '" stroke="#C1C8B4" stroke-width="' + (i % 4 === 0 ? 1.4 : 0.7) + '"/>';
     function y(r) { return H - 14 - r * ((H - 28) / (righe - 1)); }
-    function barra(x, r, l, forte) { return '<rect x="' + x + '" y="' + (y(r) - 4) + '" width="' + Math.max(3, l) + '" height="8" rx="4" fill="#f2c45c" opacity="' + (forte ? 1 : 0.62) + '"/>'; }
+    function barra(x, r, l, forte) { return '<rect x="' + x + '" y="' + (y(r) - 4) + '" width="' + Math.max(3, l) + '" height="8" rx="1" fill="#634A00" opacity="' + (forte ? 1 : 0.62) + '"/>'; }
     var fine = 284;
     if (tipo === "accordo") for (var r = 0; r < 4; r++) s += barra(12, r, fine - 12, true);
     if (tipo === "strum") { for (r = 0; r < 4; r++) s += barra(12 + r * 14, r, 120 - r * 14, r === 0); for (r = 0; r < 4; r++) s += barra(150 + (3 - r) * 14, r, fine - 150 - (3 - r) * 14, r === 3); }
@@ -1171,8 +1110,8 @@ spread=2</pre>
     var dpr = window.devicePixelRatio || 1, r = c.getBoundingClientRect();
     c.width = Math.max(200, Math.round(r.width * dpr)); c.height = Math.round(56 * dpr);
     var g = c.getContext("2d"), w = c.width, h = c.height, tipo = c.dataset.onda;
-    g.strokeStyle = "rgba(43,52,70,1)"; g.lineWidth = dpr; g.beginPath(); g.moveTo(0, h / 2); g.lineTo(w, h / 2); g.stroke();
-    var col = tipo === "corda" || tipo === "ensemble" ? "154,124,244" : "242,196,92";
+    g.strokeStyle = "#C1C8B4"; g.lineWidth = dpr; g.beginPath(); g.moveTo(0, h / 2); g.lineTo(w, h / 2); g.stroke();
+    var col = tipo === "corda" || tipo === "ensemble" ? "74,40,148" : "99,74,0";
     [[8, 0.14], [1.8, 0.95]].forEach(function (pass) {
       g.beginPath();
       for (var x = 0; x <= w; x += dpr) { var v = forma(tipo, x / w), yy = h / 2 - v * h * 0.38; if (x === 0) g.moveTo(x, yy); else g.lineTo(x, yy); }
@@ -1183,18 +1122,18 @@ spread=2</pre>
   /* ------------------------------------------------------------ stereo */
   var ssvg = document.getElementById("stereo-svg"), srange = document.getElementById("stereo"), sval = document.getElementById("stereo-valore");
   function rendiStereo() {
-    var w = srange.value / 100, cx = 260, ampio = 200, note = [["Do3", "#f2c45c"], ["Mi3", "#f2c45c"], ["Sol3", "#f2c45c"], ["Do4", "#f2c45c"]];
-    var s = '<line x1="40" y1="70" x2="480" y2="70" stroke="#2b3446" stroke-width="2"/>' +
-      '<text x="40" y="104" fill="#9099ae" font-size="13" font-family="Be Vietnam Pro, sans-serif">sinistra</text>' +
-      '<text x="480" y="104" fill="#9099ae" font-size="13" text-anchor="end" font-family="Be Vietnam Pro, sans-serif">destra</text>' +
-      '<line x1="260" y1="58" x2="260" y2="82" stroke="#5f6880" stroke-width="1.5"/>';
+    var w = srange.value / 100, cx = 260, ampio = 200, note = [["Do3", "#634A00"], ["Mi3", "#634A00"], ["Sol3", "#634A00"], ["Do4", "#634A00"]];
+    var s = '<line x1="40" y1="70" x2="480" y2="70" stroke="#A2AA95" stroke-width="2"/>' +
+      '<text x="40" y="104" fill="#424C47" font-size="13" font-family="IBM Plex Sans, sans-serif">sinistra</text>' +
+      '<text x="480" y="104" fill="#424C47" font-size="13" text-anchor="end" font-family="IBM Plex Sans, sans-serif">destra</text>' +
+      '<line x1="260" y1="58" x2="260" y2="82" stroke="#879180" stroke-width="1.5"/>';
     note.forEach(function (n, i) {
       var pan = (2 * i / (note.length - 1) - 1) * w, x = cx + pan * ampio;
       s += '<circle cx="' + x + '" cy="70" r="11" fill="' + n[1] + '" opacity="0.9"/>';
-      if (w >= 0.12) s += '<text x="' + x + '" y="' + (40 - (i % 2) * 14) + '" fill="#ecebf3" font-size="13" text-anchor="middle" font-family="JetBrains Mono, monospace">' + n[0] + "</text>";
+      if (w >= 0.12) s += '<text x="' + x + '" y="' + (40 - (i % 2) * 14) + '" fill="#141B18" font-size="13" text-anchor="middle" font-family="IBM Plex Mono, monospace">' + n[0] + "</text>";
     });
-    if (w < 0.12) s += '<text x="260" y="36" fill="#ecebf3" font-size="13" text-anchor="middle" font-family="JetBrains Mono, monospace">Do Mi Sol Do: tutte al centro</text>';
-    s += '<circle cx="260" cy="70" r="7" fill="#9a7cf4"/><text x="260" y="134" fill="#9a7cf4" font-size="13" text-anchor="middle" font-family="Be Vietnam Pro, sans-serif">il basso resta al centro</text>';
+    if (w < 0.12) s += '<text x="260" y="36" fill="#141B18" font-size="13" text-anchor="middle" font-family="IBM Plex Mono, monospace">Do Mi Sol Do: tutte al centro</text>';
+    s += '<circle cx="260" cy="70" r="7" fill="#4A2894"/><text x="260" y="134" fill="#4A2894" font-size="13" text-anchor="middle" font-family="IBM Plex Sans, sans-serif">il basso resta al centro</text>';
     ssvg.innerHTML = s;
     sval.textContent = srange.value + "%";
   }
@@ -1239,7 +1178,7 @@ spread=2</pre>
     return '<div class="categoria"><h3>' + c[0] + "<small>" + c[2] + "</small></h3>" + SUONI.filter(function (s) { return c[1].indexOf(s[2]) >= 0; }).map(function (s) {
       return '<div class="patch"><span class="n">' + String(s[0]).padStart(2, "0") + "</span><b>" + s[1] + "</b><span>" + s[3] + " · " + s[4] + (s[5] ? ' · <span class="st">stereo</span>' : "") + "</span></div>";
     }).join("") + "</div>";
-  }).join("") + '<div class="categoria"><h3>Tuoi<small>dal numero 28 in poi</small></h3><p style="color:#cfd2de;font-size:.92rem">I suoni che salvi tu, in ordine alfabetico, dopo quelli di fabbrica. Anche loro rispondono al program change.</p></div>';
+  }).join("") + '<div class="categoria"><h3>Tuoi<small>dal numero 28 in poi</small></h3><p style="font-size:.92rem">I suoni che salvi tu, in ordine alfabetico, dopo quelli di fabbrica. Anche loro rispondono al program change.</p></div>';
 })();
 </script>
 </body>

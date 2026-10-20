@@ -9,19 +9,22 @@
 <meta property="og:description" content="Sedici pad, quattro pattern da 16 passi, il microfono USB e una libreria di campioni. Con la MPK mini o un Launchpad Mini MK3.">
 <meta property="og:image" content="https://luigismith.github.io/cirmolo/sampler/img/pad.png">
 <meta property="og:type" content="article">
-<meta name="theme-color" content="#0d1017">
+<meta name="theme-color" content="#D9DECE">
 <link rel="icon" type="image/png" href="../favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=Be+Vietnam+Pro:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<link rel="preload" href="../fonts/matrice.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../fonts/spleen-8x16.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../stame.css">
 <link rel="stylesheet" href="../app.css">
 <style>
-:root { --accento: #f2b45c; --su-accento: #1e1406; }
+:root { --accento: var(--bass); }
 /* il Launchpad disegnato: 8 righe di pad, i tasti in alto e quelli a destra */
 .lp-blocco { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: clamp(22px, 4vw, 48px); align-items: center; }
 .lp-blocco > * { min-width: 0; }
 .lp { background: linear-gradient(160deg, #1e2230, #111319); border: 1px solid #343b4f; border-radius: 22px; padding: 14px; display: grid;
-  grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 5px; max-width: 460px; box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4); }
+  grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 5px; max-width: 460px; box-shadow: 0 18px 36px rgba(20, 27, 24, 0.28); }
 .lp span { aspect-ratio: 1; border-radius: 6px; display: grid; place-items: center; font: 600 0.56rem var(--f-mono); color: #d5d8e4; text-align: center; line-height: 1.05; }
 .lp span.tondo { border-radius: 50%; background: #333a4c; }
 .lp span.vuoto { background: none; }
@@ -31,9 +34,9 @@
 .lp span.su { background: #f2b45c; color: #1e1406; }
 .lp span.bianco { background: #e9e9f2; color: #111; }
 .legenda { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
-.legenda li { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 12px; align-items: start; color: var(--chiaro); }
+.legenda li { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 12px; align-items: start; color: var(--text); }
 .legenda li i { width: 18px; height: 18px; border-radius: 5px; margin-top: 3px; }
-.legenda b { color: var(--testo); }
+.legenda b { color: var(--text); }
 @media (max-width: 900px) { .lp-blocco { grid-template-columns: minmax(0, 1fr); } }
 </style>
 </head>
@@ -41,7 +44,7 @@
 
 <header class="barra">
   <div class="contenitore">
-    <a class="marchio" href="../"><img src="../favicon.png" alt="" width="30" height="30"><span>Cirmolo</span> <small>· Sampler</small></a>
+    <a class="marchio" href="../"><img src="../img/pigna-piccola.png" alt="" width="49" height="28"><span>Cirmolo</span> <small>· Sampler</small></a>
     <nav aria-label="Sezioni">
       <a href="#pad">Pad</a>
       <a href="#sequenza">Sequenza</a>
@@ -101,9 +104,9 @@
       </div>
       <div class="schede">
         <div class="scheda"><h3>Colpo, tenuto, loop</h3><p>Un pad può suonare tutto il campione a ogni colpo, solo finché tieni il tasto, oppure in loop.</p></div>
-        <div class="scheda" style="--c: #9b7bf0"><h3>Gruppi di esclusione</h3><p>Quattro gruppi: un pad zittisce gli altri del suo gruppo, come il charleston aperto con quello chiuso.</p></div>
-        <div class="scheda" style="--c: var(--aghi)"><h3>Ritaglio e inverso</h3><p>Inizio e fine del campione al centesimo, e il campione al contrario.</p></div>
-        <div class="scheda" style="--c: #78aaff"><h3>Intonazione</h3><p>Più o meno dodici semitoni; nella pagina Modifica la levetta destra la ritocca di un decimo.</p></div>
+        <div class="scheda" style="--c: var(--loop)"><h3>Gruppi di esclusione</h3><p>Quattro gruppi: un pad zittisce gli altri del suo gruppo, come il charleston aperto con quello chiuso.</p></div>
+        <div class="scheda" style="--c: var(--focus)"><h3>Ritaglio e inverso</h3><p>Inizio e fine del campione al centesimo, e il campione al contrario.</p></div>
+        <div class="scheda" style="--c: var(--treble)"><h3>Intonazione</h3><p>Più o meno dodici semitoni; nella pagina Modifica la levetta destra la ritocca di un decimo.</p></div>
       </div>
     </div>
     <div class="due">
